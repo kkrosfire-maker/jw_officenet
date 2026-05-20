@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공유오피스 운영 대시보드</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Malgun Gothic', -apple-system, sans-serif;
+  background: #2c2c2c;
+  color: #333;
+  min-height: 100vh;
+}
+
+header {
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 100%);
+  color: white;
+  padding: 0 20px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+header h1 { font-size: 16px; font-weight: 700; }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+
+.month-nav button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.8;
+  width: 18px;
+}
+
+.month-nav button:hover { opacity: 1; }
+
+#month-display {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 76px;
+  text-align: center;
+}
+
+#today-display { font-size: 11px; color: rgba(255,255,255,0.5); }
+
+
+
+/* Stats */
+.stats-bar {
+  background: #3a3a3a;
+  padding: 8px 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #505050;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.stat-card {
+  background: #484848;
+  border-radius: 8px;
+  padding: 7px 13px;
+  text-align: center;
+  min-width: 84px;
+  border: 1px solid #585858;
+  flex: 0 0 auto;
+}
+
+.stat-value { font-size: 17px; font-weight: 800; line-height: 1.2; color: #e8e8e8; }
+.stat-label { font-size: 9px; color: #aaa; margin-top: 1px; }
+
+/* Type summary */
+.type-summary {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #363636;
+  border-bottom: 1px solid #505050;
+  overflow-x: auto;
+}
+
+.type-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #484848;
+  border-radius: 8px;
+  padding: 6px 12px;
+  border: 1px solid #585858;
+  min-width: 140px;
+  flex: 0 0 auto;
+}
+
+.type-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.type-info { font-size: 11px; color: #aaa; }
+.type-info strong { font-size: 12px; color: #e0e0e0; display: block; line-height: 1.4; }
+
+/* Floor */
+.main { padding: 14px 16px; }
+
+.floor-section {
+  background: #3a3a3a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.section-header h2 { font-size: 12px; color: #aaa; font-weight: 600; }
+
+.legend { display: flex; gap: 12px; font-size: 10px; color: #aaa; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 11px; height: 11px; border-radius: 3px; }
+
+/* Grid */
+.floor-grid { display: flex; flex-direction: column; gap: 4px; }
+.floor-row { display: flex; gap: 4px; }
+
+.cell {
+  flex: 1;
+  min-width: 62px;
+  max-width: 90px;
+  height: 68px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 2px;
+  position: relative;
+  font-size: 10px;
+  text-align: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.cell-room {
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.cell-room:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  z-index: 20;
+}
+
+.cell-room.vacant   { background: #f4f4f4; border-color: #ddd; color: #333; }
+.cell-room.paid     { background: #e0f4f1; border-color: #26a69a; color: #111; }
+.cell-room.unpaid   { background: #fce4ec; border-color: #e91e63; color: #111; }
+
+.cell-util     { background: #eceff1; border: 1px dashed #cfd8dc; }
+.cell-corridor { background: #ede7f6; border: 1px solid #ce93d8; color: #6a1b9a; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+.cell-empty    { background: transparent; border: none; pointer-events: none; }
+.cell-gap      { flex: 0.5; min-width: 0; background: transparent; border: none; pointer-events: none; }
+
+.type-strip {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+}
+
+.room-id   { font-weight: 800; font-size: 11px; margin-top: 6px; }
+.room-name { font-size: 10px; margin-top: 1px; max-width: 76px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-rent { font-size: 9px; margin-top: 1px; opacity: 0.75; }
+.room-type-sub { font-size: 8px; opacity: 0.6; margin-top: 1px; }
+
+.badge-unpaid {
+  position: absolute;
+  top: 5px; right: 4px;
+  background: #e91e63;
+  color: white;
+  font-size: 7px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 800;
+}
+
+.badge-paid {
+  position: absolute;
+  top: 5px; left: 4px;
+  background: #2e7d32;
+  color: white;
+  font-size: 9px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 800;
+}
+
+.badge-miss {
+  position: absolute;
+  top: 5px; left: 4px;
+  background: #d32f2f;
+  color: white;
+  font-size: 9px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 800;
+}
+
+.badge-expiry {
+  position: absolute;
+  bottom: 3px; right: 3px;
+  background: #ff6f00;
+  color: white;
+  font-size: 7px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 700;
+}
+
+.badge-virtual {
+  position: absolute;
+  bottom: 3px; left: 3px;
+  background: #546e7a;
+  color: white;
+  font-size: 7px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 700;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 460px;
+  max-width: 94vw;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  animation: slideUp 0.16s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-type-bar { height: 5px; border-radius: 12px 12px 0 0; }
+.modal-body { padding: 20px 24px 24px; }
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-title-row { display: flex; align-items: center; gap: 10px; }
+.modal-header h2 { font-size: 18px; color: #1a1a2e; }
+.modal-type-label { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px; color: white; }
+
+.btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #bbb; }
+.btn-close:hover { color: #555; }
+
+.expiry-warn {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 7px 11px;
+  font-size: 12px;
+  color: #e65100;
+  margin-bottom: 13px;
+}
+
+.form-group { margin-bottom: 12px; }
+
+.form-group label {
+  display: block;
+  font-size: 10px;
+  color: #aaa;
+  font-weight: 700;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #333;
+  background: white;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { outline: none; border-color: #555; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.paid-toggle {
+  display: flex;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.paid-toggle button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #aaa;
+  transition: all 0.15s;
+}
+
+.paid-toggle button.is-paid   { background: #26a69a; color: white; }
+.paid-toggle button.is-unpaid { background: #e91e63; color: white; }
+
+.modal-actions { display: flex; gap: 7px; margin-top: 18px; }
+
+.btn {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.btn:hover { filter: brightness(0.9); }
+.btn-primary { flex: 1; background: #1b2838; color: white; }
+.btn-danger  { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+.btn-cancel  { background: #f0f0f0; color: #555; }
+
+.toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: #1b2838;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.22s, transform 0.22s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#127970; 공유오피스 운영 대시보드</h1>
+  <div class="header-right">
+    <div class="month-nav">
+      <button onclick="changeMonth(-1)">&#8592;</button>
+      <span id="month-display"></span>
+      <button onclick="changeMonth(1)">&#8594;</button>
+    </div>
+    <span id="today-display"></span>
+  </div>
+</header>
+
+<div class="stats-bar" id="stats-bar"></div>
+<div class="type-summary" id="type-summary"></div>
+
+
+<div class="main">
+  <div class="floor-section">
+    <div class="section-header">
+      <h2>평면도 &mdash; 호실을 클릭하면 정보를 입력할 수 있습니다</h2>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#f4f4f4;border:1px solid #ddd;"></div>
+          <span>공실</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#e0f4f1;border:2px solid #26a69a;"></div>
+          <span>납부완료</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#fce4ec;border:2px solid #e91e63;"></div>
+          <span>미납</span>
+        </div>
+      </div>
+    </div>
+    <div class="floor-grid" id="floor-grid"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-type-bar" id="modal-type-bar"></div>
+    <div class="modal-body">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <h2 id="modal-title"></h2>
+          <span class="modal-type-label" id="modal-type-label"></span>
+        </div>
+        <button class="btn-close" onclick="closeModal()">&#215;</button>
+      </div>
+      <div id="expiry-warn" class="expiry-warn" style="display:none;"></div>
+      <div class="form-group">
+        <label>&#9998; 방 이름 (표시명)</label>
+        <input type="text" id="f-display-name" placeholder="예: 101호, 대표실 (비우면 기본 ID 사용)">
+      </div>
+      <hr style="border:none;border-top:1px solid #eee;margin:4px 0 12px;">
+      <div class="form-group">
+        <label>입주자 이름</label>
+        <input type="text" id="f-name" placeholder="이름 입력 (공실이면 비워두세요)">
+      </div>
+      <div class="form-group">
+        <label>연락처</label>
+        <input type="text" id="f-phone" placeholder="010-0000-0000">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>계약 시작일</label>
+          <input type="date" id="f-start">
+        </div>
+        <div class="form-group">
+          <label>계약 만료일</label>
+          <input type="date" id="f-end">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>월 임대료 (원)</label>
+        <input type="number" id="f-rent" placeholder="예: 300000">
+      </div>
+      <div class="form-group">
+        <label>계약 유형</label>
+        <select id="f-type">
+          <option value="입주">입주 (상주)</option>
+          <option value="비상주">비상주 (가상오피스)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="paid-label">납부 현황</label>
+        <div class="paid-toggle">
+          <button id="btn-unpaid" onclick="setPaid(false)">미납</button>
+          <button id="btn-paid"   onclick="setPaid(true)">납부완료</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>메모</label>
+        <textarea id="f-memo" rows="2" placeholder="특이사항 등"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="btn-vacate" onclick="vacateRoom()" style="display:none;">퇴실처리</button>
+        <button class="btn btn-cancel" onclick="closeModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveRoom()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 구역 정보 ──────────────────────────────────────
+const ZONE = {
+  A: { color: '#1565c0', name: 'A구역' },
+  B: { color: '#e65100', name: 'B구역' },
+  C: { color: '#2e7d32', name: 'C구역' },
+  D: { color: '#6a1b9a', name: 'D구역' },
+};
+
+// ── 평면도 레이아웃 ────────────────────────────────
+// U=공용시설  CORR=복도  null=건물 외부  'X000'=호실
+const LAYOUT = [
+  // 0행: A001
+  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A001'],
+  // 1행: A002
+  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A002'],
+  // 2행: B상단(B008→B003) + null×2 + B001 + A018 + GAP + A011 + GAP + A003
+  ['B008','B007','B006','B005','B004','B003',null,null,'B001','A018','GAP','A011','GAP','A003'],
+  // 3행: 빈칸×8 + B002 + A017 + GAP + A012 + GAP + A004
+  [null,null,null,null,null,null,null,null,'B002','A017','GAP','A012','GAP','A004'],
+  // 4행: B하단(B009→B014) + null×2 + C001 + A016 + GAP + A013 + GAP + A005
+  ['B009','B010','B011','B012','B013','B014',null,null,'C001','A016','GAP','A013','GAP','A005'],
+  // 5행: C중간(C009→C003) + null + C002 + A015 + GAP + A014 + GAP + A006
+  ['C009','C008','C007','C006','C005','C004','C003',null,'C002','A015','GAP','A014','GAP','A006'],
+  // 6행: A007만
+  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A007'],
+  // 7행: C하단(C010→C018) + A010 + GAP + A009 + GAP + A008
+  ['C010','C011','C012','C013','C014','C015','C016','C017','C018','A010','GAP','A009','GAP','A008'],
+];
+
+// 전체 호실 목록 (중복 제거)
+const ALL_ROOMS = [...new Set(LAYOUT.flat().filter(c => c && c !== 'U' && c !== 'CORR' && c !== 'GAP'))];
+
+// ── 상태 ────────────────────────────────────────────
+let currentMonth = new Date().toISOString().slice(0, 7);
+let currentRoom  = null;
+let paidState    = false;
+
+// ── 데이터 ──────────────────────────────────────────
+const DATA_KEY = 'cowork_v1';
+const load  = ()     => JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
+const store = (data) => localStorage.setItem(DATA_KEY, JSON.stringify(data));
+const pKey  = (m)    => 'paid_' + m;
+const isPaid = (d, m) => !!(d && d[pKey(m)]);
+
+const zone = (id) => id[0]; // 'A','B','C','D'
+
+function daysLeft(end) {
+  if (!end) return null;
+  const diff = Math.ceil((new Date(end) - new Date()) / 864e5);
+  if (diff < 0)  return '만료';
+  if (diff <= 30) return 'D-' + diff;
+  return null;
+}
+
+function statusClass(id) {
+  const d = load()[id];
+  if (!d || !d.name) return 'vacant';
+  return isPaid(d, currentMonth) ? 'paid' : 'unpaid';
+}
+
+// ── 평면도 렌더 ─────────────────────────────────────
+function renderFloor() {
+  const data = load();
+  const grid = document.getElementById('floor-grid');
+  grid.innerHTML = '';
+
+  LAYOUT.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'floor-row';
+
+    row.forEach(cell => {
+      const el = document.createElement('div');
+      el.className = 'cell';
+
+      if (!cell) {
+        el.classList.add('cell-empty');
+      } else if (cell === 'GAP') {
+        el.classList.add('cell-gap');
+      } else if (cell === 'U') {
+        el.classList.add('cell-util');
+      } else if (cell === 'CORR') {
+        el.classList.add('cell-corridor');
+        el.textContent = '복도';
+      } else {
+        const z  = zone(cell);
+        const st = statusClass(cell);
+        const d  = data[cell] || {};
+        const tag = daysLeft(d.end);
+        const color = ZONE[z].color;
+
+        el.classList.add('cell-room', st);
+        el.onclick = () => openModal(cell);
+
+        const label = d.displayName || cell;
+        let html = `<div class="type-strip" style="background:${color}"></div>`;
+        html += `<div class="room-id">${label}</div>`;
+        if (d.displayName) html += `<div class="room-type-sub">${cell}</div>`;
+        html += `<div class="room-name">${d.name || '공실'}</div>`;
+        if (d.name && d.rent) html += `<div class="room-rent">${Math.round(d.rent/10000)}만원</div>`;
+        if (d.name && st === 'paid')   html += `<div class="badge-paid">완</div>`;
+        if (d.name && st === 'unpaid') html += `<div class="badge-miss">미</div>`;
+        if (tag && d.name)    html += `<div class="badge-expiry">${tag}</div>`;
+        if (d.contractType === '비상주' && d.name) html += `<div class="badge-virtual">비상주</div>`;
+
+        el.innerHTML = html;
+      }
+      rowEl.appendChild(el);
+    });
+    grid.appendChild(rowEl);
+  });
+}
+
+// ── 통계 렌더 ───────────────────────────────────────
+function renderStats() {
+  const data = load();
+  const occ     = ALL_ROOMS.filter(r => data[r]?.name);
+  const paid    = occ.filter(r => isPaid(data[r], currentMonth));
+  const unpaid  = occ.filter(r => !isPaid(data[r], currentMonth));
+  const paidAmt = paid.reduce((s,r) => s + (data[r]?.rent||0), 0);
+  const unpaidAmt = unpaid.reduce((s,r) => s + (data[r]?.rent||0), 0);
+  const expiring = occ.filter(r => daysLeft(data[r]?.end) !== null).length;
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-value">${ALL_ROOMS.length}</div>
+      <div class="stat-label">전체 호실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#0d47a1">${occ.length}</div>
+      <div class="stat-label">입주 중</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#bbb">${ALL_ROOMS.length - occ.length}</div>
+      <div class="stat-label">공실</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${Math.round(occ.length / ALL_ROOMS.length * 100)}%</div>
+      <div class="stat-label">점유율</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#00695c">${paidAmt.toLocaleString()}</div>
+      <div class="stat-label">납부완료 (원)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:#c62828">${unpaidAmt.toLocaleString()}</div>
+      <div class="stat-label">미납 (원)</div>
+    </div>
+    ${expiring > 0 ? `
+    <div class="stat-card">
+      <div class="stat-value" style="color:#ff6f00">${expiring}건</div>
+      <div class="stat-label">만료임박·만료</div>
+    </div>` : ''}
+  `;
+
+  document.getElementById('type-summary').innerHTML = ['A','B','C','D'].map(z => {
+    const rooms  = ALL_ROOMS.filter(r => zone(r) === z);
+    const zocc   = rooms.filter(r => data[r]?.name).length;
+    const zunpaid = rooms.filter(r => data[r]?.name && !isPaid(data[r], currentMonth)).length;
+    return `
+      <div class="type-card">
+        <div class="type-badge" style="background:${ZONE[z].color}">${z}</div>
+        <div class="type-info">
+          <strong>${ZONE[z].name} &nbsp; ${zocc}/${rooms.length}</strong>
+          ${zunpaid > 0
+            ? `<span style="color:#e91e63">미납 ${zunpaid}건</span>`
+            : `<span style="color:#26a69a">납부 완료</span>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── 월 탐색 ─────────────────────────────────────────
+function changeMonth(delta) {
+  const [y, m] = currentMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  currentMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  updateMonthDisplay();
+  renderFloor();
+  renderStats();
+}
+
+function updateMonthDisplay() {
+  const [y, m] = currentMonth.split('-').map(Number);
+  document.getElementById('month-display').textContent = y + '년 ' + m + '월';
+  const pl = document.getElementById('paid-label');
+  if (pl) pl.textContent = y + '년 ' + m + '월 납부 현황';
+}
+
+// ── 모달 ────────────────────────────────────────────
+function openModal(id) {
+  currentRoom = id;
+  const d = load()[id] || {};
+  const z = zone(id);
+  const color = ZONE[z].color;
+
+  document.getElementById('modal-type-bar').style.background = color;
+  document.getElementById('modal-title').textContent = id;
+  document.getElementById('modal-type-label').textContent = ZONE[z].name;
+  document.getElementById('modal-type-label').style.background = color;
+
+  document.getElementById('f-display-name').value = d.displayName || '';
+  document.getElementById('f-name').value  = d.name  || '';
+  document.getElementById('f-phone').value = d.phone || '';
+  document.getElementById('f-start').value = d.start || '';
+  document.getElementById('f-end').value   = d.end   || '';
+  document.getElementById('f-rent').value  = d.rent  || '';
+  document.getElementById('f-type').value  = d.contractType || '입주';
+  document.getElementById('f-memo').value  = d.memo  || '';
+
+  paidState = isPaid(d, currentMonth);
+  updatePaidToggle();
+
+  const tag = daysLeft(d.end);
+  const warn = document.getElementById('expiry-warn');
+  if (tag && d.name) {
+    warn.style.display = 'block';
+    warn.textContent = tag === '만료'
+      ? '⚠ 계약이 만료되었습니다 (' + d.end + ')'
+      : '⚠ 계약 만료 ' + tag + ' (만료일: ' + d.end + ')';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  document.getElementById('btn-vacate').style.display = d.name ? 'inline-block' : 'none';
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('f-name').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  currentRoom = null;
+}
+
+function setPaid(val) { paidState = val; updatePaidToggle(); }
+
+function updatePaidToggle() {
+  document.getElementById('btn-paid').className   = paidState ? 'is-paid'   : '';
+  document.getElementById('btn-unpaid').className = paidState ? '' : 'is-unpaid';
+}
+
+function saveRoom() {
+  if (!currentRoom) return;
+  const data = load();
+  const prev = data[currentRoom] || {};
+  const name = document.getElementById('f-name').value.trim();
+
+  const displayName = document.getElementById('f-display-name').value.trim();
+
+  // 방 이름(표시명)만 바꿔도 저장 — 입주자 없어도 displayName은 유지
+  const hasContent = name || displayName;
+  if (!hasContent) {
+    delete data[currentRoom];
+  } else {
+    data[currentRoom] = Object.assign({}, prev, {
+      displayName: displayName || '',
+      name,
+      phone: document.getElementById('f-phone').value.trim(),
+      start: document.getElementById('f-start').value,
+      end:   document.getElementById('f-end').value,
+      rent:  parseInt(document.getElementById('f-rent').value) || 0,
+      contractType: document.getElementById('f-type').value,
+      memo:  document.getElementById('f-memo').value.trim(),
+      [pKey(currentMonth)]: paidState,
+    });
+  }
+
+  store(data);
+  closeModal();
+  renderFloor();
+  renderStats();
+  toast('저장되었습니다.');
+}
+
+function vacateRoom() {
+  if (!currentRoom) return;
+  if (!confirm(currentRoom + ' 퇴실 처리하시겠습니까?\n입력된 모든 정보가 삭제됩니다.')) return;
+  const data = load();
+  delete data[currentRoom];
+  store(data);
+  closeModal();
+  renderFloor();
+  renderStats();
+  toast('퇴실 처리되었습니다.');
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+
+// ── 이벤트 ──────────────────────────────────────────
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target.id === 'modal-overlay') closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── 초기화 ──────────────────────────────────────────
+document.getElementById('today-display').textContent =
+  new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+
+updateMonthDisplay();
+renderFloor();
+renderStats();
+</script>
+</body>
+</html>
