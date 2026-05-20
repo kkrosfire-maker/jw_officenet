@@ -149,6 +149,18 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .legend { display: flex; gap: 12px; font-size: 10px; color: #aaa; }
 .legend-item { display: flex; align-items: center; gap: 4px; }
+
+.btn-excel {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-excel:hover { background: #388e3c; }
 .legend-dot { width: 11px; height: 11px; border-radius: 3px; }
 
 /* Grid */
@@ -427,6 +439,7 @@ header h1 { font-size: 16px; font-weight: 700; }
   <div class="floor-section">
     <div class="section-header">
       <h2>평면도 &mdash; 호실을 클릭하면 정보를 입력할 수 있습니다</h2>
+      <button class="btn-excel" onclick="exportExcel()">&#128190; 엑셀 내보내기</button>
       <div class="legend">
         <div class="legend-item">
           <div class="legend-dot" style="background:#f4f4f4;border:1px solid #ddd;"></div>
@@ -799,6 +812,32 @@ function vacateRoom() {
   renderFloor();
   renderStats();
   toast('퇴실 처리되었습니다.');
+}
+
+async function exportExcel() {
+  const data = load();
+  if (Object.keys(data).length === 0) {
+    toast('저장된 데이터가 없습니다.');
+    return;
+  }
+  try {
+    const res = await fetch('/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data, month: currentMonth }),
+    });
+    if (!res.ok) throw new Error('서버 오류');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `공유오피스_입주현황_${currentMonth}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('엑셀 파일이 저장되었습니다.');
+  } catch (e) {
+    toast('엑셀 내보내기는 대시보드 프로그램에서만 사용 가능합니다.');
+  }
 }
 
 function toast(msg) {
