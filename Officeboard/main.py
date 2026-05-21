@@ -4,6 +4,7 @@ import io
 import json
 import threading
 import webbrowser
+from datetime import date, datetime
 
 from flask import Flask, send_from_directory, request, send_file, session, redirect
 
@@ -184,6 +185,79 @@ def export_excel():
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
+
+
+def _to_date_str(val):
+    if val is None:
+        return ''
+    if isinstance(val, (date, datetime)):
+        return val.strftime('%Y-%m-%d')
+    s = str(val).strip()
+    return s.split(' ')[0] if ' ' in s else s
+
+
+@app.route('/import', methods=['POST'])
+def import_excel():
+    try:
+        file = request.files.get('file')
+        if not file:
+            return 'No file', 400
+
+        wb = openpyxl.load_workbook(file, data_only=True)
+        ws = wb.active
+
+        headers = [str(c.value).strip() if c.value else '' for c in ws[1]]
+
+        # 납부 컬럼에서 월 추출 (예: "2026-05 납부" → "2026-05")
+        paid_col_idx = None
+        paid_month = None
+        for i, h in enumerate(headers):
+            if '납부' in h:
+                paid_col_idx = i
+                paid_month = h.replace('납부', '').strip()
+                break
+
+        col = {h: i for i, h in enumerate(headers)}
+
+        data = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            room_id = str(row[col.get('호실', 0)] or '').strip()
+            if not room_id:
+                continue
+
+            name = str(row[col.get('입주자', 2)] or '').strip()
+            display_name = str(row[col.get('표시명', 1)] or '').strip()
+
+            if not name and not display_name:
+                continue
+
+            rent_val = row[col.get('월세(원)', 6)]
+            try:
+                rent = int(float(str(rent_val))) if rent_val else 0
+            except (ValueError, TypeError):
+                rent = 0
+
+            entry = {
+                'displayName': display_name,
+                'name': name,
+                'phone': str(row[col.get('연락처', 3)] or '').strip(),
+                'start': _to_date_str(row[col.get('계약시작', 4)]),
+                'end': _to_date_str(row[col.get('계약종료', 5)]),
+                'rent': rent,
+                'contractType': str(row[col.get('계약유형', 7)] or '입주').strip(),
+                'memo': str(row[col.get('메모', 9)] or '').strip(),
+            }
+
+            if paid_month and paid_col_idx is not None:
+                paid_val = row[paid_col_idx]
+                entry['paid_' + paid_month] = (str(paid_val).strip() == '완납')
+
+            data[room_id] = entry
+
+        return json.dumps(data, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
+
+    except Exception as e:
+        return str(e), 400
 
 
 def open_browser():

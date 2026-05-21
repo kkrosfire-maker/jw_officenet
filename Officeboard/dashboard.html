@@ -449,6 +449,8 @@ header h1 { font-size: 20px; font-weight: 700; }
     <div class="section-header">
       <h2>평면도 &mdash; 호실을 클릭하면 정보를 입력할 수 있습니다</h2>
       <button class="btn-excel" onclick="exportExcel()">&#128190; 엑셀 내보내기</button>
+      <button class="btn-excel" style="background:#1565c0" onclick="document.getElementById('excel-upload').click()">&#128229; 엑셀 업로드</button>
+      <input type="file" id="excel-upload" accept=".xlsx" style="display:none" onchange="importExcel(event)">
       <div class="legend">
         <div class="legend-item">
           <div class="legend-dot" style="background:#f4f4f4;border:1px solid #ddd;"></div>
@@ -581,8 +583,8 @@ let dataLoaded = false;
 
 const load = () => DATA;
 
-async function store(data) {
-  if (!dataLoaded) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
+async function store(data, force) {
+  if (!dataLoaded && !force) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
   DATA = data;
   const res = await fetch('/data', {
     method: 'POST',
@@ -840,6 +842,36 @@ async function vacateRoom() {
     toast('퇴실 처리되었습니다.');
   } catch(e) {
     toast('저장 실패 — 네트워크를 확인 후 다시 시도해주세요.');
+  }
+}
+
+async function importExcel(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
+  if (!confirm('현재 데이터를 업로드한 엑셀 파일로 교체합니다.\n계속하시겠습니까?')) return;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/import', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(await res.text());
+
+    const imported = await res.json();
+    if (Object.keys(imported).length === 0) {
+      toast('업로드된 데이터가 없습니다. 파일을 확인해주세요.');
+      return;
+    }
+
+    await store(imported, true);
+    dataLoaded = true;
+    renderFloor();
+    renderStats();
+    toast(Object.keys(imported).length + '개 호실 데이터를 업로드했습니다.');
+  } catch(e) {
+    toast('업로드 실패 — ' + e.message);
   }
 }
 
