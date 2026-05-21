@@ -280,6 +280,9 @@ header h1 { font-size: 16px; font-weight: 700; }
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
 }
 .modal-overlay.active { display: flex; }
 
@@ -287,11 +290,17 @@ header h1 { font-size: 16px; font-weight: 700; }
   background: white;
   border-radius: 12px;
   width: 460px;
-  max-width: 94vw;
-  max-height: 92vh;
-  overflow-y: auto;
+  max-width: 100%;
+  max-height: none;
+  overflow-y: visible;
   box-shadow: 0 20px 60px rgba(0,0,0,0.35);
   animation: slideUp 0.16s ease;
+  flex-shrink: 0;
+  margin: auto;
+}
+
+@media (max-height: 700px) {
+  .modal-overlay { align-items: flex-start; }
 }
 
 @keyframes slideUp {
