@@ -70,16 +70,19 @@ def get_data():
 @app.route('/data', methods=['POST'])
 def save_data():
     raw = request.get_data(as_text=True)
-    if DATABASE_URL:
-        conn = _db_conn()
-        cur = conn.cursor()
-        cur.execute("UPDATE office_data SET data = %s WHERE id = 1", (raw,))
-        conn.commit()
-        cur.close()
-        conn.close()
-    else:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            f.write(raw)
+    try:
+        if DATABASE_URL:
+            conn = _db_conn()
+            cur = conn.cursor()
+            cur.execute("UPDATE office_data SET data = %s WHERE id = 1", (raw,))
+            conn.commit()
+            cur.close()
+            conn.close()
+        else:
+            with open(DATA_FILE, 'w', encoding='utf-8') as f:
+                f.write(raw)
+    except Exception as e:
+        return str(e), 500
     return '', 204
 
 

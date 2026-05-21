@@ -580,13 +580,14 @@ let DATA = {};
 
 const load = () => DATA;
 
-function store(data) {
+async function store(data) {
   DATA = data;
-  fetch('/data', {
+  const res = await fetch('/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
 }
 const pKey  = (m)    => 'paid_' + m;
 const isPaid = (d, m) => !!(d && d[pKey(m)]);
@@ -787,7 +788,7 @@ function updatePaidToggle() {
   document.getElementById('btn-unpaid').className = paidState ? '' : 'is-unpaid';
 }
 
-function saveRoom() {
+async function saveRoom() {
   if (!currentRoom) return;
   const data = load();
   const prev = data[currentRoom] || {};
@@ -813,23 +814,31 @@ function saveRoom() {
     });
   }
 
-  store(data);
-  closeModal();
-  renderFloor();
-  renderStats();
-  toast('저장되었습니다.');
+  try {
+    await store(data);
+    closeModal();
+    renderFloor();
+    renderStats();
+    toast('저장되었습니다.');
+  } catch(e) {
+    toast('저장 실패 — 네트워크를 확인 후 다시 시도해주세요.');
+  }
 }
 
-function vacateRoom() {
+async function vacateRoom() {
   if (!currentRoom) return;
   if (!confirm(currentRoom + ' 퇴실 처리하시겠습니까?\n입력된 모든 정보가 삭제됩니다.')) return;
   const data = load();
   delete data[currentRoom];
-  store(data);
-  closeModal();
-  renderFloor();
-  renderStats();
-  toast('퇴실 처리되었습니다.');
+  try {
+    await store(data);
+    closeModal();
+    renderFloor();
+    renderStats();
+    toast('퇴실 처리되었습니다.');
+  } catch(e) {
+    toast('저장 실패 — 네트워크를 확인 후 다시 시도해주세요.');
+  }
 }
 
 async function exportExcel() {
