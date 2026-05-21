@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공유오피스 대시보드 — 로그인</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Malgun Gothic', -apple-system, sans-serif;
+  background: #2c2c2c;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-box {
+  background: #3a3a3a;
+  border-radius: 12px;
+  padding: 40px 36px;
+  width: 340px;
+  max-width: 94vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+h1 {
+  color: #e8e8e8;
+  font-size: 18px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.subtitle {
+  color: #888;
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 28px;
+}
+label {
+  display: block;
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+input[type="password"] {
+  width: 100%;
+  padding: 11px 14px;
+  background: #484848;
+  border: 1.5px solid #585858;
+  border-radius: 7px;
+  color: #e8e8e8;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type="password"]:focus { border-color: #888; }
+.error {
+  background: #4a1a1a;
+  border: 1px solid #7a2a2a;
+  color: #ff8a8a;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-top: 12px;
+  display: none;
+}
+.error.show { display: block; }
+button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: #1b2838;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:hover { background: #243447; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <h1>&#127970; 공유오피스 대시보드</h1>
+  <p class="subtitle">접근하려면 비밀번호를 입력하세요</p>
+  <form method="POST" action="/login">
+    <label>비밀번호</label>
+    <input type="password" name="password" autofocus placeholder="••••••••">
+    <div class="error" id="err">비밀번호가 틀렸습니다.</div>
+    <button type="submit">입력</button>
+  </form>
+</div>
+<script>
+  if (new URLSearchParams(location.search).get('error')) {
+    document.getElementById('err').classList.add('show');
+  }
+</script>
+</body>
+</html>

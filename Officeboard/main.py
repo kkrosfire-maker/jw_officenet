@@ -5,7 +5,7 @@ import json
 import threading
 import webbrowser
 
-from flask import Flask, send_from_directory, request, send_file
+from flask import Flask, send_from_directory, request, send_file, session, redirect
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -14,8 +14,37 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 PORT = 5050
 DATABASE_URL = os.environ.get('DATABASE_URL')
+APP_PASSWORD = os.environ.get('APP_PASSWORD')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'local-dev-key')
 
 app = Flask(__name__)
+app.secret_key = SECRET_KEY
+
+
+@app.before_request
+def require_login():
+    if not APP_PASSWORD:
+        return
+    if request.endpoint == 'login':
+        return
+    if not session.get('authenticated'):
+        return redirect('/login')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('password') == APP_PASSWORD:
+            session['authenticated'] = True
+            return redirect('/')
+        return redirect('/login?error=1')
+    return send_from_directory(BASE_DIR, 'login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
 
 
 def _db_conn():
