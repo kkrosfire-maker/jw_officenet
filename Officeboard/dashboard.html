@@ -700,7 +700,7 @@ function daysLeft(end) {
 
 function statusClass(id) {
   const d = load()[id];
-  if (!d || !d.name) return 'vacant';
+  if (!d || (!d.name && !d.tenantName)) return 'vacant';
   return isPaid(d, currentMonth) ? 'paid' : 'unpaid';
 }
 
@@ -739,11 +739,11 @@ function renderFloor() {
 
         let html = `<div class="type-strip" style="background:${color}"></div>`;
         html += `<div class="room-id">${cell}</div>`;
-        html += `<div class="room-name">${d.name || '공실'}</div>`;
+        html += `<div class="room-name">${d.name || d.tenantName || '공실'}</div>`;
         if (d.name && d.rent) html += `<div class="room-rent">${Math.round(d.rent/10000)}만원</div>`;
         if (d.name && st === 'paid')   html += `<div class="badge-paid">완</div>`;
         if (d.name && st === 'unpaid') html += `<div class="badge-miss">미</div>`;
-        if (tag && d.name)    html += `<div class="badge-expiry">${tag}</div>`;
+        if (tag && (d.name || d.tenantName)) html += `<div class="badge-expiry">${tag}</div>`;
         if (d.contractType === '비상주' && d.name) html += `<div class="badge-virtual">비상주</div>`;
 
         el.innerHTML = html;
@@ -757,7 +757,7 @@ function renderFloor() {
 // ── 통계 렌더 ───────────────────────────────────────
 function renderStats() {
   const data = load();
-  const occ     = ALL_ROOMS.filter(r => data[r] && data[r].name);
+  const occ     = ALL_ROOMS.filter(r => data[r] && (data[r].name || data[r].tenantName));
   const paid    = occ.filter(r => isPaid(data[r], currentMonth));
   const unpaid  = occ.filter(r => !isPaid(data[r], currentMonth));
   const paidAmt = paid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
@@ -798,8 +798,8 @@ function renderStats() {
 
   document.getElementById('type-summary').innerHTML = ['A','B','C','D'].map(z => {
     const rooms  = ALL_ROOMS.filter(r => zone(r) === z);
-    const zocc   = rooms.filter(r => data[r] && data[r].name).length;
-    const zunpaid = rooms.filter(r => data[r] && data[r].name && !isPaid(data[r], currentMonth)).length;
+    const zocc   = rooms.filter(r => data[r] && (data[r].name || data[r].tenantName)).length;
+    const zunpaid = rooms.filter(r => data[r] && (data[r].name || data[r].tenantName) && !isPaid(data[r], currentMonth)).length;
     return `
       <div class="type-card">
         <div class="type-badge" style="background:${ZONE[z].color}">${z}</div>
@@ -888,7 +888,7 @@ function openModal(id) {
 
   const tag = daysLeft(d.end);
   const warn = document.getElementById('expiry-warn');
-  if (tag && d.name) {
+  if (tag && (d.name || d.tenantName)) {
     warn.style.display = 'block';
     warn.textContent = tag === '만료'
       ? '⚠ 계약이 만료되었습니다 (' + d.end + ')'
@@ -897,7 +897,7 @@ function openModal(id) {
     warn.style.display = 'none';
   }
 
-  document.getElementById('btn-vacate').style.display = d.name ? 'inline-block' : 'none';
+  document.getElementById('btn-vacate').style.display = (d.name || d.tenantName) ? 'inline-block' : 'none';
   document.getElementById('modal-overlay').classList.add('active');
   setTimeout(() => document.getElementById('f-name').focus(), 60);
 }
@@ -937,7 +937,8 @@ async function saveRoom() {
   const prev = data[currentRoom] || {};
   const name = document.getElementById('f-name').value.trim();
 
-  if (!name) {
+  const tenantName = document.getElementById('f-tenant-name').value.trim();
+  if (!name && !tenantName) {
     delete data[currentRoom];
   } else {
     const vat = document.getElementById('f-vat').checked;
@@ -949,7 +950,7 @@ async function saveRoom() {
     data[currentRoom] = Object.assign({}, prev, {
       displayName: undefined,
       name,
-      tenantName: document.getElementById('f-tenant-name').value.trim(),
+      tenantName,
       phone: document.getElementById('f-phone').value.trim(),
       start: document.getElementById('f-start').value,
       end:   document.getElementById('f-end').value,
