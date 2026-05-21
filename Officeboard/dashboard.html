@@ -28,7 +28,7 @@ header {
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
 
-header h1 { font-size: 16px; font-weight: 700; }
+header h1 { font-size: 20px; font-weight: 700; }
 
 .header-right { display: flex; align-items: center; gap: 12px; }
 
@@ -46,21 +46,21 @@ header h1 { font-size: 16px; font-weight: 700; }
   border: none;
   color: white;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   opacity: 0.8;
-  width: 18px;
+  width: 22px;
 }
 
 .month-nav button:hover { opacity: 1; }
 
 #month-display {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
-  min-width: 76px;
+  min-width: 90px;
   text-align: center;
 }
 
-#today-display { font-size: 11px; color: rgba(255,255,255,0.5); }
+#today-display { font-size: 14px; color: rgba(255,255,255,0.5); }
 
 
 
@@ -85,8 +85,8 @@ header h1 { font-size: 16px; font-weight: 700; }
   flex: 0 0 auto;
 }
 
-.stat-value { font-size: 17px; font-weight: 800; line-height: 1.2; color: #e8e8e8; }
-.stat-label { font-size: 9px; color: #aaa; margin-top: 1px; }
+.stat-value { font-size: 21px; font-weight: 800; line-height: 1.2; color: #e8e8e8; }
+.stat-label { font-size: 13px; color: #aaa; margin-top: 2px; }
 
 /* Type summary */
 .type-summary {
@@ -111,20 +111,20 @@ header h1 { font-size: 16px; font-weight: 700; }
 }
 
 .type-badge {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 13px;
+  font-size: 16px;
   color: white;
   flex-shrink: 0;
 }
 
-.type-info { font-size: 11px; color: #aaa; }
-.type-info strong { font-size: 12px; color: #e0e0e0; display: block; line-height: 1.4; }
+.type-info { font-size: 13px; color: #aaa; }
+.type-info strong { font-size: 15px; color: #e0e0e0; display: block; line-height: 1.4; }
 
 /* Floor */
 .main { padding: 14px 16px; }
@@ -145,9 +145,9 @@ header h1 { font-size: 16px; font-weight: 700; }
   gap: 6px;
 }
 
-.section-header h2 { font-size: 12px; color: #aaa; font-weight: 600; }
+.section-header h2 { font-size: 15px; color: #aaa; font-weight: 600; }
 
-.legend { display: flex; gap: 12px; font-size: 10px; color: #aaa; }
+.legend { display: flex; gap: 12px; font-size: 13px; color: #aaa; }
 .legend-item { display: flex; align-items: center; gap: 4px; }
 
 .btn-excel {
@@ -155,13 +155,13 @@ header h1 { font-size: 16px; font-weight: 700; }
   color: white;
   border: none;
   border-radius: 7px;
-  padding: 6px 14px;
-  font-size: 12px;
+  padding: 8px 16px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
 }
 .btn-excel:hover { background: #388e3c; }
-.legend-dot { width: 11px; height: 11px; border-radius: 3px; }
+.legend-dot { width: 13px; height: 13px; border-radius: 3px; }
 
 /* Grid */
 .floor-grid { display: flex; flex-direction: column; gap: 4px; }
@@ -169,17 +169,17 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .cell {
   flex: 1;
-  min-width: 62px;
-  max-width: 90px;
-  height: 68px;
+  min-width: 74px;
+  max-width: 106px;
+  height: 84px;
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3px 2px;
+  padding: 4px 3px;
   position: relative;
-  font-size: 10px;
+  font-size: 13px;
   text-align: center;
   transition: transform 0.1s, box-shadow 0.1s;
 }
@@ -200,7 +200,7 @@ header h1 { font-size: 16px; font-weight: 700; }
 .cell-room.unpaid   { background: #fce4ec; border-color: #e91e63; color: #111; }
 
 .cell-util     { background: #eceff1; border: 1px dashed #cfd8dc; }
-.cell-corridor { background: #ede7f6; border: 1px solid #ce93d8; color: #6a1b9a; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+.cell-corridor { background: #ede7f6; border: 1px solid #ce93d8; color: #6a1b9a; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
 .cell-empty    { background: transparent; border: none; pointer-events: none; }
 .cell-gap      { flex: 0.5; min-width: 0; background: transparent; border: none; pointer-events: none; }
 
@@ -211,28 +211,28 @@ header h1 { font-size: 16px; font-weight: 700; }
   border-radius: 4px 4px 0 0;
 }
 
-.room-id   { font-weight: 800; font-size: 11px; margin-top: 6px; }
-.room-name { font-size: 10px; margin-top: 1px; max-width: 76px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.room-rent { font-size: 9px; margin-top: 1px; opacity: 0.75; }
-.room-type-sub { font-size: 8px; opacity: 0.6; margin-top: 1px; }
+.room-id   { font-weight: 800; font-size: 14px; margin-top: 6px; }
+.room-name { font-size: 13px; margin-top: 1px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.room-rent { font-size: 13px; margin-top: 1px; opacity: 0.75; }
+.room-type-sub { font-size: 13px; opacity: 0.6; margin-top: 1px; }
 
 .badge-unpaid {
   position: absolute;
-  top: 5px; right: 4px;
+  top: 6px; right: 4px;
   background: #e91e63;
   color: white;
-  font-size: 7px;
+  font-size: 13px;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 1px 4px;
   font-weight: 800;
 }
 
 .badge-paid {
   position: absolute;
-  top: 5px; left: 4px;
+  top: 6px; left: 4px;
   background: #2e7d32;
   color: white;
-  font-size: 9px;
+  font-size: 13px;
   border-radius: 3px;
   padding: 1px 4px;
   font-weight: 800;
@@ -240,10 +240,10 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .badge-miss {
   position: absolute;
-  top: 5px; left: 4px;
+  top: 6px; left: 4px;
   background: #d32f2f;
   color: white;
-  font-size: 9px;
+  font-size: 13px;
   border-radius: 3px;
   padding: 1px 4px;
   font-weight: 800;
@@ -251,23 +251,23 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .badge-expiry {
   position: absolute;
-  bottom: 3px; right: 3px;
+  bottom: 4px; right: 3px;
   background: #ff6f00;
   color: white;
-  font-size: 7px;
+  font-size: 13px;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 1px 4px;
   font-weight: 700;
 }
 
 .badge-virtual {
   position: absolute;
-  bottom: 3px; left: 3px;
+  bottom: 4px; left: 3px;
   background: #546e7a;
   color: white;
-  font-size: 7px;
+  font-size: 13px;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 1px 4px;
   font-weight: 700;
 }
 
@@ -321,10 +321,10 @@ header h1 { font-size: 16px; font-weight: 700; }
 }
 
 .modal-title-row { display: flex; align-items: center; gap: 10px; }
-.modal-header h2 { font-size: 18px; color: #1a1a2e; }
-.modal-type-label { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px; color: white; }
+.modal-header h2 { font-size: 22px; color: #1a1a2e; }
+.modal-type-label { font-size: 14px; font-weight: 700; border-radius: 5px; padding: 3px 10px; color: white; }
 
-.btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #bbb; }
+.btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #bbb; }
 .btn-close:hover { color: #555; }
 
 .expiry-warn {
@@ -332,7 +332,7 @@ header h1 { font-size: 16px; font-weight: 700; }
   border: 1px solid #ffe082;
   border-radius: 6px;
   padding: 7px 11px;
-  font-size: 12px;
+  font-size: 15px;
   color: #e65100;
   margin-bottom: 13px;
 }
@@ -341,10 +341,10 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .form-group label {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   color: #aaa;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -353,10 +353,10 @@ header h1 { font-size: 16px; font-weight: 700; }
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1.5px solid #e0e0e0;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 16px;
   font-family: inherit;
   color: #333;
   background: white;
@@ -378,11 +378,11 @@ header h1 { font-size: 16px; font-weight: 700; }
 
 .paid-toggle button {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   border: none;
   background: #f8f8f8;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   font-family: inherit;
   font-weight: 600;
   color: #aaa;
@@ -395,11 +395,11 @@ header h1 { font-size: 16px; font-weight: 700; }
 .modal-actions { display: flex; gap: 7px; margin-top: 18px; }
 
 .btn {
-  padding: 9px 14px;
+  padding: 11px 16px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   font-family: inherit;
 }
@@ -414,9 +414,9 @@ header h1 { font-size: 16px; font-weight: 700; }
   bottom: 20px; right: 20px;
   background: #1b2838;
   color: white;
-  padding: 10px 18px;
+  padding: 12px 20px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 16px;
   z-index: 9999;
   opacity: 0;
   transform: translateY(5px);
