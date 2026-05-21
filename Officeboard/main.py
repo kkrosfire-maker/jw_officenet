@@ -11,6 +11,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 PORT = 5050
 
 app = Flask(__name__)
@@ -19,6 +20,21 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return send_from_directory(BASE_DIR, 'dashboard.html')
+
+
+@app.route('/data', methods=['GET'])
+def get_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            return f.read(), 200, {'Content-Type': 'application/json'}
+    return '{}', 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/data', methods=['POST'])
+def save_data():
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        f.write(request.get_data(as_text=True))
+    return '', 204
 
 
 @app.route('/export', methods=['POST'])

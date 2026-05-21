@@ -567,9 +567,18 @@ let currentRoom  = null;
 let paidState    = false;
 
 // ── 데이터 ──────────────────────────────────────────
-const DATA_KEY = 'cowork_v1';
-const load  = ()     => JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
-const store = (data) => localStorage.setItem(DATA_KEY, JSON.stringify(data));
+let DATA = {};
+
+const load = () => DATA;
+
+function store(data) {
+  DATA = data;
+  fetch('/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
 const pKey  = (m)    => 'paid_' + m;
 const isPaid = (d, m) => !!(d && d[pKey(m)]);
 
@@ -859,9 +868,19 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 document.getElementById('today-display').textContent =
   new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
 
-updateMonthDisplay();
-renderFloor();
-renderStats();
+async function init() {
+  try {
+    const res = await fetch('/data');
+    DATA = await res.json();
+  } catch(e) {
+    DATA = {};
+  }
+  updateMonthDisplay();
+  renderFloor();
+  renderStats();
+}
+
+init();
 </script>
 </body>
 </html>
