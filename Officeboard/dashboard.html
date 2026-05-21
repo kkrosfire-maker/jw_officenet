@@ -559,7 +559,7 @@ const LAYOUT = [
 ];
 
 // 전체 호실 목록 (중복 제거)
-const ALL_ROOMS = [...new Set(LAYOUT.flat().filter(c => c && c !== 'U' && c !== 'CORR' && c !== 'GAP'))];
+const ALL_ROOMS = [...new Set([].concat.apply([], LAYOUT).filter(c => c && c !== 'U' && c !== 'CORR' && c !== 'GAP'))];
 
 // ── 상태 ────────────────────────────────────────────
 let currentMonth = new Date().toISOString().slice(0, 7);
@@ -653,12 +653,12 @@ function renderFloor() {
 // ── 통계 렌더 ───────────────────────────────────────
 function renderStats() {
   const data = load();
-  const occ     = ALL_ROOMS.filter(r => data[r]?.name);
+  const occ     = ALL_ROOMS.filter(r => data[r] && data[r].name);
   const paid    = occ.filter(r => isPaid(data[r], currentMonth));
   const unpaid  = occ.filter(r => !isPaid(data[r], currentMonth));
-  const paidAmt = paid.reduce((s,r) => s + (data[r]?.rent||0), 0);
-  const unpaidAmt = unpaid.reduce((s,r) => s + (data[r]?.rent||0), 0);
-  const expiring = occ.filter(r => daysLeft(data[r]?.end) !== null).length;
+  const paidAmt = paid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const unpaidAmt = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const expiring = occ.filter(r => daysLeft(data[r] && data[r].end) !== null).length;
 
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-card">
@@ -694,8 +694,8 @@ function renderStats() {
 
   document.getElementById('type-summary').innerHTML = ['A','B','C','D'].map(z => {
     const rooms  = ALL_ROOMS.filter(r => zone(r) === z);
-    const zocc   = rooms.filter(r => data[r]?.name).length;
-    const zunpaid = rooms.filter(r => data[r]?.name && !isPaid(data[r], currentMonth)).length;
+    const zocc   = rooms.filter(r => data[r] && data[r].name).length;
+    const zunpaid = rooms.filter(r => data[r] && data[r].name && !isPaid(data[r], currentMonth)).length;
     return `
       <div class="type-card">
         <div class="type-badge" style="background:${ZONE[z].color}">${z}</div>
