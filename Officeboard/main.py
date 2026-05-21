@@ -135,8 +135,8 @@ def export_excel():
     header_align = Alignment(horizontal='center', vertical='center')
 
     headers = [
-        '호실', '표시명', '입주자', '연락처',
-        '계약시작', '계약종료', '월세(원)', '계약유형',
+        '호실', '상호명', '입주자 이름', '연락처',
+        '계약시작', '계약종료', 'VAT', '할인율', '월세(원)', '계약유형',
         f'{month} 납부', '메모',
     ]
     for col, h in enumerate(headers, 1):
@@ -154,13 +154,17 @@ def export_excel():
             paid_val = '완납' if d.get(paid_key) else '미납'
         else:
             paid_val = ''
+        discount_pct = int(float(d.get('discount', 0)) * 100)
+        discount_str = f'{discount_pct}%' if discount_pct else '표준가'
         row_data = [
             room_id,
-            d.get('displayName', ''),
             d.get('name', ''),
+            d.get('tenantName', ''),
             d.get('phone', ''),
             d.get('start', ''),
             d.get('end', ''),
+            '유' if d.get('vat') else '무',
+            discount_str,
             d.get('rent', 0) or '',
             d.get('contractType', ''),
             paid_val,
@@ -225,27 +229,42 @@ def import_excel():
             if not room_id:
                 continue
 
-            name = str(row[col.get('입주자', 2)] or '').strip()
-            display_name = str(row[col.get('표시명', 1)] or '').strip()
-
-            if not name and not display_name:
+            # 상호명 컬럼 우선, 없으면 구버전 '입주자' 컬럼 사용
+            name = str(row[col.get('상호명', col.get('입주자', 1))] or '').strip()
+            if not name:
                 continue
 
-            rent_val = row[col.get('월세(원)', 6)]
+            tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
+
+            rent_val = row[col.get('월세(원)', 8)]
             try:
                 rent = int(float(str(rent_val))) if rent_val else 0
             except (ValueError, TypeError):
                 rent = 0
 
+            vat_str = str(row[col.get('VAT', '')] or '').strip()
+            vat = (vat_str == '유')
+
+            discount_str = str(row[col.get('할인율', '')] or '').strip()
+            if discount_str and discount_str != '표준가' and discount_str.endswith('%'):
+                try:
+                    discount = float(discount_str.replace('%', '')) / 100
+                except (ValueError, TypeError):
+                    discount = 0.0
+            else:
+                discount = 0.0
+
             entry = {
-                'displayName': display_name,
                 'name': name,
+                'tenantName': tenant_name,
                 'phone': str(row[col.get('연락처', 3)] or '').strip(),
                 'start': _to_date_str(row[col.get('계약시작', 4)]),
                 'end': _to_date_str(row[col.get('계약종료', 5)]),
+                'vat': vat,
+                'discount': discount,
                 'rent': rent,
-                'contractType': str(row[col.get('계약유형', 7)] or '입주').strip(),
-                'memo': str(row[col.get('메모', 9)] or '').strip(),
+                'contractType': str(row[col.get('계약유형', 9)] or '입주').strip(),
+                'memo': str(row[col.get('메모', 11)] or '').strip(),
             }
 
             if paid_month and paid_col_idx is not None:

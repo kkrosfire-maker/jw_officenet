@@ -424,6 +424,58 @@ header h1 { font-size: 20px; font-weight: 700; }
   pointer-events: none;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
+
+.vat-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #555;
+  transition: border-color 0.15s;
+}
+.vat-check-label:hover { border-color: #999; }
+.vat-check-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #1b2838;
+  flex-shrink: 0;
+}
+.discount-options { display: flex; gap: 5px; flex-wrap: wrap; }
+.discount-btn {
+  flex: 1;
+  min-width: 52px;
+  padding: 8px 4px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #888;
+  transition: all 0.15s;
+  text-align: center;
+}
+.discount-btn.selected { border-color: #1b2838; background: #1b2838; color: white; }
+.discount-btn:hover { border-color: #999; background: #f0f0f0; }
+.discount-btn.selected:hover { background: #243447; }
+.base-rent-info {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 10px;
+}
+.base-rent-info strong { color: #333; margin-left: 4px; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -484,13 +536,12 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
       <div id="expiry-warn" class="expiry-warn" style="display:none;"></div>
       <div class="form-group">
-        <label>&#9998; 방 이름 (표시명)</label>
-        <input type="text" id="f-display-name" placeholder="예: 101호, 대표실 (비우면 기본 ID 사용)">
+        <label>상호명</label>
+        <input type="text" id="f-name" placeholder="상호명 입력 (개인이면 이름, 공실이면 비워두세요)">
       </div>
-      <hr style="border:none;border-top:1px solid #eee;margin:4px 0 12px;">
       <div class="form-group">
         <label>입주자 이름</label>
-        <input type="text" id="f-name" placeholder="이름 입력 (공실이면 비워두세요)">
+        <input type="text" id="f-tenant-name" placeholder="입주자 성함">
       </div>
       <div class="form-group">
         <label>연락처</label>
@@ -506,9 +557,29 @@ header h1 { font-size: 20px; font-weight: 700; }
           <input type="date" id="f-end">
         </div>
       </div>
+      <div class="base-rent-info" id="base-rent-row" style="display:none;">
+        기준 임대료: <strong id="base-rent-display"></strong>
+      </div>
+      <div class="form-group">
+        <label>VAT (부가세)</label>
+        <label class="vat-check-label">
+          <input type="checkbox" id="f-vat" onchange="updateRentCalc()">
+          부가세 포함 (×1.1)
+        </label>
+      </div>
+      <div class="form-group">
+        <label>할인율</label>
+        <div class="discount-options">
+          <button type="button" class="discount-btn selected" data-discount="0" onclick="selectDiscount(this)">표준가</button>
+          <button type="button" class="discount-btn" data-discount="0.1" onclick="selectDiscount(this)">10%</button>
+          <button type="button" class="discount-btn" data-discount="0.2" onclick="selectDiscount(this)">20%</button>
+          <button type="button" class="discount-btn" data-discount="0.25" onclick="selectDiscount(this)">25%</button>
+          <button type="button" class="discount-btn" data-discount="0.3" onclick="selectDiscount(this)">30%</button>
+        </div>
+      </div>
       <div class="form-group">
         <label>월 임대료 (원)</label>
-        <input type="number" id="f-rent" placeholder="예: 300000">
+        <input type="text" id="f-rent" placeholder="예: 430,000">
       </div>
       <div class="form-group">
         <label>계약 유형</label>
@@ -571,6 +642,27 @@ const LAYOUT = [
 
 // 전체 호실 목록 (중복 제거)
 const ALL_ROOMS = [...new Set([].concat.apply([], LAYOUT).filter(c => c && c !== 'U' && c !== 'CORR' && c !== 'GAP'))];
+
+// ── 호실별 기준 임대료 ──────────────────────────────────
+const BASE_RENT = {
+  A002:430000, A003:430000, A004:430000, A005:430000, A006:430000, A007:430000, A010:430000,
+  A008:500000, A009:500000,
+  A011:330000, A012:330000, A013:330000,
+  A014:380000, A015:380000, A016:380000, A017:380000,
+  B001:380000, B002:380000,
+  B003:330000, B004:330000, B005:330000, B006:330000, B007:330000,
+  B008:550000, B009:550000,
+  B010:380000, B011:380000, B012:380000, B013:380000, B014:380000,
+  C001:380000, C002:380000,
+  C003:280000, C004:280000, C005:280000, C006:280000, C007:280000, C008:280000,
+  C009:430000, C010:430000, C011:430000, C012:430000, C013:430000, C014:430000,
+  C015:430000, C016:430000, C017:430000, C018:430000,
+};
+
+function fmtWon(n) {
+  if (!n) return '';
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 // ── 상태 ────────────────────────────────────────────
 let currentMonth = new Date().toISOString().slice(0, 7);
@@ -645,10 +737,8 @@ function renderFloor() {
         el.classList.add('cell-room', st);
         el.onclick = () => openModal(cell);
 
-        const label = d.displayName || cell;
         let html = `<div class="type-strip" style="background:${color}"></div>`;
-        html += `<div class="room-id">${label}</div>`;
-        if (d.displayName) html += `<div class="room-type-sub">${cell}</div>`;
+        html += `<div class="room-id">${cell}</div>`;
         html += `<div class="room-name">${d.name || '공실'}</div>`;
         if (d.name && d.rent) html += `<div class="room-rent">${Math.round(d.rent/10000)}만원</div>`;
         if (d.name && st === 'paid')   html += `<div class="badge-paid">완</div>`;
@@ -752,14 +842,46 @@ function openModal(id) {
   document.getElementById('modal-type-label').textContent = ZONE[z].name;
   document.getElementById('modal-type-label').style.background = color;
 
-  document.getElementById('f-display-name').value = d.displayName || '';
-  document.getElementById('f-name').value  = d.name  || '';
-  document.getElementById('f-phone').value = d.phone || '';
-  document.getElementById('f-start').value = d.start || '';
-  document.getElementById('f-end').value   = d.end   || '';
-  document.getElementById('f-rent').value  = d.rent  || '';
-  document.getElementById('f-type').value  = d.contractType || '입주';
-  document.getElementById('f-memo').value  = d.memo  || '';
+  document.getElementById('f-name').value        = d.name || '';
+  document.getElementById('f-tenant-name').value = d.tenantName || '';
+  document.getElementById('f-phone').value       = d.phone || '';
+  document.getElementById('f-start').value       = d.start || '';
+  document.getElementById('f-end').value         = d.end   || '';
+  document.getElementById('f-type').value        = d.contractType || '입주';
+  document.getElementById('f-memo').value        = d.memo  || '';
+
+  // 기준 임대료 표시
+  var base = BASE_RENT[id];
+  var baseRow = document.getElementById('base-rent-row');
+  if (base) {
+    document.getElementById('base-rent-display').textContent = fmtWon(base) + '원';
+    baseRow.style.display = 'flex';
+  } else {
+    baseRow.style.display = 'none';
+  }
+
+  // VAT 설정
+  document.getElementById('f-vat').checked = !!(d.vat);
+
+  // 할인율 버튼 설정
+  var savedDiscount = d.discount || 0;
+  document.querySelectorAll('.discount-btn').forEach(function(b) {
+    b.classList.remove('selected');
+    if (Math.abs(parseFloat(b.getAttribute('data-discount')) - savedDiscount) < 0.001) {
+      b.classList.add('selected');
+    }
+  });
+
+  // 임대료: 기존값 표시, 공실이면 기준가 자동계산
+  if (d.rent) {
+    document.getElementById('f-rent').value = fmtWon(d.rent);
+  } else if (base) {
+    var disc = savedDiscount || 0;
+    var vat  = !!(d.vat);
+    document.getElementById('f-rent').value = fmtWon(Math.round(base * (1 - disc) * (vat ? 1.1 : 1)));
+  } else {
+    document.getElementById('f-rent').value = '';
+  }
 
   paidState = isPaid(d, currentMonth);
   updatePaidToggle();
@@ -785,6 +907,23 @@ function closeModal() {
   currentRoom = null;
 }
 
+function updateRentCalc() {
+  if (!currentRoom) return;
+  var base = BASE_RENT[currentRoom];
+  if (!base) return;
+  var vat = document.getElementById('f-vat').checked;
+  var selBtn = document.querySelector('.discount-btn.selected');
+  var discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
+  var calc = Math.round(base * (1 - discount) * (vat ? 1.1 : 1));
+  document.getElementById('f-rent').value = fmtWon(calc);
+}
+
+function selectDiscount(btn) {
+  document.querySelectorAll('.discount-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  updateRentCalc();
+}
+
 function setPaid(val) { paidState = val; updatePaidToggle(); }
 
 function updatePaidToggle() {
@@ -798,20 +937,25 @@ async function saveRoom() {
   const prev = data[currentRoom] || {};
   const name = document.getElementById('f-name').value.trim();
 
-  const displayName = document.getElementById('f-display-name').value.trim();
-
-  // 방 이름(표시명)만 바꿔도 저장 — 입주자 없어도 displayName은 유지
-  const hasContent = name || displayName;
-  if (!hasContent) {
+  if (!name) {
     delete data[currentRoom];
   } else {
+    const vat = document.getElementById('f-vat').checked;
+    const selBtn = document.querySelector('.discount-btn.selected');
+    const discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
+    const rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
+    const rent = parseInt(rentRaw, 10) || 0;
+
     data[currentRoom] = Object.assign({}, prev, {
-      displayName: displayName || '',
+      displayName: undefined,
       name,
+      tenantName: document.getElementById('f-tenant-name').value.trim(),
       phone: document.getElementById('f-phone').value.trim(),
       start: document.getElementById('f-start').value,
       end:   document.getElementById('f-end').value,
-      rent:  parseInt(document.getElementById('f-rent').value) || 0,
+      rent,
+      vat,
+      discount,
       contractType: document.getElementById('f-type').value,
       memo:  document.getElementById('f-memo').value.trim(),
       [pKey(currentMonth)]: paidState,
