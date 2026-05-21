@@ -82,18 +82,21 @@ def index():
 
 @app.route('/data', methods=['GET'])
 def get_data():
-    if DATABASE_URL:
-        conn = _db_conn()
-        cur = conn.cursor()
-        cur.execute("SELECT data FROM office_data WHERE id = 1")
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        return json.dumps(row[0] if row else {}), 200, {'Content-Type': 'application/json'}
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            return f.read(), 200, {'Content-Type': 'application/json'}
-    return '{}', 200, {'Content-Type': 'application/json'}
+    try:
+        if DATABASE_URL:
+            conn = _db_conn()
+            cur = conn.cursor()
+            cur.execute("SELECT data FROM office_data WHERE id = 1")
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            return json.dumps(row[0] if row else {}), 200, {'Content-Type': 'application/json'}
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                return f.read(), 200, {'Content-Type': 'application/json'}
+        return '{}', 200, {'Content-Type': 'application/json'}
+    except Exception as e:
+        return str(e), 500
 
 
 @app.route('/data', methods=['POST'])

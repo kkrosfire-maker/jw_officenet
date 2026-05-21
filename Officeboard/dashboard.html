@@ -577,10 +577,12 @@ let paidState    = false;
 
 // ── 데이터 ──────────────────────────────────────────
 let DATA = {};
+let dataLoaded = false;
 
 const load = () => DATA;
 
 async function store(data) {
+  if (!dataLoaded) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
   DATA = data;
   const res = await fetch('/data', {
     method: 'POST',
@@ -892,9 +894,12 @@ async function init() {
   renderStats();
   try {
     const res = await fetch('/data');
+    if (!res.ok) throw new Error('서버 오류 ' + res.status);
     DATA = await res.json();
+    dataLoaded = true;
   } catch(e) {
-    DATA = {};
+    dataLoaded = false;
+    toast('데이터 로드 실패 — 새로고침 해주세요.');
   }
   renderFloor();
   renderStats();
