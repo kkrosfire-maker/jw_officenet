@@ -150,7 +150,7 @@ def export_excel():
     paid_key = f'paid_{month}'
     for row_idx, room_id in enumerate(sorted(data.keys()), 2):
         d = data[room_id]
-        if d.get('name'):
+        if d.get('name') or d.get('tenantName'):
             paid_val = '완납' if d.get(paid_key) else '미납'
         else:
             paid_val = ''
@@ -231,21 +231,23 @@ def import_excel():
 
             # 상호명 컬럼 우선, 없으면 구버전 '입주자' 컬럼 사용
             name = str(row[col.get('상호명', col.get('입주자', 1))] or '').strip()
-            if not name:
+            tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
+            if not name and not tenant_name:
                 continue
 
-            tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
-
-            rent_val = row[col.get('월세(원)', 8)]
+            rent_col = col.get('월세(원)')
+            rent_val = row[rent_col] if rent_col is not None else None
             try:
                 rent = int(float(str(rent_val))) if rent_val else 0
             except (ValueError, TypeError):
                 rent = 0
 
-            vat_str = str(row[col.get('VAT', '')] or '').strip()
-            vat = (vat_str == '유')
+            vat_col = col.get('VAT')
+            vat_str = str(row[vat_col] or '') if vat_col is not None else ''
+            vat = (vat_str.strip() == '유')
 
-            discount_str = str(row[col.get('할인율', '')] or '').strip()
+            disc_col = col.get('할인율')
+            discount_str = str(row[disc_col] or '').strip() if disc_col is not None else ''
             if discount_str and discount_str != '표준가' and discount_str.endswith('%'):
                 try:
                     discount = float(discount_str.replace('%', '')) / 100
