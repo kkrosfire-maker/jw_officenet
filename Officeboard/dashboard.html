@@ -869,13 +869,15 @@ document.getElementById('today-display').textContent =
   new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
 
 async function init() {
+  updateMonthDisplay();
+  renderFloor();
+  renderStats();
   try {
     const res = await fetch('/data');
     DATA = await res.json();
   } catch(e) {
     DATA = {};
   }
-  updateMonthDisplay();
   renderFloor();
   renderStats();
 }
