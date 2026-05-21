@@ -13,8 +13,37 @@ from openpyxl.styles import Font, PatternFill, Alignment
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 PORT = 5050
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 app = Flask(__name__)
+
+
+def _db_conn():
+    import psycopg2
+    return psycopg2.connect(DATABASE_URL)
+
+
+def init_db():
+    if not DATABASE_URL:
+        return
+    conn = _db_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS office_data (
+            id INTEGER PRIMARY KEY,
+            data JSONB NOT NULL DEFAULT '{}'
+        )
+    """)
+    cur.execute("""
+        INSERT INTO office_data (id, data) VALUES (1, '{}')
+        ON CONFLICT (id) DO NOTHING
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+init_db()
 
 
 @app.route('/')
@@ -24,6 +53,14 @@ def index():
 
 @app.route('/data', methods=['GET'])
 def get_data():
+    if DATABASE_URL:
+        conn = _db_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT data FROM office_data WHERE id = 1")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return json.dumps(row[0] if row else {}), 200, {'Content-Type': 'application/json'}
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return f.read(), 200, {'Content-Type': 'application/json'}
@@ -32,8 +69,17 @@ def get_data():
 
 @app.route('/data', methods=['POST'])
 def save_data():
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        f.write(request.get_data(as_text=True))
+    raw = request.get_data(as_text=True)
+    if DATABASE_URL:
+        conn = _db_conn()
+        cur = conn.cursor()
+        cur.execute("UPDATE office_data SET data = %s WHERE id = 1", (raw,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    else:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            f.write(raw)
     return '', 204
 
 
