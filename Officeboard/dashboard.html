@@ -284,9 +284,9 @@ header h1 { font-size: 20px; font-weight: 700; }
   inset: 0;
   background: rgba(0,0,0,0.55);
   z-index: 1000;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  overflow-y: auto;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
   padding: 16px;
 }
@@ -297,16 +297,17 @@ header h1 { font-size: 20px; font-weight: 700; }
   border-radius: 12px;
   width: 460px;
   max-width: 100%;
-  max-height: none;
   overflow-y: visible;
   box-shadow: 0 20px 60px rgba(0,0,0,0.35);
   animation: slideUp 0.16s ease;
   flex-shrink: 0;
-  margin: auto;
+  margin: 0 auto;
 }
 
-@media (max-height: 700px) {
-  .modal-overlay { align-items: flex-start; }
+@media (max-width: 500px) {
+  .modal-overlay { padding: 10px 8px; }
+  .modal { border-radius: 10px; }
+  .modal-body { padding: 16px 16px 20px; }
 }
 
 @keyframes slideUp {
@@ -1340,6 +1341,13 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target.id === 'modal-overlay') closeModal();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// 모바일: 키보드 등장 후 포커스된 input이 키보드에 가려지지 않도록 스크롤
+document.getElementById('modal-overlay').addEventListener('focusin', e => {
+  if (e.target.matches('input, select, textarea')) {
+    setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  }
+});
 
 // ── 초기화 ──────────────────────────────────────────
 document.getElementById('today-display').textContent =
