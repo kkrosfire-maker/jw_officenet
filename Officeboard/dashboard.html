@@ -476,6 +476,79 @@ header h1 { font-size: 20px; font-weight: 700; }
   margin-bottom: 10px;
 }
 .base-rent-info strong { color: #333; margin-left: 4px; font-size: 15px; }
+
+.daily-rent-box {
+  background: #fff8e1;
+  border: 1.5px solid #ffe082;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.daily-rent-title { font-size: 12px; color: #e65100; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.daily-rent-detail { font-size: 13px; color: #888; margin-bottom: 4px; }
+.daily-rent-amount { font-size: 20px; font-weight: 800; color: #bf360c; }
+
+.prepaid-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  background: #f8f8f8;
+  margin-bottom: 8px;
+  transition: all 0.12s;
+}
+.prepaid-check-label.active {
+  border-color: #7b1fa2;
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+.prepaid-check-label input[type="checkbox"] {
+  width: 16px; height: 16px;
+  cursor: pointer;
+  accent-color: #7b1fa2;
+  flex-shrink: 0;
+}
+.month-pay-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 158px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.month-pay-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f8f8f8;
+  color: #aaa;
+  transition: all 0.12s;
+  user-select: none;
+  white-space: nowrap;
+}
+.month-pay-item.is-paid {
+  border-color: #26a69a;
+  background: #e0f4f1;
+  color: #00695c;
+}
+.month-pay-item input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: #26a69a;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -550,11 +623,11 @@ header h1 { font-size: 20px; font-weight: 700; }
       <div class="form-row">
         <div class="form-group">
           <label>계약 시작일</label>
-          <input type="date" id="f-start">
+          <input type="date" id="f-start" onchange="updateDailyRent(); renderMonthPayments();">
         </div>
         <div class="form-group">
           <label>계약 만료일</label>
-          <input type="date" id="f-end">
+          <input type="date" id="f-end" onchange="renderMonthPayments()">
         </div>
       </div>
       <div class="base-rent-info" id="base-rent-row" style="display:none;">
@@ -577,9 +650,14 @@ header h1 { font-size: 20px; font-weight: 700; }
           <button type="button" class="discount-btn" data-discount="0.3" onclick="selectDiscount(this)">30%</button>
         </div>
       </div>
+      <div id="daily-rent-box" class="daily-rent-box" style="display:none;">
+        <div class="daily-rent-title">&#128197; 일할계산 요금</div>
+        <div id="daily-rent-detail" class="daily-rent-detail"></div>
+        <div id="daily-rent-amount" class="daily-rent-amount"></div>
+      </div>
       <div class="form-group">
         <label>월 임대료 (원)</label>
-        <input type="text" id="f-rent" placeholder="예: 430,000">
+        <input type="text" id="f-rent" placeholder="예: 430,000" oninput="updateDailyRent()">
       </div>
       <div class="form-group">
         <label>계약 유형</label>
@@ -589,11 +667,12 @@ header h1 { font-size: 20px; font-weight: 700; }
         </select>
       </div>
       <div class="form-group">
-        <label id="paid-label">납부 현황</label>
-        <div class="paid-toggle">
-          <button id="btn-unpaid" onclick="setPaid(false)">미납</button>
-          <button id="btn-paid"   onclick="setPaid(true)">납부완료</button>
-        </div>
+        <label>납부 현황</label>
+        <label class="prepaid-check-label" id="prepaid-wrap">
+          <input type="checkbox" id="f-prepaid" onchange="onPrepaidChange()">
+          선납완료 &mdash; 전 계약기간 납부 완료
+        </label>
+        <div id="month-pay-grid" class="month-pay-grid"></div>
       </div>
       <div class="form-group">
         <label>메모</label>
@@ -670,7 +749,6 @@ function isOccupied(d) { return !!(d && (d.name || d.tenantName)); }
 // ── 상태 ────────────────────────────────────────────
 let currentMonth = new Date().toISOString().slice(0, 7);
 let currentRoom  = null;
-let paidState    = false;
 
 // ── 데이터 ──────────────────────────────────────────
 let DATA = {};
@@ -689,7 +767,7 @@ async function store(data, force) {
   if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
 }
 const pKey  = (m)    => 'paid_' + m;
-const isPaid = (d, m) => !!(d && d[pKey(m)]);
+const isPaid = (d, m) => !!(d && (d.prepaid || d[pKey(m)]));
 
 const zone = (id) => id[0]; // 'A','B','C','D'
 
@@ -829,8 +907,6 @@ function changeMonth(delta) {
 function updateMonthDisplay() {
   const [y, m] = currentMonth.split('-').map(Number);
   document.getElementById('month-display').textContent = y + '년 ' + m + '월';
-  const pl = document.getElementById('paid-label');
-  if (pl) pl.textContent = y + '년 ' + m + '월 납부 현황';
 }
 
 // ── 모달 ────────────────────────────────────────────
@@ -886,8 +962,9 @@ function openModal(id) {
     document.getElementById('f-rent').value = '';
   }
 
-  paidState = isPaid(d, currentMonth);
-  updatePaidToggle();
+  document.getElementById('f-prepaid').checked = !!(d.prepaid);
+  document.getElementById('prepaid-wrap').classList.toggle('active', !!(d.prepaid));
+  renderMonthPayments();
 
   const tag = daysLeft(d.end);
   const warn = document.getElementById('expiry-warn');
@@ -901,6 +978,7 @@ function openModal(id) {
   }
 
   document.getElementById('btn-vacate').style.display = isOccupied(d) ? 'inline-block' : 'none';
+  updateDailyRent();
   document.getElementById('modal-overlay').classList.add('active');
   setTimeout(() => document.getElementById('f-name').focus(), 60);
 }
@@ -919,6 +997,7 @@ function updateRentCalc() {
   var discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
   var calc = Math.round(base * (1 - discount) * (vat ? 1.1 : 1));
   document.getElementById('f-rent').value = fmtWon(calc);
+  updateDailyRent();
 }
 
 function selectDiscount(btn) {
@@ -927,11 +1006,90 @@ function selectDiscount(btn) {
   updateRentCalc();
 }
 
-function setPaid(val) { paidState = val; updatePaidToggle(); }
+function updateDailyRent() {
+  var box = document.getElementById('daily-rent-box');
+  var startVal = document.getElementById('f-start').value;
+  if (!startVal) { box.style.display = 'none'; return; }
 
-function updatePaidToggle() {
-  document.getElementById('btn-paid').className   = paidState ? 'is-paid'   : '';
-  document.getElementById('btn-unpaid').className = paidState ? '' : 'is-unpaid';
+  var startDate = new Date(startVal + 'T00:00:00');
+  var day = startDate.getDate();
+  if (day === 1) { box.style.display = 'none'; return; }
+
+  var rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
+  var monthlyRent = parseInt(rentRaw, 10);
+  if (!monthlyRent) { box.style.display = 'none'; return; }
+
+  var year = startDate.getFullYear();
+  var month = startDate.getMonth(); // 0-indexed
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var daysUsed = daysInMonth - day + 1;
+  var dailyAmt = Math.round(monthlyRent / daysInMonth * daysUsed);
+
+  document.getElementById('daily-rent-detail').textContent =
+    (month + 1) + '월 ' + day + '일 ~ ' + daysInMonth + '일 (' + daysUsed + '일, ' + daysInMonth + '일 기준)';
+  document.getElementById('daily-rent-amount').textContent = fmtWon(dailyAmt) + '원';
+  box.style.display = 'block';
+}
+
+function getMonthRange(start, end) {
+  if (!start) return [];
+  var s = new Date(start.slice(0, 7) + '-01');
+  var e = end ? new Date(end.slice(0, 7) + '-01') : s;
+  var months = [];
+  var cur = new Date(s);
+  while (cur <= e) {
+    months.push(cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0'));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return months;
+}
+
+function renderMonthPayments() {
+  if (!currentRoom) return;
+  var d = load()[currentRoom] || {};
+  var start  = document.getElementById('f-start').value;
+  var end    = document.getElementById('f-end').value;
+  var months = getMonthRange(start, end);
+  if (months.length === 0) months = [currentMonth];
+
+  var prepaid = document.getElementById('f-prepaid').checked;
+  var grid = document.getElementById('month-pay-grid');
+
+  // preserve states the user already toggled in this session
+  var saved = {};
+  grid.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
+    saved[cb.value] = cb.checked;
+  });
+
+  grid.innerHTML = '';
+  months.forEach(function(m) {
+    var paidVal = (m in saved) ? saved[m] : (prepaid || !!(d['paid_' + m]));
+    var lbl = document.createElement('label');
+    lbl.className = 'month-pay-item' + (paidVal ? ' is-paid' : '');
+    lbl.innerHTML =
+      '<input type="checkbox" class="month-pay-checkbox" value="' + m + '"' +
+      (paidVal ? ' checked' : '') + '> ' + m.replace('-', '.');
+    var cb = lbl.querySelector('input');
+    cb.addEventListener('change', function() {
+      lbl.classList.toggle('is-paid', this.checked);
+      if (!this.checked) {
+        document.getElementById('f-prepaid').checked = false;
+        document.getElementById('prepaid-wrap').classList.remove('active');
+      }
+    });
+    grid.appendChild(lbl);
+  });
+}
+
+function onPrepaidChange() {
+  var prepaid = document.getElementById('f-prepaid').checked;
+  document.getElementById('prepaid-wrap').classList.toggle('active', prepaid);
+  if (prepaid) {
+    document.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
+      cb.checked = true;
+      cb.closest('.month-pay-item').classList.add('is-paid');
+    });
+  }
 }
 
 async function saveRoom() {
@@ -950,6 +1108,11 @@ async function saveRoom() {
     const rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
     const rent = parseInt(rentRaw, 10) || 0;
 
+    var paymentData = { prepaid: document.getElementById('f-prepaid').checked };
+    document.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
+      paymentData['paid_' + cb.value] = cb.checked;
+    });
+
     data[currentRoom] = Object.assign({}, prev, {
       displayName: undefined,
       name,
@@ -962,8 +1125,7 @@ async function saveRoom() {
       discount,
       contractType: document.getElementById('f-type').value,
       memo:  document.getElementById('f-memo').value.trim(),
-      [pKey(currentMonth)]: paidState,
-    });
+    }, paymentData);
   }
 
   try {
