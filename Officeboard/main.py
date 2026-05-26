@@ -209,82 +209,84 @@ def import_excel():
             return 'No file', 400
 
         wb = openpyxl.load_workbook(file, data_only=True)
-        ws = wb.active
-
-        headers = [str(c.value).strip() if c.value else '' for c in ws[1]]
-
-        # 납부 컬럼에서 월 추출 (예: "2026-05 납부" → "2026-05")
-        paid_col_idx = None
-        paid_month = None
-        for i, h in enumerate(headers):
-            if '납부' in h:
-                paid_col_idx = i
-                paid_month = h.replace('납부', '').strip()
-                break
-
-        col = {h: i for i, h in enumerate(headers)}
 
         data = {}
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            room_id = str(row[col.get('호실', 0)] or '').strip()
-            if not room_id:
+        for ws in wb.worksheets:
+            headers = [str(c.value).strip() if c.value else '' for c in ws[1]]
+            if '호실' not in headers:
                 continue
 
-            # 상호명 컬럼 우선, 없으면 구버전 '입주자' 컬럼 사용
-            name = str(row[col.get('상호명', col.get('입주자', 1))] or '').strip()
-            tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
-            if not name and not tenant_name:
-                continue
+            # 납부 컬럼에서 월 추출 (예: "2026-05 납부" → "2026-05")
+            paid_col_idx = None
+            paid_month = None
+            for i, h in enumerate(headers):
+                if '납부' in h:
+                    paid_col_idx = i
+                    paid_month = h.replace('납부', '').strip()
+                    break
 
-            rent_col = col.get('월세(원)')
-            rent_val = row[rent_col] if rent_col is not None else None
-            try:
-                rent = int(float(str(rent_val))) if rent_val else 0
-            except (ValueError, TypeError):
-                rent = 0
+            col = {h: i for i, h in enumerate(headers)}
 
-            vat_col = col.get('VAT')
-            vat_str = str(row[vat_col] or '') if vat_col is not None else ''
-            vat = (vat_str.strip() == '유')
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                room_id = str(row[col.get('호실', 0)] or '').strip()
+                if not room_id:
+                    continue
 
-            disc_col = col.get('할인율')
-            discount_str = str(row[disc_col] or '').strip() if disc_col is not None else ''
-            if discount_str and discount_str != '표준가' and discount_str.endswith('%'):
+                # 상호명 컬럼 우선, 없으면 구버전 '입주자' 컬럼 사용
+                name = str(row[col.get('상호명', col.get('입주자', 1))] or '').strip()
+                tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
+                if not name and not tenant_name:
+                    continue
+
+                rent_col = col.get('월세(원)')
+                rent_val = row[rent_col] if rent_col is not None else None
                 try:
-                    discount = float(discount_str.replace('%', '')) / 100
+                    rent = int(float(str(rent_val))) if rent_val else 0
                 except (ValueError, TypeError):
+                    rent = 0
+
+                vat_col = col.get('VAT')
+                vat_str = str(row[vat_col] or '') if vat_col is not None else ''
+                vat = (vat_str.strip() == '유')
+
+                disc_col = col.get('할인율')
+                discount_str = str(row[disc_col] or '').strip() if disc_col is not None else ''
+                if discount_str and discount_str != '표준가' and discount_str.endswith('%'):
+                    try:
+                        discount = float(discount_str.replace('%', '')) / 100
+                    except (ValueError, TypeError):
+                        discount = 0.0
+                else:
                     discount = 0.0
-            else:
-                discount = 0.0
 
-            contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
-            # V-prefix 호실은 항상 비상주
-            if re.match(r'^V\d+$', room_id):
-                contract_type = '비상주'
+                contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
+                # V-prefix 호실은 항상 비상주
+                if re.match(r'^V\d+$', room_id):
+                    contract_type = '비상주'
 
-            entry = {
-                'name': name,
-                'tenantName': tenant_name,
-                'phone': str(row[col.get('연락처', 3)] or '').strip(),
-                'start': _to_date_str(row[col.get('계약시작', 4)]),
-                'end': _to_date_str(row[col.get('계약종료', 5)]),
-                'vat': vat,
-                'discount': discount,
-                'rent': rent,
-                'contractType': contract_type,
-                'memo': str(row[col.get('메모', 11)] or '').strip(),
-            }
+                entry = {
+                    'name': name,
+                    'tenantName': tenant_name,
+                    'phone': str(row[col.get('연락처', 3)] or '').strip(),
+                    'start': _to_date_str(row[col.get('계약시작', 4)]),
+                    'end': _to_date_str(row[col.get('계약종료', 5)]),
+                    'vat': vat,
+                    'discount': discount,
+                    'rent': rent,
+                    'contractType': contract_type,
+                    'memo': str(row[col.get('메모', 11)] or '').strip(),
+                }
 
-            if '계약상태' in col:
-                cs = str(row[col['계약상태']] or '').strip()
-                if cs in ('계약중', '계약만료', '계약해지'):
-                    entry['contractStatus'] = cs
+                if '계약상태' in col:
+                    cs = str(row[col['계약상태']] or '').strip()
+                    if cs in ('계약중', '계약만료', '계약해지'):
+                        entry['contractStatus'] = cs
 
-            if paid_month and paid_col_idx is not None:
-                paid_val = row[paid_col_idx]
-                entry['paid_' + paid_month] = (str(paid_val).strip() == '완납')
+                if paid_month and paid_col_idx is not None:
+                    paid_val = row[paid_col_idx]
+                    entry['paid_' + paid_month] = (str(paid_val).strip() == '완납')
 
-            data[room_id] = entry
+                data[room_id] = entry
 
         return json.dumps(data, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
 
