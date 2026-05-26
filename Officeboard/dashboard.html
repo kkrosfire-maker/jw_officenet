@@ -487,6 +487,27 @@ header h1 { font-size: 20px; font-weight: 700; }
 .daily-rent-title { font-size: 12px; color: #e65100; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
 .daily-rent-detail { font-size: 13px; color: #888; margin-bottom: 4px; }
 .daily-rent-amount { font-size: 20px; font-weight: 800; color: #bf360c; }
+.daily-rent-box.is-service { background: #e8f5e9; border-color: #66bb6a; }
+.daily-rent-box.is-service .daily-rent-title { color: #2e7d32; }
+.daily-service-msg { font-size: 16px; font-weight: 800; color: #2e7d32; }
+.service-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  font-size: 13px;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+}
+.service-check-label input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: #2e7d32;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
 .prepaid-check-label {
   display: flex;
@@ -652,8 +673,15 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
       <div id="daily-rent-box" class="daily-rent-box" style="display:none;">
         <div class="daily-rent-title">&#128197; 일할계산 요금</div>
-        <div id="daily-rent-detail" class="daily-rent-detail"></div>
-        <div id="daily-rent-amount" class="daily-rent-amount"></div>
+        <div id="daily-rent-content">
+          <div id="daily-rent-detail" class="daily-rent-detail"></div>
+          <div id="daily-rent-amount" class="daily-rent-amount"></div>
+        </div>
+        <div id="daily-service-msg" class="daily-service-msg" style="display:none;">이번달은 서비스 기간입니다.</div>
+        <label class="service-check-label">
+          <input type="checkbox" id="f-service" onchange="onServiceChange()">
+          서비스 기간 (이번달 요금 없음)
+        </label>
       </div>
       <div class="form-group">
         <label>월 임대료 (원)</label>
@@ -977,6 +1005,7 @@ function openModal(id) {
     warn.style.display = 'none';
   }
 
+  document.getElementById('f-service').checked = !!(d.dailyService);
   document.getElementById('btn-vacate').style.display = isOccupied(d) ? 'inline-block' : 'none';
   updateDailyRent();
   document.getElementById('modal-overlay').classList.add('active');
@@ -1029,7 +1058,19 @@ function updateDailyRent() {
     (month + 1) + '월 ' + day + '일 ~ ' + daysInMonth + '일 (' + daysUsed + '일, ' + daysInMonth + '일 기준)';
   document.getElementById('daily-rent-amount').textContent = fmtWon(dailyAmt) + '원';
   box.style.display = 'block';
+  applyServiceState();
 }
+
+function applyServiceState() {
+  var isService = document.getElementById('f-service').checked;
+  var box = document.getElementById('daily-rent-box');
+  if (box.style.display === 'none') return;
+  box.classList.toggle('is-service', isService);
+  document.getElementById('daily-rent-content').style.display = isService ? 'none' : 'block';
+  document.getElementById('daily-service-msg').style.display = isService ? 'block' : 'none';
+}
+
+function onServiceChange() { applyServiceState(); }
 
 function getMonthRange(start, end) {
   if (!start) return [];
@@ -1108,7 +1149,7 @@ async function saveRoom() {
     const rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
     const rent = parseInt(rentRaw, 10) || 0;
 
-    var paymentData = { prepaid: document.getElementById('f-prepaid').checked };
+    var paymentData = { prepaid: document.getElementById('f-prepaid').checked, dailyService: document.getElementById('f-service').checked };
     document.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
       paymentData['paid_' + cb.value] = cb.checked;
     });
