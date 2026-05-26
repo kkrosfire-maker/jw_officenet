@@ -471,6 +471,25 @@ header h1 { font-size: 20px; font-weight: 700; }
 .discount-btn.selected { border-color: #1b2838; background: #1b2838; color: white; }
 .discount-btn:hover { border-color: #999; background: #f0f0f0; }
 .discount-btn.selected:hover { background: #243447; }
+.contract-status-options { display: flex; gap: 6px; }
+.status-btn {
+  flex: 1;
+  padding: 9px 8px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #888;
+  transition: all 0.15s;
+  text-align: center;
+}
+.status-btn:hover { border-color: #999; background: #f0f0f0; }
+.status-btn.s-active   { background: #1b2838; border-color: #1b2838; color: white; }
+.status-btn.s-expired  { background: #e65100; border-color: #e65100; color: white; }
+.status-btn.s-canceled { background: #c62828; border-color: #c62828; color: white; }
 .base-rent-info {
   display: flex;
   align-items: center;
@@ -696,10 +715,18 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
       <div class="form-group">
         <label>계약 유형</label>
-        <select id="f-type">
+        <select id="f-type" onchange="onContractTypeChange()">
           <option value="입주">입주 (상주)</option>
           <option value="비상주">비상주 (가상오피스)</option>
         </select>
+      </div>
+      <div class="form-group" id="contract-status-group" style="display:none;">
+        <label>계약 상태</label>
+        <div class="contract-status-options">
+          <button type="button" class="status-btn s-active" data-status="계약중" onclick="selectContractStatus(this)">계약중</button>
+          <button type="button" class="status-btn" data-status="계약만료" onclick="selectContractStatus(this)">계약만료</button>
+          <button type="button" class="status-btn" data-status="계약해지" onclick="selectContractStatus(this)">계약해지</button>
+        </div>
       </div>
       <div class="form-group">
         <label>납부 현황</label>
@@ -985,6 +1012,12 @@ function openModal(id) {
   document.getElementById('f-start').value       = d.start || '';
   document.getElementById('f-end').value         = d.end   || '';
   document.getElementById('f-type').value        = d.contractType || '입주';
+  var cStatus = d.contractStatus || '계약중';
+  document.querySelectorAll('.status-btn').forEach(function(b) {
+    b.classList.remove('s-active', 's-expired', 's-canceled');
+    if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
+  });
+  onContractTypeChange();
   document.getElementById('f-memo').value        = d.memo  || '';
 
   // 기준 임대료 표시
@@ -1152,6 +1185,23 @@ function renderMonthPayments() {
   });
 }
 
+function onContractTypeChange() {
+  var isVirtual = document.getElementById('f-type').value === '비상주';
+  document.getElementById('contract-status-group').style.display = isVirtual ? 'block' : 'none';
+}
+
+function applyStatusClass(btn) {
+  var map = { '계약중': 's-active', '계약만료': 's-expired', '계약해지': 's-canceled' };
+  btn.classList.add(map[btn.getAttribute('data-status')] || 's-active');
+}
+
+function selectContractStatus(btn) {
+  document.querySelectorAll('.status-btn').forEach(function(b) {
+    b.classList.remove('s-active', 's-expired', 's-canceled');
+  });
+  applyStatusClass(btn);
+}
+
 function onPrepaidChange() {
   var prepaid = document.getElementById('f-prepaid').checked;
   document.getElementById('prepaid-wrap').classList.toggle('active', prepaid);
@@ -1195,6 +1245,11 @@ async function saveRoom() {
       vat,
       discount,
       contractType: document.getElementById('f-type').value,
+      contractStatus: (function() {
+        if (document.getElementById('f-type').value !== '비상주') return undefined;
+        var b = document.querySelector('.status-btn.s-active, .status-btn.s-expired, .status-btn.s-canceled');
+        return b ? b.getAttribute('data-status') : '계약중';
+      })(),
       memo:  document.getElementById('f-memo').value.trim(),
     }, paymentData);
   }
@@ -1299,9 +1354,11 @@ function showVirtualList() {
   if (rooms.length === 0) {
     content.innerHTML = '<p style="color:#aaa;text-align:center;padding:24px;">비상주 고객이 없습니다.</p>';
   } else {
+    const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
     const rows = rooms.map(r => {
       const d = data[r];
       const ok = isPaid(d, currentMonth);
+      const cs = d.contractStatus || '계약중';
       return `<tr onclick="openVirtualRoom('${r}')">
         <td><strong>${r}</strong></td>
         <td>${d.name || '-'}</td>
@@ -1311,12 +1368,13 @@ function showVirtualList() {
         <td>${d.end || '-'}</td>
         <td>${fmtWon(d.rent) || '-'}</td>
         <td><span style="color:${ok ? '#26a69a' : '#e91e63'};font-weight:700;">${ok ? '완납' : '미납'}</span></td>
+        <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
       </tr>`;
     }).join('');
     content.innerHTML = `<table class="virtual-table">
       <thead><tr>
         <th>호실</th><th>상호명</th><th>입주자</th><th>연락처</th>
-        <th>계약시작</th><th>계약종료</th><th>월세(원)</th><th>납부현황</th>
+        <th>계약시작</th><th>계약종료</th><th>월세(원)</th><th>납부현황</th><th>계약상태</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;

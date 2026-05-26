@@ -135,8 +135,9 @@ def export_excel():
     header_fill = PatternFill('solid', fgColor='2C2C2C')
     header_align = Alignment(horizontal='center', vertical='center')
 
-    def write_sheet(ws, room_ids):
-        for col, h in enumerate(headers, 1):
+    def write_sheet(ws, room_ids, extra_col=None):
+        sheet_headers = headers + ([extra_col] if extra_col else [])
+        for col, h in enumerate(sheet_headers, 1):
             cell = ws.cell(row=1, column=col, value=h)
             cell.font = header_font
             cell.fill = header_fill
@@ -157,6 +158,8 @@ def export_excel():
                 d.get('rent', 0) or '', d.get('contractType', ''),
                 paid_val, d.get('memo', ''),
             ]
+            if extra_col == '계약상태':
+                row_data.append(d.get('contractStatus', '계약중'))
             for col, val in enumerate(row_data, 1):
                 ws.cell(row=row_idx, column=col, value=val)
         for col in ws.columns:
@@ -172,7 +175,7 @@ def export_excel():
     write_sheet(ws1, resident_ids)
 
     ws2 = wb.create_sheet('비상주')
-    write_sheet(ws2, virtual_ids)
+    write_sheet(ws2, virtual_ids, extra_col='계약상태')
 
     buf = io.BytesIO()
     wb.save(buf)
