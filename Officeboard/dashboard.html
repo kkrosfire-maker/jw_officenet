@@ -639,6 +639,9 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
     </div>
     <div class="floor-grid" id="floor-grid"></div>
+    <div style="margin-top:14px;">
+      <button class="btn-excel" style="background:#546e7a;font-size:15px;" onclick="showVirtualList()">&#128203; 비상주 등록하기</button>
+    </div>
   </div>
 </div>
 
@@ -713,14 +716,7 @@ header h1 { font-size: 20px; font-weight: 700; }
         <label>월 임대료 (원)</label>
         <input type="text" id="f-rent" placeholder="예: 430,000" oninput="updateDailyRent()">
       </div>
-      <div class="form-group">
-        <label>계약 유형</label>
-        <select id="f-type" onchange="onContractTypeChange()">
-          <option value="입주">입주 (상주)</option>
-          <option value="비상주">비상주 (가상오피스)</option>
-        </select>
-      </div>
-      <div class="form-group" id="contract-status-group" style="display:none;">
+      <div class="form-group" id="contract-status-group">
         <label>계약 상태</label>
         <div class="contract-status-options">
           <button type="button" class="status-btn s-active" data-status="계약중" onclick="selectContractStatus(this)">계약중</button>
@@ -1011,13 +1007,11 @@ function openModal(id) {
   document.getElementById('f-phone').value       = d.phone || '';
   document.getElementById('f-start').value       = d.start || '';
   document.getElementById('f-end').value         = d.end   || '';
-  document.getElementById('f-type').value        = d.contractType || '입주';
   var cStatus = d.contractStatus || '계약중';
   document.querySelectorAll('.status-btn').forEach(function(b) {
     b.classList.remove('s-active', 's-expired', 's-canceled');
     if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
   });
-  onContractTypeChange();
   document.getElementById('f-memo').value        = d.memo  || '';
 
   // 기준 임대료 표시
@@ -1185,11 +1179,6 @@ function renderMonthPayments() {
   });
 }
 
-function onContractTypeChange() {
-  var isVirtual = document.getElementById('f-type').value === '비상주';
-  document.getElementById('contract-status-group').style.display = isVirtual ? 'block' : 'none';
-}
-
 function applyStatusClass(btn) {
   var map = { '계약중': 's-active', '계약만료': 's-expired', '계약해지': 's-canceled' };
   btn.classList.add(map[btn.getAttribute('data-status')] || 's-active');
@@ -1244,9 +1233,7 @@ async function saveRoom() {
       rent,
       vat,
       discount,
-      contractType: document.getElementById('f-type').value,
       contractStatus: (function() {
-        if (document.getElementById('f-type').value !== '비상주') return undefined;
         var b = document.querySelector('.status-btn.s-active, .status-btn.s-expired, .status-btn.s-canceled');
         return b ? b.getAttribute('data-status') : '계약중';
       })(),
