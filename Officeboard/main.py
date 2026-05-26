@@ -2,6 +2,7 @@ import os
 import sys
 import io
 import json
+import re
 import threading
 import webbrowser
 from datetime import date, datetime
@@ -181,7 +182,8 @@ def export_excel():
     wb.save(buf)
     buf.seek(0)
 
-    filename = f'공유오피스_입주현황_{month}.xlsx'
+    today_str = datetime.now().strftime('%y%m%d')
+    filename = f'{today_str} 공유오피스 운영 대시보드 백업.xlsx'
     return send_file(
         buf,
         as_attachment=True,
@@ -255,6 +257,11 @@ def import_excel():
             else:
                 discount = 0.0
 
+            contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
+            # V-prefix 호실은 항상 비상주
+            if re.match(r'^V\d+$', room_id):
+                contract_type = '비상주'
+
             entry = {
                 'name': name,
                 'tenantName': tenant_name,
@@ -264,9 +271,14 @@ def import_excel():
                 'vat': vat,
                 'discount': discount,
                 'rent': rent,
-                'contractType': str(row[col.get('계약유형', 9)] or '입주').strip(),
+                'contractType': contract_type,
                 'memo': str(row[col.get('메모', 11)] or '').strip(),
             }
+
+            if '계약상태' in col:
+                cs = str(row[col['계약상태']] or '').strip()
+                if cs in ('계약중', '계약만료', '계약해지'):
+                    entry['contractStatus'] = cs
 
             if paid_month and paid_col_idx is not None:
                 paid_val = row[paid_col_idx]
