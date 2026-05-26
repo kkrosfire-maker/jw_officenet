@@ -125,58 +125,54 @@ def export_excel():
     data: dict = body.get('data', {})
     month: str = body.get('month', '')
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = '입주현황'
-
-    # ── 헤더 ──────────────────────────────────────────
-    header_font = Font(bold=True, color='FFFFFF', size=11)
-    header_fill = PatternFill('solid', fgColor='2C2C2C')
-    header_align = Alignment(horizontal='center', vertical='center')
-
     headers = [
         '호실', '상호명', '입주자 이름', '연락처',
         '계약시작', '계약종료', 'VAT', '할인율', '월세(원)', '계약유형',
         f'{month} 납부', '메모',
     ]
-    for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=h)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_align
-    ws.row_dimensions[1].height = 20
-
-    # ── 데이터 ────────────────────────────────────────
     paid_key = f'paid_{month}'
-    for row_idx, room_id in enumerate(sorted(data.keys()), 2):
-        d = data[room_id]
-        if d.get('name') or d.get('tenantName'):
-            paid_val = '완납' if d.get(paid_key) else '미납'
-        else:
-            paid_val = ''
-        discount_pct = int(float(d.get('discount', 0)) * 100)
-        discount_str = f'{discount_pct}%' if discount_pct else '표준가'
-        row_data = [
-            room_id,
-            d.get('name', ''),
-            d.get('tenantName', ''),
-            d.get('phone', ''),
-            d.get('start', ''),
-            d.get('end', ''),
-            '유' if d.get('vat') else '무',
-            discount_str,
-            d.get('rent', 0) or '',
-            d.get('contractType', ''),
-            paid_val,
-            d.get('memo', ''),
-        ]
-        for col, val in enumerate(row_data, 1):
-            ws.cell(row=row_idx, column=col, value=val)
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill('solid', fgColor='2C2C2C')
+    header_align = Alignment(horizontal='center', vertical='center')
 
-    # ── 열 너비 자동 조정 ─────────────────────────────
-    for col in ws.columns:
-        width = max(len(str(cell.value or '')) for cell in col)
-        ws.column_dimensions[col[0].column_letter].width = width + 4
+    def write_sheet(ws, room_ids):
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+        ws.row_dimensions[1].height = 20
+        for row_idx, room_id in enumerate(sorted(room_ids), 2):
+            d = data[room_id]
+            if d.get('name') or d.get('tenantName'):
+                paid_val = '완납' if (d.get('prepaid') or d.get(paid_key)) else '미납'
+            else:
+                paid_val = ''
+            discount_pct = int(float(d.get('discount', 0)) * 100)
+            discount_str = f'{discount_pct}%' if discount_pct else '표준가'
+            row_data = [
+                room_id, d.get('name', ''), d.get('tenantName', ''),
+                d.get('phone', ''), d.get('start', ''), d.get('end', ''),
+                '유' if d.get('vat') else '무', discount_str,
+                d.get('rent', 0) or '', d.get('contractType', ''),
+                paid_val, d.get('memo', ''),
+            ]
+            for col, val in enumerate(row_data, 1):
+                ws.cell(row=row_idx, column=col, value=val)
+        for col in ws.columns:
+            width = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = width + 4
+
+    resident_ids = [r for r in data if data[r].get('contractType') != '비상주']
+    virtual_ids  = [r for r in data if data[r].get('contractType') == '비상주']
+
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = '상주'
+    write_sheet(ws1, resident_ids)
+
+    ws2 = wb.create_sheet('비상주')
+    write_sheet(ws2, virtual_ids)
 
     buf = io.BytesIO()
     wb.save(buf)

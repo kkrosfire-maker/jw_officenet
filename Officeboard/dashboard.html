@@ -87,6 +87,12 @@ header h1 { font-size: 20px; font-weight: 700; }
 
 .stat-value { font-size: 21px; font-weight: 800; line-height: 1.2; color: #e8e8e8; }
 .stat-label { font-size: 13px; color: #aaa; margin-top: 2px; }
+.stat-card-btn { cursor: pointer; }
+.stat-card-btn:hover { background: #555; }
+.virtual-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.virtual-table th { background: #f5f5f5; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e0e0e0; font-size: 12px; color: #888; font-weight: 700; white-space: nowrap; }
+.virtual-table td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; color: #333; white-space: nowrap; }
+.virtual-table tbody tr:hover td { background: #f5f9ff; cursor: pointer; }
 
 /* Type summary */
 .type-summary {
@@ -715,6 +721,23 @@ header h1 { font-size: 20px; font-weight: 700; }
   </div>
 </div>
 
+<!-- 비상주 목록 모달 -->
+<div class="modal-overlay" id="virtual-modal-overlay">
+  <div class="modal" style="width:720px;max-width:96vw;">
+    <div class="modal-type-bar" style="background:#546e7a;"></div>
+    <div class="modal-body">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <h2>비상주 고객 목록</h2>
+          <span class="modal-type-label" style="background:#546e7a;">가상오피스</span>
+        </div>
+        <button class="btn-close" onclick="closeVirtualModal()">&#215;</button>
+      </div>
+      <div style="overflow-x:auto;" id="virtual-list-content"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -866,7 +889,9 @@ function renderFloor() {
 // ── 통계 렌더 ───────────────────────────────────────
 function renderStats() {
   const data = load();
-  const occ     = ALL_ROOMS.filter(r => isOccupied(data[r]));
+  const occ      = ALL_ROOMS.filter(r => isOccupied(data[r]));
+  const resident = occ.filter(r => !(data[r] && data[r].contractType === '비상주'));
+  const virtual  = occ.filter(r =>   data[r] && data[r].contractType === '비상주');
   const paid    = occ.filter(r => isPaid(data[r], currentMonth));
   const unpaid  = occ.filter(r => !isPaid(data[r], currentMonth));
   const paidAmt = paid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
@@ -879,8 +904,12 @@ function renderStats() {
       <div class="stat-label">전체 호실</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value" style="color:#0d47a1">${occ.length}</div>
-      <div class="stat-label">입주 중</div>
+      <div class="stat-value" style="color:#0d47a1">${resident.length}</div>
+      <div class="stat-label">상주</div>
+    </div>
+    <div class="stat-card stat-card-btn" onclick="showVirtualList()">
+      <div class="stat-value" style="color:#546e7a">${virtual.length}</div>
+      <div class="stat-label">비상주 &#9654;</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" style="color:#bbb">${ALL_ROOMS.length - occ.length}</div>
@@ -1261,7 +1290,52 @@ function toast(msg) {
 }
 
 
+function showVirtualList() {
+  const data = load();
+  const rooms = ALL_ROOMS.filter(r => isOccupied(data[r]) && data[r].contractType === '비상주');
+  const content = document.getElementById('virtual-list-content');
+
+  if (rooms.length === 0) {
+    content.innerHTML = '<p style="color:#aaa;text-align:center;padding:24px;">비상주 고객이 없습니다.</p>';
+  } else {
+    const rows = rooms.map(r => {
+      const d = data[r];
+      const ok = isPaid(d, currentMonth);
+      return `<tr onclick="openVirtualRoom('${r}')">
+        <td><strong>${r}</strong></td>
+        <td>${d.name || '-'}</td>
+        <td>${d.tenantName || '-'}</td>
+        <td>${d.phone || '-'}</td>
+        <td>${d.start || '-'}</td>
+        <td>${d.end || '-'}</td>
+        <td>${fmtWon(d.rent) || '-'}</td>
+        <td><span style="color:${ok ? '#26a69a' : '#e91e63'};font-weight:700;">${ok ? '완납' : '미납'}</span></td>
+      </tr>`;
+    }).join('');
+    content.innerHTML = `<table class="virtual-table">
+      <thead><tr>
+        <th>호실</th><th>상호명</th><th>입주자</th><th>연락처</th>
+        <th>계약시작</th><th>계약종료</th><th>월세(원)</th><th>납부현황</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+  document.getElementById('virtual-modal-overlay').classList.add('active');
+}
+
+function closeVirtualModal() {
+  document.getElementById('virtual-modal-overlay').classList.remove('active');
+}
+
+function openVirtualRoom(id) {
+  closeVirtualModal();
+  openModal(id);
+}
+
 // ── 이벤트 ──────────────────────────────────────────
+document.getElementById('virtual-modal-overlay').addEventListener('click', e => {
+  if (e.target.id === 'virtual-modal-overlay') closeVirtualModal();
+});
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target.id === 'modal-overlay') closeModal();
 });
