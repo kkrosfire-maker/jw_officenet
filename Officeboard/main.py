@@ -1,10 +1,10 @@
 import os
-import sys
 import io
 import json
 import re
 import threading
 import webbrowser
+from contextlib import contextmanager
 from datetime import date, datetime
 
 from flask import Flask, send_from_directory, request, send_file, session, redirect
@@ -21,6 +21,73 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'local-dev-key')
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# ── 스토리지 어댑터 ──────────────────────────────────────────────────────────
+# PostgreSQL 어댑터와 JSON 파일 어댑터를 load_data/store_data 뒤에 숨깁니다.
+# 라우트 핸들러는 어느 스토리지가 활성화됐는지 알 필요 없습니다.
+
+@contextmanager
+def _pg_conn():
+    import psycopg2
+    conn = psycopg2.connect(DATABASE_URL)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def load_data() -> dict:
+    if DATABASE_URL:
+        with _pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT data FROM office_data WHERE id = 1")
+            row = cur.fetchone()
+            return row[0] if row else {}
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+
+def store_data(payload: str) -> None:
+    if DATABASE_URL:
+        with _pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE office_data SET data = %s WHERE id = 1", (payload,))
+    else:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            f.write(payload)
+
+
+def init_db():
+    if not DATABASE_URL:
+        return
+    with _pg_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS office_data (
+                id INTEGER PRIMARY KEY,
+                data JSONB NOT NULL DEFAULT '{}'
+            )
+        """)
+        cur.execute("""
+            INSERT INTO office_data (id, data) VALUES (1, '{}')
+            ON CONFLICT (id) DO NOTHING
+        """)
+
+
+init_db()
+
+# ── 인증 ────────────────────────────────────────────────────────────────────
+
+_API_PATHS = ('/data', '/export', '/import', '/ping')
 
 
 @app.before_request
@@ -30,6 +97,10 @@ def require_login():
     if request.endpoint == 'login':
         return
     if not session.get('authenticated'):
+        # API 엔드포인트는 302 redirect 대신 401 반환
+        # → fetch()가 Content-Type 검사 없이 정확히 감지 가능
+        if any(request.path.startswith(p) for p in _API_PATHS):
+            return '', 401
         return redirect('/login')
 
 
@@ -48,56 +119,33 @@ def logout():
     session.clear()
     return redirect('/login')
 
+# ── 헬스체크 ─────────────────────────────────────────────────────────────────
 
-def _db_conn():
-    import psycopg2
-    return psycopg2.connect(DATABASE_URL)
+@app.route('/ping')
+def ping():
+    storage = 'postgres' if DATABASE_URL else 'file'
+    if DATABASE_URL:
+        try:
+            with _pg_conn() as conn:
+                conn.cursor().execute("SELECT 1")
+        except Exception as e:
+            return json.dumps({'ok': False, 'storage': storage, 'error': str(e)}), 500, \
+                   {'Content-Type': 'application/json'}
+    return json.dumps({'ok': True, 'storage': storage}), 200, {'Content-Type': 'application/json'}
 
+# ── 데이터 API ───────────────────────────────────────────────────────────────
 
-def init_db():
-    if not DATABASE_URL:
-        return
-    conn = _db_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS office_data (
-            id INTEGER PRIMARY KEY,
-            data JSONB NOT NULL DEFAULT '{}'
-        )
-    """)
-    cur.execute("""
-        INSERT INTO office_data (id, data) VALUES (1, '{}')
-        ON CONFLICT (id) DO NOTHING
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-init_db()
-
-
-@app.route('/')
-def index():
-    return send_from_directory(BASE_DIR, 'dashboard.html')
+_JSON_HEADERS = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+}
 
 
 @app.route('/data', methods=['GET'])
 def get_data():
     try:
-        if DATABASE_URL:
-            conn = _db_conn()
-            cur = conn.cursor()
-            cur.execute("SELECT data FROM office_data WHERE id = 1")
-            row = cur.fetchone()
-            cur.close()
-            conn.close()
-            body = json.dumps(row[0] if row else {}, ensure_ascii=False)
-            return body, 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                return f.read(), 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
-        return '{}', 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
+        body = json.dumps(load_data(), ensure_ascii=False)
+        return body, 200, _JSON_HEADERS
     except Exception as e:
         return str(e), 500
 
@@ -106,20 +154,12 @@ def get_data():
 def save_data():
     raw = request.get_data(as_text=True)
     try:
-        if DATABASE_URL:
-            conn = _db_conn()
-            cur = conn.cursor()
-            cur.execute("UPDATE office_data SET data = %s WHERE id = 1", (raw,))
-            conn.commit()
-            cur.close()
-            conn.close()
-        else:
-            with open(DATA_FILE, 'w', encoding='utf-8') as f:
-                f.write(raw)
+        store_data(raw)
     except Exception as e:
         return str(e), 500
     return '', 204
 
+# ── 엑셀 내보내기 ────────────────────────────────────────────────────────────
 
 @app.route('/export', methods=['POST'])
 def export_excel():
@@ -192,6 +232,7 @@ def export_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
+# ── 엑셀 가져오기 ────────────────────────────────────────────────────────────
 
 def _to_date_str(val):
     if val is None:
@@ -210,14 +251,13 @@ def import_excel():
             return 'No file', 400
 
         wb = openpyxl.load_workbook(file, data_only=True)
-
         data = {}
+
         for ws in wb.worksheets:
             headers = [str(c.value).strip() if c.value else '' for c in ws[1]]
             if '호실' not in headers:
                 continue
 
-            # 납부 컬럼에서 월 추출 (예: "2026-05 납부" → "2026-05")
             paid_col_idx = None
             paid_month = None
             for i, h in enumerate(headers):
@@ -233,7 +273,6 @@ def import_excel():
                 if not room_id:
                     continue
 
-                # 상호명 컬럼 우선, 없으면 구버전 '입주자' 컬럼 사용
                 name = str(row[col.get('상호명', col.get('입주자', 1))] or '').strip()
                 tenant_name = str(row[col.get('입주자 이름', col.get('입주자', 2))] or '').strip()
                 if not name and not tenant_name:
@@ -261,7 +300,6 @@ def import_excel():
                     discount = 0.0
 
                 contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
-                # V-prefix 호실은 항상 비상주
                 if re.match(r'^V\d+$', room_id):
                     contract_type = '비상주'
 
@@ -293,6 +331,12 @@ def import_excel():
 
     except Exception as e:
         return str(e), 400
+
+# ── 로컬 실행 ─────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def index():
+    return send_from_directory(BASE_DIR, 'dashboard.html')
 
 
 def open_browser():

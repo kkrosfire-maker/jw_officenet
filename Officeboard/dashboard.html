@@ -1680,13 +1680,18 @@ async function init() {
   renderFloor();
   renderStats();
   try {
-    const res = await fetch('/data');
+    const res = await fetch('/data', { credentials: 'same-origin' });
+    if (res.status === 401) { window.location.href = '/login'; return; }
     if (!res.ok) throw new Error('서버 오류 ' + res.status);
     DATA = await res.json();
     dataLoaded = true;
   } catch(e) {
     dataLoaded = false;
-    toast('데이터 로드 실패 — 새로고침 해주세요.');
+    // 토스트 대신 화면에 고정 배너로 표시 (모바일에서 놓치지 않도록)
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;text-align:center;padding:12px;font-size:15px;z-index:9999;';
+    banner.textContent = '데이터 로드 실패 — 탭을 새로고침 해주세요.';
+    document.body.appendChild(banner);
   }
   renderFloor();
   renderStats();
