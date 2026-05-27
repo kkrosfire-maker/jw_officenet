@@ -92,11 +92,12 @@ def get_data():
             row = cur.fetchone()
             cur.close()
             conn.close()
-            return json.dumps(row[0] if row else {}), 200, {'Content-Type': 'application/json'}
+            body = json.dumps(row[0] if row else {}, ensure_ascii=False)
+            return body, 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                return f.read(), 200, {'Content-Type': 'application/json'}
-        return '{}', 200, {'Content-Type': 'application/json'}
+                return f.read(), 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
+        return '{}', 200, {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store'}
     except Exception as e:
         return str(e), 500
 
