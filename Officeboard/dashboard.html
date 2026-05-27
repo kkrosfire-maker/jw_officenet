@@ -1019,38 +1019,38 @@ function renderStats() {
   }).join('');
 
   document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-value">${ALL_ROOMS.length}</div>
-      <div class="stat-label">전체 호실</div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#1a1a1a">${ALL_ROOMS.length}</div>
+      <div class="stat-label" style="color:#666;">전체 호실</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#0d47a1">${resident.length}</div>
-      <div class="stat-label">상주</div>
+      <div class="stat-label" style="color:#666;">상주</div>
     </div>
-    <div class="stat-card stat-card-btn" onclick="showVirtualList()">
+    <div class="stat-card stat-card-btn" style="background:#fff;border-color:#ddd;" onclick="showVirtualList()">
       <div class="stat-value" style="color:#546e7a">${virtual.length}</div>
-      <div class="stat-label">비상주 &#9654;</div>
+      <div class="stat-label" style="color:#666;">비상주 &#9654;</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color:#bbb">${ALL_ROOMS.length - occ.length}</div>
-      <div class="stat-label">공실</div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#888">${ALL_ROOMS.length - occ.length}</div>
+      <div class="stat-label" style="color:#666;">공실</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value">${Math.round(occ.length / ALL_ROOMS.length * 100)}%</div>
-      <div class="stat-label">점유율</div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#1a1a1a">${Math.round(occ.length / ALL_ROOMS.length * 100)}%</div>
+      <div class="stat-label" style="color:#666;">점유율</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#00695c">${paidAmt.toLocaleString()}</div>
-      <div class="stat-label">납부완료 (원)</div>
+      <div class="stat-label" style="color:#666;">납부완료 (원)</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#c62828">${unpaidAmt.toLocaleString()}</div>
-      <div class="stat-label">미납 (원)</div>
+      <div class="stat-label" style="color:#666;">미납 (원)</div>
     </div>
     ${expiring > 0 ? `
-    <div class="stat-card">
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#ff6f00">${expiring}건</div>
-      <div class="stat-label">만료임박·만료</div>
+      <div class="stat-label" style="color:#666;">만료임박·만료</div>
     </div>` : ''}
     <div style="flex:1;min-width:0;"></div>
     ${vAlerts}
