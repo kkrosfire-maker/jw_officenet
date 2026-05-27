@@ -1170,6 +1170,7 @@ function openModal(id) {
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
+  resetOverlay();
   currentRoom = null;
 }
 
@@ -1638,10 +1639,35 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-// 모바일: 키보드 등장 후 포커스된 input이 키보드에 가려지지 않도록 스크롤
+// 모바일/태블릿: 키보드가 올라올 때 오버레이 높이를 시각적 뷰포트에 맞게 조정
+function adjustOverlayForKeyboard() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const overlay = document.getElementById('modal-overlay');
+  if (!overlay.classList.contains('active')) return;
+  overlay.style.top    = vv.offsetTop + 'px';
+  overlay.style.height = vv.height + 'px';
+  overlay.style.bottom = 'auto';
+  // 포커스된 요소가 중앙에 오도록 스크롤
+  const focused = overlay.querySelector('input:focus, select:focus, textarea:focus');
+  if (focused) focused.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetOverlay() {
+  const overlay = document.getElementById('modal-overlay');
+  overlay.style.top    = '';
+  overlay.style.height = '';
+  overlay.style.bottom = '';
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', adjustOverlayForKeyboard);
+  window.visualViewport.addEventListener('scroll', adjustOverlayForKeyboard);
+}
+
 document.getElementById('modal-overlay').addEventListener('focusin', e => {
   if (e.target.matches('input, select, textarea')) {
-    setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    setTimeout(adjustOverlayForKeyboard, 300);
   }
 });
 
