@@ -1032,11 +1032,11 @@ function renderStats() {
       <div class="stat-label" style="color:#666;">비상주 &#9654;</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#888">${ALL_ROOMS.length - occ.length}</div>
+      <div class="stat-value" style="color:#888">${ALL_ROOMS.length - resident.length}</div>
       <div class="stat-label" style="color:#666;">공실</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a1a1a">${Math.round(occ.length / ALL_ROOMS.length * 100)}%</div>
+      <div class="stat-value" style="color:#1a1a1a">${Math.round(resident.length / ALL_ROOMS.length * 100)}%</div>
       <div class="stat-label" style="color:#666;">점유율</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
