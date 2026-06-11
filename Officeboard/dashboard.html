@@ -178,7 +178,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   flex: 1;
   min-width: 74px;
   max-width: 106px;
-  height: 84px;
+  height: 75px;
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -206,6 +206,7 @@ header h1 { font-size: 20px; font-weight: 700; }
 .cell-room.paid          { background: #e0f4f1; border-color: #26a69a; color: #111; }
 .cell-room.unpaid        { background: #fce4ec; border-color: #e91e63; color: #111; }
 .cell-room.pre-contract  { background: #f5f5f5; border-color: #bdbdbd; color: #9e9e9e; }
+.cell-room.expired       { background: #fff !important; border-color: #ff6f00 !important; color: #333; }
 
 .cell-util     { background: #eceff1; border: 1px dashed #cfd8dc; }
 .cell-corridor { background: #ede7f6; border: 1px solid #ce93d8; color: #6a1b9a; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
@@ -221,7 +222,7 @@ header h1 { font-size: 20px; font-weight: 700; }
 
 .room-id   { font-weight: 800; font-size: 14px; margin-top: 6px; }
 .room-name { font-size: 13px; margin-top: 1px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.room-rent { font-size: 11px; margin-top: 1px; opacity: 0.75; line-height: 1.3; }
+.room-rent { font-size: 13px; margin-top: 1px; opacity: 0.75; line-height: 1.3; }
 .room-vacant-price { font-size: 10px; margin-top: 2px; color: #888; line-height: 1.4; }
 .room-type-sub { font-size: 13px; opacity: 0.6; margin-top: 1px; }
 
@@ -486,6 +487,24 @@ header h1 { font-size: 20px; font-weight: 700; }
 .discount-btn:hover { border-color: #999; background: #f0f0f0; }
 .discount-btn.selected:hover { background: #243447; }
 .contract-status-options { display: flex; gap: 6px; }
+.contract-period-options { display: flex; gap: 6px; }
+.period-btn {
+  flex: 1;
+  padding: 9px 8px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #888;
+  transition: all 0.15s;
+  text-align: center;
+}
+.period-btn:hover { border-color: #999; background: #f0f0f0; }
+.period-btn.selected { background: #546e7a; border-color: #546e7a; color: white; }
+.period-btn.selected:hover { background: #607d8b; }
 .status-btn {
   flex: 1;
   padding: 9px 8px;
@@ -807,18 +826,26 @@ header h1 { font-size: 20px; font-weight: 700; }
         <label>연락처</label>
         <input type="text" id="va-phone" placeholder="010-0000-0000" oninput="formatPhone(this)" inputmode="numeric">
       </div>
+      <div class="form-group">
+        <label>계약 기간</label>
+        <div class="contract-period-options">
+          <button type="button" class="period-btn selected" data-years="1" onclick="selectVaPeriod(this)">1년</button>
+          <button type="button" class="period-btn" data-years="2" onclick="selectVaPeriod(this)">2년</button>
+          <button type="button" class="period-btn" data-years="3" onclick="selectVaPeriod(this)">3년</button>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label>계약 시작일</label>
           <input type="date" id="va-start" onchange="onVaStartChange()">
         </div>
         <div class="form-group">
-          <label>계약 만료일 (자동 +1년)</label>
+          <label>계약 만료일 (자동 계산)</label>
           <input type="date" id="va-end" onchange="renderVaMonthPayments()">
         </div>
       </div>
       <div class="form-group">
-        <label>연간 임대료 (원)</label>
+        <label>계약 임대료 (원)</label>
         <input type="text" id="va-rent" value="290,400" readonly style="background:#f5f5f5;color:#333;font-weight:700;">
       </div>
       <div class="form-group">
@@ -900,6 +927,9 @@ const BASE_RENT = {
   C015:430000, C016:430000, C017:430000, C018:430000,
 };
 
+// ── 비상주 기준 임대료 ──────────────────────────────────
+const VIRTUAL_RENT_BASE = 290400; // 1년 기준, 2년=×2, 3년=×3
+
 function fmtWon(n) {
   if (!n) return '';
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -907,6 +937,9 @@ function fmtWon(n) {
 
 // 점유 판단 — 상호명 또는 입주자명 중 하나라도 있으면 입주 중
 function isOccupied(d) { return !!(d && (d.name || d.tenantName)); }
+
+// 비상주 판별 — contractType '비상주' 또는 V-ID 패턴 중 하나라도 해당하면 비상주
+function isVirtual(id, d) { return !!(d && d.contractType === '비상주') || /^V\d+$/.test(id); }
 
 // ── 상태 ────────────────────────────────────────────
 let currentMonth = new Date().toISOString().slice(0, 7);
@@ -928,6 +961,12 @@ async function store(data, force) {
   });
   if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
 }
+async function removeRoom(id) {
+  const data = load();
+  delete data[id];
+  return store(data);
+}
+
 const pKey  = (m)    => 'paid_' + m;
 const isPaid = (d, m) => !!(d && (d.prepaid || d[pKey(m)]));
 const isBeforeStart = (d) => !!(d && d.start && d.start > new Date().toISOString().slice(0, 10));
@@ -980,6 +1019,7 @@ function renderFloor() {
         const color = ZONE[z].color;
 
         el.classList.add('cell-room', st);
+        if (tag === '만료' && isOccupied(d)) el.classList.add('expired');
         el.onclick = () => openModal(cell);
 
         let html = `<div class="type-strip" style="background:${color}"></div>`;
@@ -992,11 +1032,12 @@ function renderFloor() {
           const disc = Math.round(base * 0.7);
           html += `<div class="room-vacant-price">${fmtWon(disc)}원</div>`;
         }
-        if (isOccupied(d) && st === 'paid')         html += `<div class="badge-paid">완</div>`;
-        if (isOccupied(d) && st === 'unpaid')       html += `<div class="badge-miss">미</div>`;
+        const isExpired = tag === '만료';
+        if (isOccupied(d) && st === 'paid'   && !isExpired) html += `<div class="badge-paid">완</div>`;
+        if (isOccupied(d) && st === 'unpaid' && !isExpired) html += `<div class="badge-miss">미</div>`;
         if (isOccupied(d) && st === 'pre-contract') html += `<div class="badge-pre">대기</div>`;
         if (tag && isOccupied(d)) html += `<div class="badge-expiry">${tag}</div>`;
-        if (d.contractType === '비상주' && isOccupied(d)) html += `<div class="badge-virtual">비상주</div>`;
+        if (isVirtual(cell, d) && isOccupied(d)) html += `<div class="badge-virtual">비상주</div>`;
 
         el.innerHTML = html;
       }
@@ -1006,20 +1047,19 @@ function renderFloor() {
   });
 }
 
-// ── 통계 렌더 ───────────────────────────────────────
-function renderStats() {
-  const data = load();
-  const vKeys = Object.keys(data).filter(r => /^V\d+$/.test(r) && isOccupied(data[r]));
-  const occ = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys.filter(r => !ALL_ROOMS.includes(r))];
-  const virtual  = occ.filter(r => (data[r] && data[r].contractType === '비상주') || /^V\d+$/.test(r));
-  const resident = occ.filter(r => !virtual.includes(r));
-  const paid    = occ.filter(r => !isBeforeStart(data[r]) && isPaid(data[r], currentMonth));
-  const unpaid  = occ.filter(r => !isBeforeStart(data[r]) && !isPaid(data[r], currentMonth));
-  const paidAmt = paid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const unpaidAmt = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const expiring = occ.filter(r => daysLeft(data[r] && data[r].end) !== null).length;
+// ── 통계 계산 (순수 함수 — DOM 접근 없음) ────────────
+function computeStats(data, month) {
+  const vKeys    = Object.keys(data).filter(r => /^V\d+$/.test(r) && isOccupied(data[r]));
+  const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys.filter(r => !ALL_ROOMS.includes(r))];
+  const virtual  = occ.filter(r => isVirtual(r, data[r]));
+  const resident = occ.filter(r => !isVirtual(r, data[r]));
+  const paid     = occ.filter(r => !isBeforeStart(data[r]) && isPaid(data[r], month));
+  const unpaid   = occ.filter(r => !isBeforeStart(data[r]) && !isPaid(data[r], month));
+  const rPaidAmt    = paid.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const vPaidAmt    = paid.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const unpaidAmt   = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && daysLeft(data[r] && data[r].end) !== null).length;
 
-  // 비상주 만료 30일 이내 알림
   const today = new Date(); today.setHours(0,0,0,0);
   const vExpiring = vKeys.map(r => {
     const d = data[r]; if (!d.end) return null;
@@ -1028,10 +1068,31 @@ function renderStats() {
     return diff <= 30 ? { id: r, name: d.name || d.tenantName || r, diff } : null;
   }).filter(Boolean).sort((a,b) => a.diff - b.diff);
 
+  return {
+    totalRooms:    ALL_ROOMS.length,
+    residentCount: resident.length,
+    virtualCount:  virtual.length,
+    vacantCount:   ALL_ROOMS.length - resident.length,
+    occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
+    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt, unpaidAmt,
+    expiring, vExpiring,
+    curMonthNum: parseInt(month.split('-')[1]),
+  };
+}
+
+// ── 통계 렌더 ───────────────────────────────────────
+function renderStats() {
+  const data = load();
+  const {
+    totalRooms, residentCount, virtualCount, vacantCount, occupancyRate,
+    rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
+    expiring, vExpiring, curMonthNum,
+  } = computeStats(data, currentMonth);
+
   const vAlerts = vExpiring.map(a => {
     const col = a.diff < 0 ? '#c62828' : a.diff <= 7 ? '#e91e63' : '#e65100';
     const lbl = a.diff < 0 ? '계약만료' : `만료 D-${a.diff}`;
-    return `<div class="stat-card stat-card-btn" style="border:1.5px solid ${col};" onclick="openVirtualAdd('${a.id}')">
+    return `<div class="stat-card stat-card-btn" style="border:1.5px solid ${col};background:#fff;" onclick="openVirtualAdd('${a.id}')">
       <div class="stat-value" style="color:${col};font-size:16px;">${a.id}</div>
       <div class="stat-label" style="color:${col};">${lbl}</div>
     </div>`;
@@ -1039,28 +1100,36 @@ function renderStats() {
 
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a1a1a">${ALL_ROOMS.length}</div>
+      <div class="stat-value" style="color:#1a1a1a">${totalRooms}</div>
       <div class="stat-label" style="color:#666;">전체 호실</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#0d47a1">${resident.length}</div>
+      <div class="stat-value" style="color:#0d47a1">${residentCount}</div>
       <div class="stat-label" style="color:#666;">상주</div>
     </div>
     <div class="stat-card stat-card-btn" style="background:#fff;border-color:#ddd;" onclick="showVirtualList()">
-      <div class="stat-value" style="color:#546e7a">${virtual.length}</div>
+      <div class="stat-value" style="color:#546e7a">${virtualCount}</div>
       <div class="stat-label" style="color:#666;">비상주 &#9654;</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#888">${ALL_ROOMS.length - resident.length}</div>
+      <div class="stat-value" style="color:#888">${vacantCount}</div>
       <div class="stat-label" style="color:#666;">공실</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a1a1a">${Math.round(resident.length / ALL_ROOMS.length * 100)}%</div>
+      <div class="stat-value" style="color:#1a1a1a">${occupancyRate}%</div>
       <div class="stat-label" style="color:#666;">점유율</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#00695c">${paidAmt.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">납부완료 (원)</div>
+      <div class="stat-value" style="color:#00695c">${rPaidAmt.toLocaleString()}</div>
+      <div class="stat-label" style="color:#666;">상주납부금액 (원)</div>
+    </div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#546e7a">${vPaidAmt.toLocaleString()}</div>
+      <div class="stat-label" style="color:#666;">비상주납부금액 (원)</div>
+    </div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#1a237e">${totalPaidAmt.toLocaleString()}</div>
+      <div class="stat-label" style="color:#666;">${curMonthNum}월 합계금액 (원)</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#c62828">${unpaidAmt.toLocaleString()}</div>
@@ -1386,10 +1455,8 @@ async function saveRoom() {
 async function vacateRoom() {
   if (!currentRoom) return;
   if (!confirm(currentRoom + ' 퇴실 처리하시겠습니까?\n입력된 모든 정보가 삭제됩니다.')) return;
-  const data = load();
-  delete data[currentRoom];
   try {
-    await store(data);
+    await removeRoom(currentRoom);
     closeModal();
     renderFloor();
     renderStats();
@@ -1470,10 +1537,7 @@ function toast(msg) {
 
 function showVirtualList() {
   const data = load();
-  const rooms = [
-    ...ALL_ROOMS.filter(r => isOccupied(data[r]) && data[r].contractType === '비상주'),
-    ...Object.keys(data).filter(r => /^V\d+$/.test(r) && isOccupied(data[r])),
-  ];
+  const rooms = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]));
   const content = document.getElementById('virtual-list-content');
 
   const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
@@ -1550,7 +1614,12 @@ function openVirtualAdd(id) {
   document.getElementById('va-phone').value    = d.phone || '';
   document.getElementById('va-start').value    = d.start || '';
   document.getElementById('va-end').value      = d.end   || '';
-  document.getElementById('va-rent').value     = '290,400';
+  var years = d.contractYears || (d.rent === 871200 ? 3 : d.rent === 580800 ? 2 : 1);
+  document.querySelectorAll('.period-btn').forEach(function(b) {
+    b.classList.remove('selected');
+    if (parseInt(b.getAttribute('data-years'), 10) === years) b.classList.add('selected');
+  });
+  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * years);
   document.getElementById('va-memo').value     = d.memo  || '';
   document.getElementById('va-btn-delete').style.display = id ? 'inline-block' : 'none';
 
@@ -1571,13 +1640,36 @@ function closeVirtualAdd() {
   document.getElementById('virtual-add-overlay').classList.remove('active');
 }
 
+function getVaPeriodYears() {
+  var sel = document.querySelector('.period-btn.selected');
+  return sel ? parseInt(sel.getAttribute('data-years'), 10) : 1;
+}
+
+function selectVaPeriod(btn) {
+  document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  var startVal = document.getElementById('va-start').value;
+  if (startVal) updateVaEndFromPeriod(startVal);
+  updateVaRent();
+}
+
+function updateVaEndFromPeriod(startVal) {
+  var years = getVaPeriodYears();
+  var d = new Date(startVal + 'T00:00:00');
+  d.setFullYear(d.getFullYear() + years);
+  document.getElementById('va-end').value = d.toISOString().slice(0, 10);
+  renderVaMonthPayments();
+}
+
+function updateVaRent() {
+  var years = getVaPeriodYears();
+  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * years);
+}
+
 function onVaStartChange() {
   var startVal = document.getElementById('va-start').value;
   if (!startVal) return;
-  var d = new Date(startVal + 'T00:00:00');
-  d.setFullYear(d.getFullYear() + 1);
-  document.getElementById('va-end').value = d.toISOString().slice(0, 10);
-  renderVaMonthPayments();
+  updateVaEndFromPeriod(startVal);
 }
 
 function onVaPrepaidChange() {
@@ -1607,7 +1699,8 @@ async function saveVirtualCustomer() {
 
   const vat      = true;
   const discount = 0;
-  const rent     = parseInt(document.getElementById('va-rent').value.replace(/,/g, ''), 10) || 290400;
+  const years    = getVaPeriodYears();
+  const rent     = VIRTUAL_RENT_BASE * years;
   const statusBtn = document.querySelector('#va-status-options .status-btn.s-active, #va-status-options .status-btn.s-expired, #va-status-options .status-btn.s-canceled');
   const contractStatus = statusBtn ? statusBtn.getAttribute('data-status') : '계약중';
 
@@ -1621,7 +1714,7 @@ async function saveVirtualCustomer() {
     phone: document.getElementById('va-phone').value.trim(),
     start: document.getElementById('va-start').value,
     end:   document.getElementById('va-end').value,
-    vat, discount, rent, contractType: '비상주', contractStatus,
+    vat, discount, rent, contractYears: years, contractType: '비상주', contractStatus,
     memo: document.getElementById('va-memo').value.trim(),
   }, vaPayment);
 
@@ -1638,10 +1731,8 @@ async function saveVirtualCustomer() {
 async function deleteVirtualCustomer() {
   const id = document.getElementById('va-id').value;
   if (!id || !confirm(id + ' 고객을 삭제하시겠습니까?')) return;
-  const data = load();
-  delete data[id];
   try {
-    await store(data);
+    await removeRoom(id);
     closeVirtualAdd();
     renderStats();
     toast('삭제되었습니다.');
