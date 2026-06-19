@@ -90,11 +90,15 @@ init_db()
 _API_PATHS = ('/data', '/export', '/import', '/ping')
 
 
+_PUBLIC_FILES = ('/office-domain.js',)
+
 @app.before_request
 def require_login():
     if not APP_PASSWORD:
         return
     if request.endpoint == 'login':
+        return
+    if request.path in _PUBLIC_FILES:
         return
     if not session.get('authenticated'):
         if any(request.path.startswith(p) for p in _API_PATHS):
