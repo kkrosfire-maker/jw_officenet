@@ -969,13 +969,19 @@ async function removeRoom(id) {
 
 const pKey  = (m)    => 'paid_' + m;
 const isPaid = (d, m) => !!(d && (d.prepaid || d[pKey(m)]));
-const isBeforeStart = (d) => !!(d && d.start && d.start > new Date().toISOString().slice(0, 10));
+function _todayLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+const isBeforeStart = (d) => !!(d && d.start && d.start > _todayLocal());
 
 const zone = (id) => id[0]; // 'A','B','C','D'
 
 function daysLeft(end) {
   if (!end) return null;
-  const diff = Math.ceil((new Date(end) - new Date()) / 864e5);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endDate = new Date(end + 'T00:00:00');
+  const diff = Math.round((endDate - today) / 864e5);
   if (diff < 0)  return '만료';
   if (diff <= 30) return 'D-' + diff;
   return null;
@@ -1236,6 +1242,7 @@ function openModal(id) {
 
   document.getElementById('f-prepaid').checked = !!(d.prepaid);
   document.getElementById('prepaid-wrap').classList.toggle('active', !!(d.prepaid));
+  document.getElementById('month-pay-grid').innerHTML = '';
   renderMonthPayments();
 
   const tag = daysLeft(d.end);
@@ -1297,7 +1304,7 @@ function updateDailyRent() {
   var month = startDate.getMonth(); // 0-indexed
   var daysInMonth = new Date(year, month + 1, 0).getDate();
   var daysUsed = daysInMonth - day + 1;
-  var dailyAmt = Math.round(monthlyRent / daysInMonth * daysUsed);
+  var dailyAmt = Math.round(monthlyRent / daysInMonth * daysUsed / 10) * 10;
 
   document.getElementById('daily-rent-detail').textContent =
     (month + 1) + '월 ' + day + '일 ~ ' + daysInMonth + '일 (' + daysUsed + '일, ' + daysInMonth + '일 기준)';
@@ -1631,6 +1638,7 @@ function openVirtualAdd(id) {
 
   document.getElementById('va-prepaid').checked = !!(d.prepaid);
   document.getElementById('va-prepaid-wrap').classList.toggle('active', !!(d.prepaid));
+  document.getElementById('va-month-pay-grid').innerHTML = '';
   renderVaMonthPayments();
 
   document.getElementById('virtual-add-overlay').classList.add('active');
