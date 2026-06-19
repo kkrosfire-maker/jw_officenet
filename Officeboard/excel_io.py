@@ -16,24 +16,19 @@ def _to_date_str(val) -> str:
 
 
 def parse_workbook(wb: openpyxl.Workbook) -> dict:
-    """openpyxl Workbook → 대시보드 data dict 변환.
-
-    Returns:
-        {"호실ID": {...entry...}, ...}
-    """
+    """openpyxl Workbook → 대시보드 data dict 변환."""
     data = {}
     for ws in wb.worksheets:
         headers = [str(c.value).strip() if c.value else '' for c in ws[1]]
         if '호실' not in headers:
             continue
 
-        paid_col_idx = None
-        paid_month = None
+        # 납부 컬럼을 모두 수집 (break 없이)
+        paid_cols = []
         for i, h in enumerate(headers):
             if '납부' in h:
-                paid_col_idx = i
-                paid_month = h.replace('납부', '').strip()
-                break
+                month_str = h.replace('납부', '').strip()
+                paid_cols.append((i, month_str))
 
         col = {h: i for i, h in enumerate(headers)}
 
@@ -90,8 +85,9 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
                 if cs in ('계약중', '계약만료', '계약해지'):
                     entry['contractStatus'] = cs
 
-            if paid_month and paid_col_idx is not None:
-                paid_val = row[paid_col_idx]
+            # 모든 납부 컬럼 처리
+            for paid_idx, paid_month in paid_cols:
+                paid_val = row[paid_idx]
                 entry['paid_' + paid_month] = (str(paid_val).strip() == '완납')
 
             data[room_id] = entry
@@ -101,43 +97,68 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
 
 def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
     """data dict → 엑셀 Workbook 생성 (export 용)."""
-    headers = [
+    base_headers = [
         '호실', '상호명', '입주자 이름', '연락처',
         '계약시작', '계약종료', 'VAT', '할인율', '월세(원)', '계약유형',
-        f'{month} 납부', '메모',
     ]
-    paid_key = f'paid_{month}'
     header_font = Font(bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill('solid', fgColor='2C2C2C')
     header_align = Alignment(horizontal='center', vertical='center')
 
-    def write_sheet(ws, room_ids, extra_col=None):
-        sheet_headers = headers + ([extra_col] if extra_col else [])
-        for col, h in enumerate(sheet_headers, 1):
-            cell = ws.cell(row=1, column=col, value=h)
+    def get_paid_months(room_ids):
+        """해당 시트 호실들의 모든 paid_* 월을 수집해 정렬 반환."""
+        months = set()
+        for r in room_ids:
+            d = data.get(r, {})
+            if d.get('prepaid'):
+                # 선납은 계약기간 전체를 포괄하므로 start~end 범위 추가
+                pass
+            for k in d:
+                if k.startswith('paid_'):
+                    months.add(k[5:])
+        # 현재 month가 없으면 추가 (최소 1개 보장)
+        months.add(month)
+        return sorted(months)
+
+    def write_sheet(ws, room_ids):
+        paid_months = get_paid_months(room_ids)
+        pay_headers = [m + ' 납부' for m in paid_months]
+        all_headers = base_headers + pay_headers + ['메모', '계약상태']
+
+        for col_idx, h in enumerate(all_headers, 1):
+            cell = ws.cell(row=1, column=col_idx, value=h)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_align
         ws.row_dimensions[1].height = 20
+
         for row_idx, room_id in enumerate(sorted(room_ids), 2):
             d = data[room_id]
-            if d.get('name') or d.get('tenantName'):
-                paid_val = '완납' if (d.get('prepaid') or d.get(paid_key)) else '미납'
-            else:
-                paid_val = ''
+            occupied = bool(d.get('name') or d.get('tenantName'))
             discount_pct = int(float(d.get('discount', 0)) * 100)
             discount_str = f'{discount_pct}%' if discount_pct else '표준가'
+
+            pay_vals = []
+            for m in paid_months:
+                if occupied:
+                    pk = 'paid_' + m
+                    pay_vals.append('완납' if (d.get('prepaid') or d.get(pk)) else '미납')
+                else:
+                    pay_vals.append('')
+
             row_data = [
                 room_id, d.get('name', ''), d.get('tenantName', ''),
                 d.get('phone', ''), d.get('start', ''), d.get('end', ''),
                 '유' if d.get('vat') else '무', discount_str,
                 d.get('rent', 0) or '', d.get('contractType', ''),
-                paid_val, d.get('memo', ''),
+            ] + pay_vals + [
+                d.get('memo', ''),
+                d.get('contractStatus', '계약중'),
             ]
-            if extra_col == '계약상태':
-                row_data.append(d.get('contractStatus', '계약중'))
-            for col, val in enumerate(row_data, 1):
-                ws.cell(row=row_idx, column=col, value=val)
+
+            for col_idx, val in enumerate(row_data, 1):
+                ws.cell(row=row_idx, column=col_idx, value=val)
+
         for col in ws.columns:
             width = max(len(str(cell.value or '')) for cell in col)
             ws.column_dimensions[col[0].column_letter].width = width + 4
@@ -151,5 +172,5 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
     write_sheet(ws1, resident_ids)
 
     ws2 = wb.create_sheet('비상주')
-    write_sheet(ws2, virtual_ids, extra_col='계약상태')
+    write_sheet(ws2, virtual_ids)
     return wb

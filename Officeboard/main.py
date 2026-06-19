@@ -152,6 +152,10 @@ def get_data():
 def save_data():
     raw = request.get_data(as_text=True)
     try:
+        json.loads(raw)
+    except json.JSONDecodeError as e:
+        return f'잘못된 JSON 형식: {e}', 400
+    try:
         store_data(raw)
     except Exception as e:
         return str(e), 500
@@ -198,6 +202,11 @@ def import_excel():
 @app.route('/')
 def index():
     return send_from_directory(BASE_DIR, 'dashboard.html')
+
+
+@app.route('/office-domain.js')
+def office_domain():
+    return send_from_directory(BASE_DIR, 'office-domain.js')
 
 
 def open_browser():

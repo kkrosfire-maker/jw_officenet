@@ -878,125 +878,39 @@ header h1 { font-size: 20px; font-weight: 700; }
 
 <div class="toast" id="toast"></div>
 
+<script src="/office-domain.js"></script>
 <script>
-// ── 구역 정보 ──────────────────────────────────────
-const ZONE = {
-  A: { color: '#1565c0', name: 'A구역' },
-  B: { color: '#e65100', name: 'B구역' },
-  C: { color: '#2e7d32', name: 'C구역' },
-  D: { color: '#6a1b9a', name: 'D구역' },
-};
-
-// ── 평면도 레이아웃 ────────────────────────────────
-// U=공용시설  CORR=복도  null=건물 외부  'X000'=호실
-const LAYOUT = [
-  // 0행: A001
-  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A001'],
-  // 1행: A002
-  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A002'],
-  // 2행: B상단(B008→B003) + null×2 + B001 + A018 + GAP + A011 + GAP + A003
-  ['B008','B007','B006','B005','B004','B003',null,null,'B001','A018','GAP','A011','GAP','A003'],
-  // 3행: 빈칸×8 + B002 + A017 + GAP + A012 + GAP + A004
-  [null,null,null,null,null,null,null,null,'B002','A017','GAP','A012','GAP','A004'],
-  // 4행: B하단(B009→B014) + null×2 + C001 + A016 + GAP + A013 + GAP + A005
-  ['B009','B010','B011','B012','B013','B014',null,null,'C001','A016','GAP','A013','GAP','A005'],
-  // 5행: C중간(C009→C003) + null + C002 + A015 + GAP + A014 + GAP + A006
-  ['C009','C008','C007','C006','C005','C004','C003',null,'C002','A015','GAP','A014','GAP','A006'],
-  // 6행: A007만
-  [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A007'],
-  // 7행: C하단(C010→C018) + A010 + GAP + A009 + GAP + A008
-  ['C010','C011','C012','C013','C014','C015','C016','C017','C018','A010','GAP','A009','GAP','A008'],
-];
-
-// 전체 호실 목록 (중복 제거)
-const ALL_ROOMS = [...new Set([].concat.apply([], LAYOUT).filter(c => c && c !== 'U' && c !== 'CORR' && c !== 'GAP'))];
-
-// ── 호실별 기준 임대료 ──────────────────────────────────
-const BASE_RENT = {
-  A002:430000, A003:430000, A004:430000, A005:430000, A006:430000, A007:430000, A010:430000,
-  A008:500000, A009:500000,
-  A011:330000, A012:330000, A013:330000,
-  A014:380000, A015:380000, A016:380000, A017:380000,
-  B001:380000, B002:380000,
-  B003:330000, B004:330000, B005:330000, B006:330000, B007:330000,
-  B008:550000, B009:550000,
-  B010:380000, B011:380000, B012:380000, B013:380000, B014:380000,
-  C001:380000, C002:380000,
-  C003:280000, C004:280000, C005:280000, C006:280000, C007:280000, C008:280000,
-  C009:430000, C010:430000, C011:430000, C012:430000, C013:430000, C014:430000,
-  C015:430000, C016:430000, C017:430000, C018:430000,
-};
-
-// ── 비상주 기준 임대료 ──────────────────────────────────
-const VIRTUAL_RENT_BASE = 290400; // 1년 기준, 2년=×2, 3년=×3
-
-function fmtWon(n) {
-  if (!n) return '';
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-// 점유 판단 — 상호명 또는 입주자명 중 하나라도 있으면 입주 중
-function isOccupied(d) { return !!(d && (d.name || d.tenantName)); }
-
-// 비상주 판별 — contractType '비상주' 또는 V-ID 패턴 중 하나라도 해당하면 비상주
-function isVirtual(id, d) { return !!(d && d.contractType === '비상주') || /^V\d+$/.test(id); }
-
 // ── 상태 ────────────────────────────────────────────
 let currentMonth = new Date().toISOString().slice(0, 7);
 let currentRoom  = null;
 
-// ── 데이터 ──────────────────────────────────────────
-let DATA = {};
-let dataLoaded = false;
+// ── 데이터 레이어 (Candidate 4) ──────────────────────
+// _DATA는 이 블록 외부에서 직접 접근 금지 — getAllData() / store() 사용
+let _DATA = {};
+let _dataLoaded = false;
 
-const load = () => DATA;
+function getAllData() { return _DATA; }
 
 async function store(data, force) {
-  if (!dataLoaded && !force) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
-  DATA = data;
+  if (!_dataLoaded && !force) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
   const res = await fetch('/data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
+  _DATA = data; // 서버 확인 후 메모리 업데이트
 }
+
 async function removeRoom(id) {
-  const data = load();
+  const data = Object.assign({}, getAllData());
   delete data[id];
   return store(data);
 }
 
-const pKey  = (m)    => 'paid_' + m;
-const isPaid = (d, m) => !!(d && (d.prepaid || d[pKey(m)]));
-function _todayLocal() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-const isBeforeStart = (d) => !!(d && d.start && d.start > _todayLocal());
-
-const zone = (id) => id[0]; // 'A','B','C','D'
-
-function daysLeft(end) {
-  if (!end) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const endDate = new Date(end + 'T00:00:00');
-  const diff = Math.round((endDate - today) / 864e5);
-  if (diff < 0)  return '만료';
-  if (diff <= 30) return 'D-' + diff;
-  return null;
-}
-
-function statusClass(id) {
-  const d = load()[id];
-  if (!isOccupied(d)) return 'vacant';
-  if (isBeforeStart(d)) return 'pre-contract';
-  return isPaid(d, currentMonth) ? 'paid' : 'unpaid';
-}
-
 // ── 평면도 렌더 ─────────────────────────────────────
 function renderFloor() {
-  const data = load();
+  const data = getAllData();
   const grid = document.getElementById('floor-grid');
   grid.innerHTML = '';
 
@@ -1019,7 +933,7 @@ function renderFloor() {
         el.textContent = '복도';
       } else {
         const z  = zone(cell);
-        const st = statusClass(cell);
+        const st = statusClass(cell, data, currentMonth);
         const d  = data[cell] || {};
         const tag = daysLeft(d.end);
         const color = ZONE[z].color;
@@ -1053,42 +967,9 @@ function renderFloor() {
   });
 }
 
-// ── 통계 계산 (순수 함수 — DOM 접근 없음) ────────────
-function computeStats(data, month) {
-  const vKeys    = Object.keys(data).filter(r => /^V\d+$/.test(r) && isOccupied(data[r]));
-  const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys.filter(r => !ALL_ROOMS.includes(r))];
-  const virtual  = occ.filter(r => isVirtual(r, data[r]));
-  const resident = occ.filter(r => !isVirtual(r, data[r]));
-  const paid     = occ.filter(r => !isBeforeStart(data[r]) && isPaid(data[r], month));
-  const unpaid   = occ.filter(r => !isBeforeStart(data[r]) && !isPaid(data[r], month));
-  const rPaidAmt    = paid.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const vPaidAmt    = paid.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const unpaidAmt   = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && daysLeft(data[r] && data[r].end) !== null).length;
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const vExpiring = vKeys.map(r => {
-    const d = data[r]; if (!d.end) return null;
-    const end = new Date(d.end + 'T00:00:00');
-    const diff = Math.ceil((end - today) / 86400000);
-    return diff <= 30 ? { id: r, name: d.name || d.tenantName || r, diff } : null;
-  }).filter(Boolean).sort((a,b) => a.diff - b.diff);
-
-  return {
-    totalRooms:    ALL_ROOMS.length,
-    residentCount: resident.length,
-    virtualCount:  virtual.length,
-    vacantCount:   ALL_ROOMS.length - resident.length,
-    occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
-    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt, unpaidAmt,
-    expiring, vExpiring,
-    curMonthNum: parseInt(month.split('-')[1]),
-  };
-}
-
 // ── 통계 렌더 ───────────────────────────────────────
 function renderStats() {
-  const data = load();
+  const data = getAllData();
   const {
     totalRooms, residentCount, virtualCount, vacantCount, occupancyRate,
     rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
@@ -1186,7 +1067,7 @@ function updateMonthDisplay() {
 // ── 모달 ────────────────────────────────────────────
 function openModal(id) {
   currentRoom = id;
-  const d = load()[id] || {};
+  const d = getAllData()[id] || {};
   const z = zone(id);
   const color = ZONE[z].color;
 
@@ -1324,29 +1205,13 @@ function applyServiceState() {
 
 function onServiceChange() { applyServiceState(); }
 
-function getMonthRange(start, end) {
-  if (!start) return [];
-  var s = new Date(start.slice(0, 7) + '-01');
-  var e = end ? new Date(end.slice(0, 7) + '-01') : s;
-  var months = [];
-  var cur = new Date(s);
-  while (cur <= e) {
-    months.push(cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0'));
-    cur.setMonth(cur.getMonth() + 1);
-  }
-  return months;
-}
-
-function _buildMonthGrid(cfg) {
-  // cfg: { dataKey, startId, endId, prepaidId, wrapId, gridId, cbClass }
-  var d = load()[cfg.dataKey] || {};
-  var start  = document.getElementById(cfg.startId).value;
-  var end    = document.getElementById(cfg.endId).value;
-  var months = getMonthRange(start, end);
+// Candidate 2: 모든 입력을 매개변수로 받음 — DOM 읽기를 호출부로 위임
+function _buildMonthGrid(cfg, startVal, endVal, prepaid) {
+  var d = getAllData()[cfg.dataKey] || {};
+  var months = getMonthRange(startVal, endVal);
   if (months.length === 0) months = [currentMonth];
 
-  var prepaid = document.getElementById(cfg.prepaidId).checked;
-  var grid    = document.getElementById(cfg.gridId);
+  var grid = document.getElementById(cfg.gridId);
 
   var saved = {};
   grid.querySelectorAll('.' + cfg.cbClass).forEach(function(cb) {
@@ -1375,15 +1240,23 @@ function _buildMonthGrid(cfg) {
 
 function renderMonthPayments() {
   if (!currentRoom) return;
-  _buildMonthGrid({ dataKey: currentRoom, startId: 'f-start', endId: 'f-end',
-    prepaidId: 'f-prepaid', wrapId: 'prepaid-wrap', gridId: 'month-pay-grid', cbClass: 'month-pay-checkbox' });
+  _buildMonthGrid(
+    { dataKey: currentRoom, prepaidId: 'f-prepaid', wrapId: 'prepaid-wrap', gridId: 'month-pay-grid', cbClass: 'month-pay-checkbox' },
+    document.getElementById('f-start').value,
+    document.getElementById('f-end').value,
+    document.getElementById('f-prepaid').checked
+  );
 }
 
 function renderVaMonthPayments() {
   var id = document.getElementById('va-id').value;
   if (!id) return;
-  _buildMonthGrid({ dataKey: id, startId: 'va-start', endId: 'va-end',
-    prepaidId: 'va-prepaid', wrapId: 'va-prepaid-wrap', gridId: 'va-month-pay-grid', cbClass: 'va-month-pay-cb' });
+  _buildMonthGrid(
+    { dataKey: id, prepaidId: 'va-prepaid', wrapId: 'va-prepaid-wrap', gridId: 'va-month-pay-grid', cbClass: 'va-month-pay-cb' },
+    document.getElementById('va-start').value,
+    document.getElementById('va-end').value,
+    document.getElementById('va-prepaid').checked
+  );
 }
 
 function applyStatusClass(btn) {
@@ -1411,7 +1284,7 @@ function onPrepaidChange() {
 
 async function saveRoom() {
   if (!currentRoom) return;
-  const data = load();
+  const data = Object.assign({}, getAllData());
   const prev = data[currentRoom] || {};
   const name = document.getElementById('f-name').value.trim();
 
@@ -1441,7 +1314,7 @@ async function saveRoom() {
       vat,
       discount,
       contractStatus: (function() {
-        var b = document.querySelector('.status-btn.s-active, .status-btn.s-expired, .status-btn.s-canceled');
+        var b = document.querySelector('#modal-overlay .status-btn.s-active, #modal-overlay .status-btn.s-expired, #modal-overlay .status-btn.s-canceled');
         return b ? b.getAttribute('data-status') : '계약중';
       })(),
       memo:  document.getElementById('f-memo').value.trim(),
@@ -1494,7 +1367,7 @@ async function importExcel(event) {
     }
 
     await store(imported, true);
-    dataLoaded = true;
+    _dataLoaded = true;
     renderFloor();
     renderStats();
     toast(Object.keys(imported).length + '개 호실 데이터를 업로드했습니다.');
@@ -1504,7 +1377,7 @@ async function importExcel(event) {
 }
 
 async function exportExcel() {
-  const data = load();
+  const data = getAllData();
   if (Object.keys(data).length === 0) {
     toast('저장된 데이터가 없습니다.');
     return;
@@ -1543,7 +1416,7 @@ function toast(msg) {
 
 
 function showVirtualList() {
-  const data = load();
+  const data = getAllData();
   const rooms = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]));
   const content = document.getElementById('virtual-list-content');
 
@@ -1600,7 +1473,7 @@ function formatPhone(input) {
 }
 
 function nextVirtualId() {
-  const data = load();
+  const data = getAllData();
   let max = 0;
   Object.keys(data).forEach(id => {
     const m = id.match(/^V(\d+)$/);
@@ -1610,7 +1483,7 @@ function nextVirtualId() {
 }
 
 function openVirtualAdd(id) {
-  const data = load();
+  const data = getAllData();
   const d = id ? (data[id] || {}) : {};
   const newId = id || nextVirtualId();
 
@@ -1699,7 +1572,7 @@ function selectVaStatus(btn) {
 }
 
 async function saveVirtualCustomer() {
-  const data = load();
+  const data = Object.assign({}, getAllData());
   const id   = document.getElementById('va-id').value.trim();
   const name = document.getElementById('va-name').value.trim();
   const tenantName = document.getElementById('va-tenant').value.trim();
@@ -1804,10 +1677,10 @@ async function init() {
     const res = await fetch('/data', { credentials: 'same-origin' });
     if (res.status === 401) { window.location.href = '/login'; return; }
     if (!res.ok) throw new Error('서버 오류 ' + res.status);
-    DATA = await res.json();
-    dataLoaded = true;
+    _DATA = await res.json();
+    _dataLoaded = true;
   } catch(e) {
-    dataLoaded = false;
+    _dataLoaded = false;
     // 토스트 대신 화면에 고정 배너로 표시 (모바일에서 놓치지 않도록)
     const banner = document.createElement('div');
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;text-align:center;padding:12px;font-size:15px;z-index:9999;';
