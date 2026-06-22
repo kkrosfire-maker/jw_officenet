@@ -15,7 +15,7 @@ description: 리서치 결과와 가이드 파일을 읽고 박원종 내과 네
 
 | 파일 | 역할 |
 |------|------|
-| `output/[주제]/research.md` | 메인 소스 — 수치·사실 관계는 이 파일에 있는 것만 사용 |
+| `output/[yymmdd_주제]/research.md` | 메인 소스 — 수치·사실 관계는 이 파일에 있는 것만 사용 |
 | `guide/style-guide.md` | 말투·문체·구조 규칙 — 반드시 따를 것 |
 | `guide/seo-guide.md` | 제목 작성법·본문 구조·키워드 배치 규칙 — 반드시 따를 것 |
 
@@ -29,7 +29,7 @@ description: 리서치 결과와 가이드 파일을 읽고 박원종 내과 네
 
 1. `guide/style-guide.md` 읽기
 2. `guide/seo-guide.md` 읽기
-3. `output/[주제]/research.md` 읽기
+3. `output/[yymmdd_주제]/research.md` 읽기
 4. 세 파일을 모두 읽은 뒤에만 작성 단계로 진입한다.
 
 ### Phase 2 — 구조 설계
@@ -111,7 +111,7 @@ description: 리서치 결과와 가이드 파일을 읽고 박원종 내과 네
 
 ### Phase 4 — 산출물 저장
 
-완성된 글을 `output/[주제]/draft.md` 에 저장한다.
+완성된 글을 `output/[yymmdd_주제]/draft.md` 에 저장한다.
 
 ---
 
