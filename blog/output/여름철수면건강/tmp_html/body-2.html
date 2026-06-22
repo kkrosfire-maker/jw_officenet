@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  /* inner-card: Grid 2행 — 제목(130px) + 그리드 */
+  .inner-card {
+    display: grid;
+    grid-template-rows: 130px 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  /* ── 제목 ── */
+  .title-bar {
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:10px;
+  }
+  .label {
+    background:#D94040; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:42px; font-weight:900;
+    color:#1a1a2e; margin:0; line-height:1.2;
+  }
+
+  /* ── 2×2 그리드 ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .card {
+    border-radius:18px; overflow:hidden;
+    display:grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 22px 24px 18px;
+    gap: 10px;
+  }
+  .card-1 { background:#FFF0F0; }
+  .card-2 { background:#FFF8EC; }
+  .card-3 { background:#EEF3FF; }
+  .card-4 { background:#F5F0FF; }
+
+  .card-top {
+    display:flex; align-items:center; gap:14px;
+  }
+  .card-icon { font-size:52px; line-height:1; flex-shrink:0; }
+  .card-main { font-size:32px; font-weight:700; color:#1a1a2e; line-height:1.2; }
+
+  .card-sub {
+    font-size:24px; color:#444; line-height:1.45;
+    overflow:hidden;
+  }
+
+  .card-highlight {
+    color:white; font-size:26px; font-weight:700;
+    padding:10px 0; border-radius:10px;
+    text-align:center; flex-shrink:0;
+  }
+  .card-1 .card-highlight { background:#D94040; }
+  .card-2 .card-highlight { background:#E87D30; }
+  .card-3 .card-highlight { background:#2155A3; }
+  .card-4 .card-highlight { background:#7C3AED; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">⚠️ 건강 경고</span>
+      <h2>수면 부족이 부르는 건강 문제</h2>
+    </div>
+
+    <div class="grid">
+
+      <div class="card card-1">
+        <div class="card-top">
+          <div class="card-icon">❤️</div>
+          <div class="card-main">심혈관 질환 위험</div>
+        </div>
+        <div class="card-sub">5시간 이하 수면 시<br>고위험군 가능성</div>
+        <div class="card-highlight">1.17배 ↑</div>
+      </div>
+
+      <div class="card card-2">
+        <div class="card-top">
+          <div class="card-icon">🛡️</div>
+          <div class="card-main">면역력 저하</div>
+        </div>
+        <div class="card-sub">스트레스 호르몬 증가<br>면역세포 생산 감소</div>
+        <div class="card-highlight">저항력 약화</div>
+      </div>
+
+      <div class="card card-3">
+        <div class="card-top">
+          <div class="card-icon">🧠</div>
+          <div class="card-main">인지 기능 저하</div>
+        </div>
+        <div class="card-sub">집중력·기억력 저하<br>감정 기복 심화</div>
+        <div class="card-highlight">일상 지장</div>
+      </div>
+
+      <div class="card card-4">
+        <div class="card-top">
+          <div class="card-icon">😴</div>
+          <div class="card-main">만성 불면증 위험</div>
+        </div>
+        <div class="card-sub">방치 시 기면증으로<br>악화 가능</div>
+        <div class="card-highlight">3주 이상 주의</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

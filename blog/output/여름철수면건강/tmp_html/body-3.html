@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  /* inner-card: Grid 2행 — 제목(130px) + 아이템 */
+  .inner-card {
+    display: grid;
+    grid-template-rows: 130px 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  /* ── 제목 ── */
+  .title-bar {
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:10px;
+  }
+  .label {
+    background:#2155A3; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:42px; font-weight:900;
+    color:#1a1a2e; margin:0; line-height:1.2;
+  }
+
+  /* ── 4개 아이템: Grid 4행 ── */
+  .items {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    border-radius: 16px;
+    padding: 0 24px;
+    border-left-width: 8px;
+    border-left-style: solid;
+    overflow: hidden;
+  }
+  .item-1 { background:#EEF3FF; border-left-color:#2155A3; }
+  .item-2 { background:#EDFFF5; border-left-color:#28A060; }
+  .item-3 { background:#FFF3EA; border-left-color:#E87D30; }
+  .item-4 { background:#F5F0FF; border-left-color:#7C3AED; }
+
+  .item-icon { font-size:46px; line-height:1; text-align:center; }
+
+  .item-content { min-width:0; overflow:hidden; }
+  .item-label {
+    font-size:22px; color:#666; margin-bottom:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-main {
+    font-size:32px; font-weight:700; color:#1a1a2e;
+    line-height:1.2; margin-bottom:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-note {
+    font-size:22px; color:#555; line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .badge {
+    color:white; font-size:24px; font-weight:700;
+    padding:12px 18px; border-radius:12px;
+    text-align:center; line-height:1.3;
+    white-space:nowrap; flex-shrink:0;
+  }
+  .item-1 .badge { background:#2155A3; }
+  .item-2 .badge { background:#28A060; }
+  .item-3 .badge { background:#E87D30; }
+  .item-4 .badge { background:#7C3AED; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">🌙 숙면 환경</span>
+      <h2>여름철 침실 최적 환경 설정</h2>
+    </div>
+
+    <div class="items">
+
+      <div class="item item-1">
+        <div class="item-icon">🌡️</div>
+        <div class="item-content">
+          <div class="item-label">실내 온도</div>
+          <div class="item-main">에어컨 적절히 활용</div>
+          <div class="item-note">본인 적정 온도보다 2~3도 높게 설정</div>
+        </div>
+        <div class="badge">24~26°C</div>
+      </div>
+
+      <div class="item item-2">
+        <div class="item-icon">💧</div>
+        <div class="item-content">
+          <div class="item-label">실내 습도</div>
+          <div class="item-main">과건조·고습도 모두 방해</div>
+          <div class="item-note">제습기 또는 에어컨 건조 기능 활용</div>
+        </div>
+        <div class="badge">50~60%</div>
+      </div>
+
+      <div class="item item-3">
+        <div class="item-icon">⏰</div>
+        <div class="item-content">
+          <div class="item-label">에어컨 타이머</div>
+          <div class="item-main">밤새 켜두면 역효과</div>
+          <div class="item-note">새벽 체온 과냉각 → 오한으로 각성</div>
+        </div>
+        <div class="badge">1~2시간<br>타이머</div>
+      </div>
+
+      <div class="item item-4">
+        <div class="item-icon">📵</div>
+        <div class="item-content">
+          <div class="item-label">청색광 차단</div>
+          <div class="item-main">스마트폰·TV 멀리하기</div>
+          <div class="item-note">블루라이트 → 멜라토닌 분비 억제</div>
+        </div>
+        <div class="badge">취침 1시간<br>전부터</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
