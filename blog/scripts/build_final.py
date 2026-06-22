@@ -14,6 +14,23 @@ from markdown import md_to_html  # noqa: E402
 from config import OUTPUT_BASE   # noqa: E402
 
 
+def validate_inputs(md_text: str, images_dir: str) -> None:
+    """draft.md에서 참조하는 이미지 파일이 모두 존재하는지 확인한다.
+
+    누락 파일이 있으면 목록을 출력하고 sys.exit(1).
+    images_dir: output/<주제>/images 절대 경로
+    """
+    import re as _re
+    refs = _re.findall(r"!\[[^\]]*\]\(\./images/([^)]+)\)", md_text)
+    missing = [f for f in refs if not os.path.exists(os.path.join(images_dir, f))]
+    if missing:
+        print("ERROR: 다음 이미지 파일이 없습니다 — Step 3(이미지 생성)을 먼저 실행하세요.")
+        for f in missing:
+            print(f"  ✗ images/{f}")
+        sys.exit(1)
+    print(f"  이미지 확인 OK ({len(refs)}개)")
+
+
 def run(topic):
     base     = os.path.join(OUTPUT_BASE, topic)
     src      = os.path.join(base, "draft.md")
@@ -26,6 +43,8 @@ def run(topic):
 
     with open(src, "r", encoding="utf-8") as f:
         md = f.read()
+
+    validate_inputs(md, os.path.join(base, "images"))
 
     shutil.copy(src, out_md)
     print(f"  final.md  저장: {out_md}")
