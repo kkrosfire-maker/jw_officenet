@@ -11,8 +11,7 @@
 import sys, os, shutil
 import sys as _sys; _sys.path.insert(0, os.path.dirname(__file__))
 from markdown import md_to_html  # noqa: E402
-
-OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
+from config import OUTPUT_BASE   # noqa: E402
 
 
 def run(topic):

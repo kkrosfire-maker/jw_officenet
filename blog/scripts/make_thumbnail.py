@@ -11,22 +11,14 @@
 import sys
 import os
 from PIL import Image, ImageDraw, ImageFont
-
-REF_IMAGE = r"C:\Users\JW\Downloads\제목을 입력해주세요\1.png"
-OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
-
-# 원본 1.png에서 측정한 제목 영역 좌표 및 스타일
-COVER = (390, 375, 945, 585)       # (x1, y1, x2, y2) — 흰색으로 덮을 영역
-TEXT_COLOR = (95, 107, 141, 255)   # 원본 제목 색상
-RIGHT_EDGE = 930                    # 우측 정렬 기준 x
-LINE_Y_START = 385                  # 첫 줄 시작 y
-LINE_SPACING = 100                  # 줄 간격
-
-FONT_PATHS = [
-    r"C:\Windows\Fonts\malgunbd.ttf",
-    r"C:\Windows\Fonts\malgun.ttf",
-    r"C:\Windows\Fonts\gulim.ttc",
-]
+sys.path.insert(0, os.path.dirname(__file__))
+from config import (  # noqa: E402
+    OUTPUT_BASE,
+    THUMB_REF_IMAGE as REF_IMAGE,
+    THUMB_COVER as COVER,
+    TEXT_COLOR, RIGHT_EDGE, LINE_Y_START, LINE_SPACING,
+    FONT_PATHS,
+)
 
 
 def find_font():

@@ -26,14 +26,12 @@ import tempfile
 import numpy as np
 from PIL import Image
 from playwright.sync_api import sync_playwright
-
-REF_DIR      = r"C:\Users\JW\Downloads\제목을 입력해주세요"
-FRAME_PNG    = r"C:\Users\JW\Downloads\클로드코드 교육용.png"
-OUTPUT_BASE  = r"C:\Users\JW\Desktop\workspace\blog\output"
-
-# 프레임 PNG 흰 영역 좌표 (픽셀 스캔 확인값)
-FRAME_LEFT, FRAME_TOP = 85, 88
-FRAME_W, FRAME_H      = 907, 903  # 992-85, 991-88
+sys.path.insert(0, os.path.dirname(__file__))
+from config import (  # noqa: E402
+    OUTPUT_BASE, REF_DIR, FRAME_PNG,
+    VIEWPORT_W, VIEWPORT_H,
+    FRAME_LEFT, FRAME_TOP, FRAME_W, FRAME_H,
+)
 
 # ── CSS 오버라이드 ─────────────────────────────────────────────────
 # Convention B 단일 표준: .clipboard-frame / .clip-wrapper / .inner-card
@@ -117,7 +115,7 @@ def run(topic: str):
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1080, "height": 1080})
+        page = browser.new_page(viewport={"width": VIEWPORT_W, "height": VIEWPORT_H})
 
         for fname in html_files:
             n = pattern.match(fname).group(1)
