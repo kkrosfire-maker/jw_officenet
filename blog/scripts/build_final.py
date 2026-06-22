@@ -8,98 +8,11 @@
   python scripts/build_final.py 갑자기더워지는날씨
   python scripts/build_final.py 여름철식중독
 """
-import sys, re, os, shutil
+import sys, os, shutil
+import sys as _sys; _sys.path.insert(0, os.path.dirname(__file__))
+from markdown import md_to_html  # noqa: E402
 
 OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
-
-
-def inline(text):
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
-    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-    return text
-
-
-def md_to_html(text, base):
-    lines = text.split("\n")
-    html_lines = []
-    in_table = False
-    table_buf = []
-    in_ul = False
-    ul_buf = []
-
-    def flush_table(buf):
-        rows = []
-        for row in buf:
-            cells = [c.strip() for c in row.strip().strip("|").split("|")]
-            rows.append(cells)
-        if not rows:
-            return ""
-        head = rows[0]
-        body = rows[2:] if len(rows) > 2 else []
-        th = "".join(f"<th>{c}</th>" for c in head)
-        trs = "".join(
-            "<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>"
-            for r in body
-        )
-        return f"<table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
-
-    def flush_ul(buf):
-        items = "".join(f"<li>{inline(re.sub(r'^\s*[-*]\s+', '', l))}</li>" for l in buf)
-        return f"<ul>{items}</ul>"
-
-    img_base = os.path.join(base, "images").replace("\\", "/")
-
-    for line in lines:
-        m = re.match(r"!\[([^\]]*)\]\(([^)]+)\)\s*$", line.strip())
-        if m:
-            if in_table:
-                html_lines.append(flush_table(table_buf)); table_buf = []; in_table = False
-            if in_ul:
-                html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
-            alt, src = m.group(1), m.group(2)
-            abs_src = src.replace("./images/", img_base + "/")
-            html_lines.append(f'<figure><img src="{abs_src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>')
-            continue
-
-        if re.match(r"^\s*\|", line):
-            if in_ul:
-                html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
-            in_table = True
-            table_buf.append(line)
-            continue
-        if in_table:
-            html_lines.append(flush_table(table_buf)); table_buf = []; in_table = False
-
-        if re.match(r"^\s*[-*]\s+", line):
-            if not in_ul:
-                in_ul = True; ul_buf = []
-            ul_buf.append(line)
-            continue
-        if in_ul:
-            html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
-
-        if re.match(r"^-{3,}$", line.strip()):
-            html_lines.append("<hr>")
-            continue
-
-        if line.startswith("# "):
-            html_lines.append(f"<h1>{inline(line[2:].strip())}</h1>")
-        elif line.startswith("## "):
-            html_lines.append(f"<h2>{inline(line[3:].strip())}</h2>")
-        elif line.startswith("### "):
-            html_lines.append(f"<h3>{inline(line[4:].strip())}</h3>")
-        elif re.match(r"^>\s+", line):
-            html_lines.append(f"<blockquote>{inline(line[1:].strip())}</blockquote>")
-        elif line.strip() == "":
-            html_lines.append("")
-        else:
-            html_lines.append(f"<p>{inline(line)}</p>")
-
-    if in_table: html_lines.append(flush_table(table_buf))
-    if in_ul:    html_lines.append(flush_ul(ul_buf))
-
-    return "\n".join(html_lines)
 
 
 def run(topic):
@@ -118,7 +31,7 @@ def run(topic):
     shutil.copy(src, out_md)
     print(f"  final.md  저장: {out_md}")
 
-    body_html = md_to_html(md, base)
+    body_html = md_to_html(md, img_base=os.path.join(base, "images"))
 
     html = f"""<!DOCTYPE html>
 <html lang="ko">
