@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  /* inner-card: Grid 2행 — 제목(130px) + 체크리스트 */
+  .inner-card {
+    display: grid;
+    grid-template-rows: 130px 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  /* ── 제목 ── */
+  .title-bar {
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:10px;
+  }
+  .label {
+    background:#28A060; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:42px; font-weight:900;
+    color:#1a1a2e; margin:0; line-height:1.2;
+  }
+
+  /* ── 체크리스트: Grid 4행 ── */
+  .checklist {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    align-items: center;
+    gap: 20px;
+    border-radius: 16px;
+    padding: 0 28px 0 0;
+    overflow: hidden;
+  }
+  .item-1 { background:#EDFFF5; }
+  .item-2 { background:#EEF3FF; }
+  .item-3 { background:#FFF3EA; }
+  .item-4 { background:#FFF0F0; }
+
+  .check-box {
+    width:72px; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:16px 0 0 16px;
+    font-size:38px; flex-shrink:0;
+  }
+  .item-1 .check-box { background:#28A060; }
+  .item-2 .check-box { background:#2155A3; }
+  .item-3 .check-box { background:#E87D30; }
+  .item-4 .check-box { background:#D94040; }
+
+  .item-content { min-width:0; overflow:hidden; }
+  .item-label {
+    font-size:22px; color:#666; margin-bottom:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-main {
+    font-size:32px; font-weight:700; color:#1a1a2e;
+    line-height:1.2; margin-bottom:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .item-note {
+    font-size:22px; color:#555; line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">💡 낮 생활 습관</span>
+      <h2>밤 숙면을 만드는 낮 루틴</h2>
+    </div>
+
+    <div class="checklist">
+
+      <div class="item item-1">
+        <div class="check-box">😴</div>
+        <div class="item-content">
+          <div class="item-label">낮잠 관리</div>
+          <div class="item-main">오후 3시 이전, 30분 이내</div>
+          <div class="item-note">이후 낮잠은 밤 불면증 악화의 지름길</div>
+        </div>
+      </div>
+
+      <div class="item item-2">
+        <div class="check-box">🏃</div>
+        <div class="item-content">
+          <div class="item-label">운동 타이밍</div>
+          <div class="item-main">초저녁 가볍게, 취침 2~3시간 전 마무리</div>
+          <div class="item-note">취침 직전 운동 → 각성 호르몬 분비로 역효과</div>
+        </div>
+      </div>
+
+      <div class="item item-3">
+        <div class="check-box">🍽️</div>
+        <div class="item-content">
+          <div class="item-label">저녁 식사</div>
+          <div class="item-main">취침 3시간 전에 마치기</div>
+          <div class="item-note">허기지면 따뜻한 우유 한 잔 (트립토판 효과)</div>
+        </div>
+      </div>
+
+      <div class="item item-4">
+        <div class="check-box">☀️</div>
+        <div class="item-content">
+          <div class="item-label">햇빛 노출</div>
+          <div class="item-main">오전 햇빛으로 생체리듬 고정</div>
+          <div class="item-note">기상 후 30분 이내 자연광 → 멜라토닌 분비 준비</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
