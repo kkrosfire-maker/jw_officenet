@@ -82,18 +82,32 @@ def inject_css_to_temp(html_path: str, css: str) -> str:
 
 
 def screenshot_and_composite(tmp_html: str, transparent_frame: Image.Image, page, out_path: str):
-    """임시 HTML을 Playwright로 캡처하고 transparent_frame을 합성해 out_path에 저장한다."""
+    """임시 HTML을 Playwright로 캡처하고 transparent_frame을 합성해 out_path에 저장한다.
+
+    tmp_html 및 파생 임시 PNG는 저장 완료 후 삭제한다.
+    """
     tmp_png = tmp_html + ".png"
-    page.goto("file:///" + tmp_html.replace("\\", "/"))
-    page.wait_for_load_state("networkidle")
-    page.screenshot(path=tmp_png, full_page=False)
-    base = Image.open(tmp_png).convert("RGBA")
-    base.alpha_composite(transparent_frame)
-    base.convert("RGB").save(out_path, "PNG")
-    print(f"  Saved: {os.path.basename(out_path)}")
+    try:
+        page.goto("file:///" + tmp_html.replace("\\", "/"))
+        page.wait_for_load_state("networkidle")
+        page.screenshot(path=tmp_png, full_page=False)
+        base = Image.open(tmp_png).convert("RGBA")
+        base.alpha_composite(transparent_frame)
+        base.convert("RGB").save(out_path, "PNG")
+        print(f"  Saved: {os.path.basename(out_path)}")
+    finally:
+        for f in (tmp_html, tmp_png):
+            try:
+                os.unlink(f)
+            except OSError:
+                pass
 
 
 def run(topic: str):
+    if not os.path.exists(FRAME_PNG):
+        print(f"ERROR: 프레임 이미지가 없습니다 — {FRAME_PNG}")
+        sys.exit(1)
+
     topic_dir_ = topic_dir(topic)
     html_dir   = os.path.join(topic_dir_, "tmp_html")
     img_dir    = os.path.join(topic_dir_, "images")

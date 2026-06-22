@@ -41,11 +41,27 @@ FONT_PATHS = [
 def topic_dir(topic: str) -> str:
     """주제 폴더 절대 경로를 반환한다.
 
-    yymmdd_ 접두어가 없으면 오늘 날짜를 붙인다.
-    예: '여름철수면건강' → '.../260622_여름철수면건강'
-        '260622_여름철수면건강' → 그대로 사용
+    1. 이미 yymmdd_ 접두어가 있으면 그대로 사용.
+    2. 없으면 OUTPUT_BASE 안에서 *_<topic> 패턴 폴더를 탐색.
+       - 1개 존재 → 그 폴더 반환 (날짜 몰라도 기존 작업 이어서 가능)
+       - 2개 이상 → 가장 최근(이름 기준 내림차순) 폴더 반환
+       - 없으면 → 오늘 날짜로 새 경로 반환
     """
     if re.match(r"^\d{6}_", topic):
         return os.path.join(OUTPUT_BASE, topic)
+
+    suffix = f"_{topic}"
+    try:
+        candidates = [
+            d for d in os.listdir(OUTPUT_BASE)
+            if d.endswith(suffix) and re.match(r"^\d{6}_", d)
+            and os.path.isdir(os.path.join(OUTPUT_BASE, d))
+        ]
+    except FileNotFoundError:
+        candidates = []
+
+    if candidates:
+        return os.path.join(OUTPUT_BASE, sorted(candidates)[-1])
+
     date = datetime.date.today().strftime("%y%m%d")
     return os.path.join(OUTPUT_BASE, f"{date}_{topic}")

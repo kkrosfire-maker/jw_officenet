@@ -38,6 +38,10 @@ def best_font_size(draw, lines, font_path, max_width=545, start=95):
 
 
 def make_thumbnail(topic: str, title_lines: list[str]):
+    if not os.path.exists(REF_IMAGE):
+        print(f"ERROR: 썸네일 참조 이미지가 없습니다 — {REF_IMAGE}")
+        sys.exit(1)
+
     out_path = os.path.join(topic_dir(topic), "images", "thumbnail.png")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
