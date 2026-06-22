@@ -61,6 +61,7 @@ OVERRIDE_CSS = (
 
 
 def build_transparent_frame() -> Image.Image:
+    """FRAME_PNG 흰 픽셀을 투명으로 바꿔 오버레이용 Image를 반환한다."""
     frame = Image.open(FRAME_PNG).convert("RGBA")
     arr = np.array(frame, dtype=np.int32)
     is_light = (arr[:,:,0] > 225) & (arr[:,:,1] > 225) & (arr[:,:,2] > 225)
@@ -69,21 +70,23 @@ def build_transparent_frame() -> Image.Image:
     return Image.fromarray(arr_u8, "RGBA")
 
 
-def capture_and_composite(html_path: str, out_path: str, page, transparent_frame: Image.Image):
+def inject_css_to_temp(html_path: str, css: str) -> str:
+    """HTML에 css를 </head> 직전에 주입한 임시 파일을 만들고 경로를 반환한다."""
     with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
-
-    modified = html.replace("</head>", OVERRIDE_CSS + "</head>")
-
-    tmp_html = os.path.join(tempfile.gettempdir(), f"cb_{os.path.basename(html_path)}")
-    tmp_png  = tmp_html + ".png"
-    with open(tmp_html, "w", encoding="utf-8") as f:
+    modified = html.replace("</head>", css + "</head>")
+    tmp_path = os.path.join(tempfile.gettempdir(), f"cb_{os.path.basename(html_path)}")
+    with open(tmp_path, "w", encoding="utf-8") as f:
         f.write(modified)
+    return tmp_path
 
+
+def screenshot_and_composite(tmp_html: str, transparent_frame: Image.Image, page, out_path: str):
+    """임시 HTML을 Playwright로 캡처하고 transparent_frame을 합성해 out_path에 저장한다."""
+    tmp_png = tmp_html + ".png"
     page.goto("file:///" + tmp_html.replace("\\", "/"))
     page.wait_for_load_state("networkidle")
     page.screenshot(path=tmp_png, full_page=False)
-
     base = Image.open(tmp_png).convert("RGBA")
     base.alpha_composite(transparent_frame)
     base.convert("RGB").save(out_path, "PNG")
@@ -121,7 +124,8 @@ def run(topic: str):
             n = pattern.match(fname).group(1)
             html_path = os.path.join(html_dir, fname)
             out_path  = os.path.join(img_dir, f"body-{n}.png")
-            capture_and_composite(html_path, out_path, page, transparent_frame)
+            tmp       = inject_css_to_temp(html_path, OVERRIDE_CSS)
+            screenshot_and_composite(tmp, transparent_frame, page, out_path)
 
         browser.close()
 
