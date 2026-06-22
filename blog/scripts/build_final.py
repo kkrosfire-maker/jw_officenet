@@ -45,7 +45,7 @@ def md_to_html(text, base):
         return f"<table><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table>"
 
     def flush_ul(buf):
-        items = "".join(f"<li>{inline(re.sub(r'^\\s*[-*]\\s+', '', l))}</li>" for l in buf)
+        items = "".join(f"<li>{inline(re.sub(r'^\s*[-*]\s+', '', l))}</li>" for l in buf)
         return f"<ul>{items}</ul>"
 
     img_base = os.path.join(base, "images").replace("\\", "/")
@@ -89,6 +89,8 @@ def md_to_html(text, base):
             html_lines.append(f"<h2>{inline(line[3:].strip())}</h2>")
         elif line.startswith("### "):
             html_lines.append(f"<h3>{inline(line[4:].strip())}</h3>")
+        elif re.match(r"^>\s+", line):
+            html_lines.append(f"<blockquote>{inline(line[1:].strip())}</blockquote>")
         elif line.strip() == "":
             html_lines.append("")
         else:
@@ -218,6 +220,15 @@ def run(topic):
     font-size: 14px;
   }}
   hr {{ border: none; border-top: 1px solid #eee; margin: 32px 0; }}
+  blockquote {{
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-left: 4px solid #F5A623;
+    background: #fffbf0;
+    border-radius: 0 8px 8px 0;
+    font-size: 17px;
+    color: #333;
+  }}
   .preview-badge {{
     display: inline-block;
     background: #F5A623;
