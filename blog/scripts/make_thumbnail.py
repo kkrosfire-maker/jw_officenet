@@ -13,7 +13,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 sys.path.insert(0, os.path.dirname(__file__))
 from config import (  # noqa: E402
-    OUTPUT_BASE,
+    topic_dir,
     THUMB_REF_IMAGE as REF_IMAGE,
     THUMB_COVER as COVER,
     TEXT_COLOR, RIGHT_EDGE, LINE_Y_START, LINE_SPACING,
@@ -38,7 +38,7 @@ def best_font_size(draw, lines, font_path, max_width=545, start=95):
 
 
 def make_thumbnail(topic: str, title_lines: list[str]):
-    out_path = os.path.join(OUTPUT_BASE, topic, "images", "thumbnail.png")
+    out_path = os.path.join(topic_dir(topic), "images", "thumbnail.png")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     img = Image.open(REF_IMAGE).convert("RGBA")

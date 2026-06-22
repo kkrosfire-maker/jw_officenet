@@ -28,7 +28,7 @@ from PIL import Image
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(__file__))
 from config import (  # noqa: E402
-    OUTPUT_BASE, REF_DIR, FRAME_PNG,
+    topic_dir, REF_DIR, FRAME_PNG,
     VIEWPORT_W, VIEWPORT_H,
     FRAME_LEFT, FRAME_TOP, FRAME_W, FRAME_H,
 )
@@ -94,9 +94,9 @@ def screenshot_and_composite(tmp_html: str, transparent_frame: Image.Image, page
 
 
 def run(topic: str):
-    topic_dir = os.path.join(OUTPUT_BASE, topic)
-    html_dir  = os.path.join(topic_dir, "tmp_html")
-    img_dir   = os.path.join(topic_dir, "images")
+    topic_dir_ = topic_dir(topic)
+    html_dir   = os.path.join(topic_dir_, "tmp_html")
+    img_dir    = os.path.join(topic_dir_, "images")
     os.makedirs(img_dir, exist_ok=True)
 
     if not os.path.isdir(html_dir):

@@ -4,6 +4,8 @@
 경로나 좌표를 바꿔야 할 때 이 파일 한 곳만 수정하면 된다.
 """
 import os
+import re
+import datetime
 
 # ── 기본 경로 ──────────────────────────────────────────────────────
 OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
@@ -34,3 +36,16 @@ FONT_PATHS = [
     r"C:\Windows\Fonts\malgun.ttf",
     r"C:\Windows\Fonts\gulim.ttc",
 ]
+
+
+def topic_dir(topic: str) -> str:
+    """주제 폴더 절대 경로를 반환한다.
+
+    yymmdd_ 접두어가 없으면 오늘 날짜를 붙인다.
+    예: '여름철수면건강' → '.../260622_여름철수면건강'
+        '260622_여름철수면건강' → 그대로 사용
+    """
+    if re.match(r"^\d{6}_", topic):
+        return os.path.join(OUTPUT_BASE, topic)
+    date = datetime.date.today().strftime("%y%m%d")
+    return os.path.join(OUTPUT_BASE, f"{date}_{topic}")

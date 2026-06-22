@@ -11,7 +11,7 @@
 import sys, os, shutil
 import sys as _sys; _sys.path.insert(0, os.path.dirname(__file__))
 from markdown import md_to_html  # noqa: E402
-from config import OUTPUT_BASE   # noqa: E402
+from config import topic_dir     # noqa: E402
 
 
 def validate_inputs(md_text: str, images_dir: str) -> None:
@@ -32,7 +32,7 @@ def validate_inputs(md_text: str, images_dir: str) -> None:
 
 
 def run(topic):
-    base     = os.path.join(OUTPUT_BASE, topic)
+    base     = topic_dir(topic)
     src      = os.path.join(base, "draft.md")
     out_html = os.path.join(base, "final.html")
     out_md   = os.path.join(base, "final.md")
