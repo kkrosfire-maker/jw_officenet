@@ -721,10 +721,13 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
       <div class="form-group" id="deposit-group" style="display:none;">
         <label>보증금</label>
-        <label class="vat-check-label">
-          <input type="checkbox" id="f-deposit-paid">
-          납부완료 &mdash; <strong id="deposit-amount-display" style="margin-left:2px;font-size:15px;color:#7b1fa2;"></strong>
-        </label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label class="vat-check-label">
+            <input type="checkbox" id="f-deposit-paid">
+            납부완료 &mdash; <strong id="deposit-amount-display" style="margin-left:2px;font-size:15px;color:#7b1fa2;"></strong>
+          </label>
+          <select id="f-deposit-month" style="font-size:13px;padding:3px 8px;border:1px solid #ccc;border-radius:4px;color:#444;"></select>
+        </div>
       </div>
       <div class="form-group">
         <label>VAT (부가세)</label>
@@ -1108,6 +1111,7 @@ function openModal(id) {
     baseRow.style.display = 'flex';
     document.getElementById('deposit-amount-display').textContent = fmtWon(depositAmount(id)) + '원';
     document.getElementById('f-deposit-paid').checked = !!(d.depositPaid);
+    populateDepositMonthSelect(d.start, d.depositPaidMonth);
     depositGroup.style.display = '';
   } else {
     baseRow.style.display = 'none';
@@ -1280,6 +1284,31 @@ function selectContractStatus(btn) {
   applyStatusClass(btn);
 }
 
+function _addMonths(ym, n) {
+  var y = parseInt(ym.slice(0, 4));
+  var m = parseInt(ym.slice(5, 7)) + n;
+  while (m > 12) { m -= 12; y++; }
+  while (m < 1)  { m += 12; y--; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+function populateDepositMonthSelect(startStr, savedMonth) {
+  var sel = document.getElementById('f-deposit-month');
+  sel.innerHTML = '';
+  var base = startStr ? startStr.slice(0, 7) : currentMonth;
+  [['전전월', -2], ['전월', -1], ['금월', 0], ['익월', 1]].forEach(function(pair) {
+    var label = pair[0], offset = pair[1];
+    var ym = _addMonths(base, offset);
+    var y = ym.slice(0, 4), m = parseInt(ym.slice(5, 7));
+    var opt = document.createElement('option');
+    opt.value = ym;
+    opt.textContent = y + '년 ' + m + '월 (' + label + ')';
+    sel.appendChild(opt);
+  });
+  var target = savedMonth || base;
+  sel.value = (Array.from(sel.options).some(function(o) { return o.value === target; })) ? target : base;
+}
+
 function onPrepaidChange() {
   var prepaid = document.getElementById('f-prepaid').checked;
   document.getElementById('prepaid-wrap').classList.toggle('active', prepaid);
@@ -1323,7 +1352,7 @@ async function saveRoom() {
       discount,
       depositPaid: document.getElementById('f-deposit-paid').checked,
       depositPaidMonth: document.getElementById('f-deposit-paid').checked
-        ? (prev.depositPaidMonth || currentMonth)
+        ? document.getElementById('f-deposit-month').value
         : null,
       contractStatus: (function() {
         var b = document.querySelector('#modal-overlay .status-btn.s-active, #modal-overlay .status-btn.s-expired, #modal-overlay .status-btn.s-canceled');
