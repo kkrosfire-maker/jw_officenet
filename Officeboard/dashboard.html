@@ -719,6 +719,13 @@ header h1 { font-size: 20px; font-weight: 700; }
       <div class="base-rent-info" id="base-rent-row" style="display:none;">
         기준 임대료: <strong id="base-rent-display"></strong>
       </div>
+      <div class="form-group" id="deposit-group" style="display:none;">
+        <label>보증금</label>
+        <label class="vat-check-label">
+          <input type="checkbox" id="f-deposit-paid">
+          납부완료 &mdash; <strong id="deposit-amount-display" style="margin-left:2px;font-size:15px;color:#7b1fa2;"></strong>
+        </label>
+      </div>
       <div class="form-group">
         <label>VAT (부가세)</label>
         <label class="vat-check-label">
@@ -811,8 +818,8 @@ header h1 { font-size: 20px; font-weight: 700; }
         <button class="btn-close" onclick="closeVirtualAdd()">&#215;</button>
       </div>
       <div class="form-group">
-        <label>고객 ID (자동생성)</label>
-        <input type="text" id="va-id" readonly style="background:#f5f5f5;color:#888;font-weight:700;">
+        <label>고객 ID <span id="va-id-hint" style="font-size:11px;color:#aaa;font-weight:400;">(신규 시 직접 입력 가능)</span></label>
+        <input type="text" id="va-id" placeholder="예: V001" style="font-weight:700;">
       </div>
       <div class="form-group">
         <label>상호명</label>
@@ -949,7 +956,7 @@ function renderFloor() {
           html += `<div class="room-rent">${fmtWon(d.rent)}원</div>`;
         } else if (!isOccupied(d) && BASE_RENT[cell]) {
           const base = BASE_RENT[cell];
-          const disc = Math.round(base * 0.7);
+          const disc = calcRent(base, 0.3, false);
           html += `<div class="room-vacant-price">${fmtWon(disc)}원</div>`;
         }
         const isExpired = tag === '만료';
@@ -973,7 +980,7 @@ function renderStats() {
   const {
     totalRooms, residentCount, virtualCount, vacantCount, occupancyRate,
     rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
-    expiring, vExpiring, curMonthNum,
+    depositTotal, expiring, vExpiring, curMonthNum,
   } = computeStats(data, currentMonth);
 
   const vAlerts = vExpiring.map(a => {
@@ -1009,6 +1016,10 @@ function renderStats() {
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#00695c">${rPaidAmt.toLocaleString()}</div>
       <div class="stat-label" style="color:#666;">상주납부금액 (원)</div>
+    </div>
+    <div class="stat-card" style="background:#fff;border-color:#ddd;">
+      <div class="stat-value" style="color:#7b1fa2">${depositTotal.toLocaleString()}</div>
+      <div class="stat-label" style="color:#666;">보증금 합계 (원)</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
       <div class="stat-value" style="color:#546e7a">${vPaidAmt.toLocaleString()}</div>
@@ -1091,11 +1102,16 @@ function openModal(id) {
   // 기준 임대료 표시
   var base = BASE_RENT[id];
   var baseRow = document.getElementById('base-rent-row');
+  var depositGroup = document.getElementById('deposit-group');
   if (base) {
     document.getElementById('base-rent-display').textContent = fmtWon(base) + '원';
     baseRow.style.display = 'flex';
+    document.getElementById('deposit-amount-display').textContent = fmtWon(depositAmount(id)) + '원';
+    document.getElementById('f-deposit-paid').checked = !!(d.depositPaid);
+    depositGroup.style.display = '';
   } else {
     baseRow.style.display = 'none';
+    depositGroup.style.display = 'none';
   }
 
   // VAT 설정
@@ -1116,7 +1132,7 @@ function openModal(id) {
   } else if (base) {
     var disc = savedDiscount || 0;
     var vat  = !!(d.vat);
-    document.getElementById('f-rent').value = fmtWon(Math.round(base * (1 - disc) * (vat ? 1.1 : 1)));
+    document.getElementById('f-rent').value = fmtWon(calcRent(base, disc, vat));
   } else {
     document.getElementById('f-rent').value = '';
   }
@@ -1157,7 +1173,7 @@ function updateRentCalc() {
   var vat = document.getElementById('f-vat').checked;
   var selBtn = document.querySelector('.discount-btn.selected');
   var discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
-  var calc = Math.round(base * (1 - discount) * (vat ? 1.1 : 1));
+  var calc = calcRent(base, discount, vat);
   document.getElementById('f-rent').value = fmtWon(calc);
   updateDailyRent();
 }
@@ -1173,23 +1189,16 @@ function updateDailyRent() {
   var startVal = document.getElementById('f-start').value;
   if (!startVal) { box.style.display = 'none'; return; }
 
-  var startDate = new Date(startVal + 'T00:00:00');
-  var day = startDate.getDate();
-  if (day === 1) { box.style.display = 'none'; return; }
-
   var rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
   var monthlyRent = parseInt(rentRaw, 10);
   if (!monthlyRent) { box.style.display = 'none'; return; }
 
-  var year = startDate.getFullYear();
-  var month = startDate.getMonth(); // 0-indexed
-  var daysInMonth = new Date(year, month + 1, 0).getDate();
-  var daysUsed = daysInMonth - day + 1;
-  var dailyAmt = Math.round(monthlyRent / daysInMonth * daysUsed / 10) * 10;
+  var result = proratedRent(monthlyRent, startVal);
+  if (!result) { box.style.display = 'none'; return; }
 
   document.getElementById('daily-rent-detail').textContent =
-    (month + 1) + '월 ' + day + '일 ~ ' + daysInMonth + '일 (' + daysUsed + '일, ' + daysInMonth + '일 기준)';
-  document.getElementById('daily-rent-amount').textContent = fmtWon(dailyAmt) + '원';
+    result.month + '월 ' + result.day + '일 ~ ' + result.daysInMonth + '일 (' + result.daysUsed + '일, ' + result.daysInMonth + '일 기준)';
+  document.getElementById('daily-rent-amount').textContent = fmtWon(result.amount) + '원';
   box.style.display = 'block';
   applyServiceState();
 }
@@ -1304,7 +1313,6 @@ async function saveRoom() {
     });
 
     data[currentRoom] = Object.assign({}, prev, {
-      displayName: undefined,
       name,
       tenantName,
       phone: document.getElementById('f-phone').value.trim(),
@@ -1313,6 +1321,10 @@ async function saveRoom() {
       rent,
       vat,
       discount,
+      depositPaid: document.getElementById('f-deposit-paid').checked,
+      depositPaidMonth: document.getElementById('f-deposit-paid').checked
+        ? (prev.depositPaidMonth || currentMonth)
+        : null,
       contractStatus: (function() {
         var b = document.querySelector('#modal-overlay .status-btn.s-active, #modal-overlay .status-btn.s-expired, #modal-overlay .status-btn.s-canceled');
         return b ? b.getAttribute('data-status') : '계약중';
@@ -1488,13 +1500,23 @@ function openVirtualAdd(id) {
   const newId = id || nextVirtualId();
 
   document.getElementById('virtual-add-title').textContent = id ? (id + ' 수정') : '비상주 신규 등록';
-  document.getElementById('va-id').value       = newId;
+  var idInput = document.getElementById('va-id');
+  idInput.value = newId;
+  if (id) {
+    idInput.readOnly = true;
+    idInput.style.background = '#f5f5f5';
+    idInput.style.color = '#888';
+  } else {
+    idInput.readOnly = false;
+    idInput.style.background = '';
+    idInput.style.color = '';
+  }
   document.getElementById('va-name').value     = d.name || '';
   document.getElementById('va-tenant').value   = d.tenantName || '';
   document.getElementById('va-phone').value    = d.phone || '';
   document.getElementById('va-start').value    = d.start || '';
   document.getElementById('va-end').value      = d.end   || '';
-  var years = d.contractYears || (d.rent === 871200 ? 3 : d.rent === 580800 ? 2 : 1);
+  var years = inferContractYears(d);
   document.querySelectorAll('.period-btn').forEach(function(b) {
     b.classList.remove('selected');
     if (parseInt(b.getAttribute('data-years'), 10) === years) b.classList.add('selected');
@@ -1576,6 +1598,8 @@ async function saveVirtualCustomer() {
   const id   = document.getElementById('va-id').value.trim();
   const name = document.getElementById('va-name').value.trim();
   const tenantName = document.getElementById('va-tenant').value.trim();
+  if (!id) { toast('고객 ID를 입력해주세요.'); return; }
+  if (ALL_ROOMS.includes(id)) { toast('실호실 ID(' + id + ')는 비상주 ID로 사용할 수 없습니다.'); return; }
   if (!name && !tenantName) { toast('상호명 또는 입주자 이름을 입력해주세요.'); return; }
 
   const vat      = true;
@@ -1615,6 +1639,7 @@ async function deleteVirtualCustomer() {
   try {
     await removeRoom(id);
     closeVirtualAdd();
+    renderFloor();
     renderStats();
     toast('삭제되었습니다.');
     setTimeout(showVirtualList, 80);

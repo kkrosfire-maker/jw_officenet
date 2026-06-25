@@ -87,7 +87,10 @@ function computeStats(data, month) {
   const rPaidAmt    = paid.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const vPaidAmt    = paid.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const unpaidAmt   = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && daysLeft(data[r] && data[r].end) !== null).length;
+  const depositTotal = ALL_ROOMS
+    .filter(r => isOccupied(data[r]) && !isVirtual(r, data[r]) && data[r] && data[r].depositPaid && data[r].depositPaidMonth === month)
+    .reduce((s, r) => s + depositAmount(r), 0);
+  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && !isBeforeStart(data[r]) && daysLeft(data[r] && data[r].end) !== null).length;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const vExpiring = vKeys.map(r => {
@@ -103,10 +106,37 @@ function computeStats(data, month) {
     virtualCount:  virtual.length,
     vacantCount:   ALL_ROOMS.length - resident.length,
     occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
-    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt, unpaidAmt,
+    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt, unpaidAmt, depositTotal,
     expiring, vExpiring,
     curMonthNum: parseInt(month.split('-')[1]),
   };
+}
+
+function calcRent(baseRent, discount, vat) {
+  return Math.floor(Math.round(baseRent * (1 - discount) * (vat ? 1.1 : 1)) / 100) * 100;
+}
+
+function proratedRent(monthlyRent, startDateStr) {
+  if (!startDateStr) return null;
+  var startDate = new Date(startDateStr + 'T00:00:00');
+  var day = startDate.getDate();
+  if (day === 1) return null;
+  var month = startDate.getMonth();
+  var daysInMonth = new Date(startDate.getFullYear(), month + 1, 0).getDate();
+  var daysUsed = daysInMonth - day + 1;
+  return {
+    month: month + 1, day, daysInMonth, daysUsed,
+    amount: Math.floor(Math.round(monthlyRent / daysInMonth * daysUsed) / 100) * 100,
+  };
+}
+
+function inferContractYears(d) {
+  if (d && d.contractYears) return d.contractYears;
+  return Math.max(1, Math.min(3, Math.round(((d && d.rent) || VIRTUAL_RENT_BASE) / VIRTUAL_RENT_BASE)));
+}
+
+function depositAmount(roomId) {
+  return (BASE_RENT[roomId] || 0) * 2;
 }
 
 function getMonthRange(start, end) {
