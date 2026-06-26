@@ -206,30 +206,6 @@ def _make_output_path(input_path: str, output_dir: str) -> str:
     return output_path
 
 
-def convert_file(input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
-    """
-    슬라이서 등 Excel 요소를 보존하며 변환.
-    win32com(Excel COM) 우선, 없으면 openpyxl 폴백.
-    반환: (출력 경로, 변환된 행 수, 매칭 안 된 사업자번호 목록)
-    """
-    if HAS_WIN32:
-        return _convert_win32(input_path, mapping, clinic_mapping, output_dir)
-    elif HAS_OPENPYXL:
-        return _convert_openpyxl(input_path, mapping, clinic_mapping, output_dir)
-    else:
-        raise RuntimeError("pywin32 또는 openpyxl 패키지가 필요합니다.")
-
-
-def _convert_win32(input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
-    """Excel COM으로 변환 — 슬라이서/차트/서식 완전 보존."""
-    import pythoncom
-    pythoncom.CoInitialize()  # 백그라운드 스레드에서 COM 사용 시 필수
-    try:
-        return _convert_win32_inner(input_path, mapping, clinic_mapping, output_dir)
-    finally:
-        pythoncom.CoUninitialize()
-
-
 def _unblock_file(path: str):
     """인터넷 출처 표시 제거 → Excel 보호된 보기 방지."""
     try:
@@ -242,121 +218,182 @@ def _unblock_file(path: str):
         pass
 
 
-def _convert_win32_inner(input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
-    output_path = _make_output_path(input_path, output_dir)
-    abs_in = os.path.abspath(input_path)
-    abs_out = os.path.abspath(output_path)
+class ExcelBackend:
+    """Excel 파일 변환/셀 쓰기 백엔드 인터페이스."""
 
-    _unblock_file(abs_in)   # 보호된 보기 창 방지
+    def convert(self, input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
+        raise NotImplementedError
 
-    xl = win32com.DispatchEx("Excel.Application")
-    xl.Visible = False
-    xl.DisplayAlerts = False
-    xl.ScreenUpdating = False
-    xl.EnableEvents = False
-    xl.Interactive = False
-    wb = None
-    try:
-        wb = xl.Workbooks.Open(abs_in, UpdateLinks=0, ReadOnly=False, AddToMru=False)
-        ws = wb.Worksheets(3)
-        last_row = ws.UsedRange.Rows.Count + ws.UsedRange.Row - 1
+    def write_cells(self, path: str, rows: list) -> int:
+        """rows: [(row_idx, new_value), ...] — 3번째 시트 B열(2열) 쓰기."""
+        raise NotImplementedError
 
-        changed = 0
-        unmatched = []
-        for row in range(10, last_row + 1):
-            hospital = ws.Cells(row, 6).Value  # F열: 병원명
 
-            # 윤병옥내과 행 — 제품명(I열) 기반 매핑
-            if hospital and str(hospital).strip() == "윤병옥내과":
-                product = ws.Cells(row, 9).Value  # I열: 제품명
-                key = str(product).strip() if product is not None else ""
-                if key and key in clinic_mapping:
-                    ws.Cells(row, 2).Value = clinic_mapping[key]
+class Win32Backend(ExcelBackend):
+    """Excel COM(win32com) 백엔드 — 슬라이서/차트/서식 완전 보존."""
+
+    def convert(self, input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
+        import pythoncom
+        pythoncom.CoInitialize()
+        try:
+            return self._convert_inner(input_path, mapping, clinic_mapping, output_dir)
+        finally:
+            pythoncom.CoUninitialize()
+
+    def _convert_inner(self, input_path, mapping, clinic_mapping, output_dir) -> tuple:
+        output_path = _make_output_path(input_path, output_dir)
+        abs_in = os.path.abspath(input_path)
+        abs_out = os.path.abspath(output_path)
+        _unblock_file(abs_in)
+        xl = win32com.DispatchEx("Excel.Application")
+        xl.Visible = False
+        xl.DisplayAlerts = False
+        xl.ScreenUpdating = False
+        xl.EnableEvents = False
+        xl.Interactive = False
+        wb = None
+        try:
+            wb = xl.Workbooks.Open(abs_in, UpdateLinks=0, ReadOnly=False, AddToMru=False)
+            ws = wb.Worksheets(3)
+            last_row = ws.UsedRange.Rows.Count + ws.UsedRange.Row - 1
+            changed, unmatched = 0, []
+            for row in range(10, last_row + 1):
+                hospital = ws.Cells(row, 6).Value
+                if hospital and str(hospital).strip() == "윤병옥내과":
+                    product = ws.Cells(row, 9).Value
+                    key = str(product).strip() if product is not None else ""
+                    if key and key in clinic_mapping:
+                        ws.Cells(row, 2).Value = clinic_mapping[key]
+                        changed += 1
+                    elif key:
+                        current_b = ws.Cells(row, 2).Value
+                        unmatched.append({
+                            "row": row,
+                            "biz_raw": f"[윤병옥] {key}",
+                            "current_b": str(current_b) if current_b is not None else "",
+                        })
+                    continue
+                biz_raw = ws.Cells(row, 5).Value
+                if biz_raw is None:
+                    continue
+                biz_no = normalize_biz_no(str(biz_raw))
+                if not biz_no:
+                    continue
+                if biz_no in mapping:
+                    ws.Cells(row, 2).Value = mapping[biz_no]
                     changed += 1
-                elif key:
+                else:
                     current_b = ws.Cells(row, 2).Value
                     unmatched.append({
                         "row": row,
+                        "biz_raw": str(biz_raw),
+                        "current_b": str(current_b) if current_b is not None else "",
+                    })
+            fmt = 52 if abs_in.lower().endswith(".xlsm") else 51
+            wb.SaveAs(abs_out, FileFormat=fmt)
+        finally:
+            if wb is not None:
+                try:
+                    wb.Close(False)
+                except Exception:
+                    pass
+            xl.Quit()
+        return output_path, changed, unmatched
+
+    def write_cells(self, path: str, rows: list) -> int:
+        import pythoncom
+        pythoncom.CoInitialize()
+        try:
+            abs_path = os.path.abspath(path)
+            xl = win32com.DispatchEx("Excel.Application")
+            xl.Visible = False
+            xl.DisplayAlerts = False
+            xl.ScreenUpdating = False
+            xl.EnableEvents = False
+            xl.Interactive = False
+            wb = None
+            try:
+                wb = xl.Workbooks.Open(abs_path, UpdateLinks=0, ReadOnly=False, AddToMru=False)
+                ws = wb.Worksheets(3)
+                for row_idx, new_val in rows:
+                    ws.Cells(row_idx, 2).Value = new_val
+                wb.Save()
+            finally:
+                if wb is not None:
+                    try:
+                        wb.Close(False)
+                    except Exception:
+                        pass
+                xl.Quit()
+        finally:
+            pythoncom.CoUninitialize()
+        return len(rows)
+
+
+class OpenpyxlBackend(ExcelBackend):
+    """openpyxl 백엔드 — 슬라이서가 제거될 수 있음."""
+
+    def convert(self, input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
+        wb = openpyxl.load_workbook(input_path)
+        ws = wb.worksheets[2]
+        changed, unmatched = 0, []
+        for row_idx in range(10, ws.max_row + 1):
+            hospital = ws.cell(row=row_idx, column=6).value
+            if hospital and str(hospital).strip() == "윤병옥내과":
+                product = ws.cell(row=row_idx, column=9).value
+                key = str(product).strip() if product is not None else ""
+                if key and key in clinic_mapping:
+                    ws.cell(row=row_idx, column=2).value = clinic_mapping[key]
+                    changed += 1
+                elif key:
+                    current_b = ws.cell(row=row_idx, column=2).value
+                    unmatched.append({
+                        "row": row_idx,
                         "biz_raw": f"[윤병옥] {key}",
                         "current_b": str(current_b) if current_b is not None else "",
                     })
-                continue  # 사업자번호 매핑 건너뜀
-
-            # 일반 행 — 사업자번호(E열) 기반 매핑
-            biz_raw = ws.Cells(row, 5).Value
+                continue
+            biz_raw = ws.cell(row=row_idx, column=5).value
             if biz_raw is None:
                 continue
-            biz_no = normalize_biz_no(str(biz_raw))
+            biz_no = normalize_biz_no(biz_raw)
             if not biz_no:
                 continue
             if biz_no in mapping:
-                ws.Cells(row, 2).Value = mapping[biz_no]
+                ws.cell(row=row_idx, column=2).value = mapping[biz_no]
                 changed += 1
             else:
-                current_b = ws.Cells(row, 2).Value
-                unmatched.append({
-                    "row": row,
-                    "biz_raw": str(biz_raw),
-                    "current_b": str(current_b) if current_b is not None else "",
-                })
-
-        fmt = 52 if abs_in.lower().endswith(".xlsm") else 51
-        wb.SaveAs(abs_out, FileFormat=fmt)
-    finally:
-        if wb is not None:
-            try:
-                wb.Close(False)   # 저장 여부 묻지 않고 닫기
-            except Exception:
-                pass
-        xl.Quit()
-
-    return output_path, changed, unmatched
-
-
-def _convert_openpyxl(input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
-    """openpyxl 폴백 — 슬라이서가 제거될 수 있음."""
-    wb = openpyxl.load_workbook(input_path)
-    ws = wb.worksheets[2]
-    changed, unmatched = 0, []
-    for row_idx in range(10, ws.max_row + 1):
-        hospital = ws.cell(row=row_idx, column=6).value  # F열: 병원명
-
-        # 윤병옥내과 행 — 제품명(I열) 기반 매핑
-        if hospital and str(hospital).strip() == "윤병옥내과":
-            product = ws.cell(row=row_idx, column=9).value  # I열: 제품명
-            key = str(product).strip() if product is not None else ""
-            if key and key in clinic_mapping:
-                ws.cell(row=row_idx, column=2).value = clinic_mapping[key]
-                changed += 1
-            elif key:
                 current_b = ws.cell(row=row_idx, column=2).value
                 unmatched.append({
                     "row": row_idx,
-                    "biz_raw": f"[윤병옥] {key}",
+                    "biz_raw": str(biz_raw),
                     "current_b": str(current_b) if current_b is not None else "",
                 })
-            continue  # 사업자번호 매핑 건너뜀
+        output_path = _make_output_path(input_path, output_dir)
+        wb.save(output_path)
+        return output_path, changed, unmatched
 
-        # 일반 행 — 사업자번호(E열) 기반 매핑
-        biz_raw = ws.cell(row=row_idx, column=5).value
-        if biz_raw is None:
-            continue
-        biz_no = normalize_biz_no(biz_raw)
-        if not biz_no:
-            continue
-        if biz_no in mapping:
-            ws.cell(row=row_idx, column=2).value = mapping[biz_no]
-            changed += 1
-        else:
-            current_b = ws.cell(row=row_idx, column=2).value
-            unmatched.append({
-                "row": row_idx,
-                "biz_raw": str(biz_raw),
-                "current_b": str(current_b) if current_b is not None else "",
-            })
-    output_path = _make_output_path(input_path, output_dir)
-    wb.save(output_path)
-    return output_path, changed, unmatched
+    def write_cells(self, path: str, rows: list) -> int:
+        wb = openpyxl.load_workbook(path)
+        ws = wb.worksheets[2]
+        for row_idx, new_val in rows:
+            ws.cell(row=row_idx, column=2).value = new_val
+        wb.save(path)
+        return len(rows)
+
+
+def get_excel_backend() -> ExcelBackend:
+    if HAS_WIN32:
+        return Win32Backend()
+    elif HAS_OPENPYXL:
+        return OpenpyxlBackend()
+    else:
+        raise RuntimeError("pywin32 또는 openpyxl 패키지가 필요합니다.")
+
+
+def convert_file(input_path: str, mapping: dict, clinic_mapping: dict, output_dir: str) -> tuple:
+    """슬라이서 등 Excel 요소를 보존하며 변환. 반환: (출력 경로, 변환된 행 수, 미매칭 목록)."""
+    return get_excel_backend().convert(input_path, mapping, clinic_mapping, output_dir)
 
 
 # ── 앱 ────────────────────────────────────────────────────────────────────────
@@ -1315,49 +1352,7 @@ class NaverMailApp:
         self._status(f"수정 적용 완료: {total}건")
 
     def _write_corrections(self, out_path: str, rows: list) -> int:
-        if HAS_WIN32:
-            return self._write_corrections_win32(out_path, rows)
-        elif HAS_OPENPYXL:
-            return self._write_corrections_openpyxl(out_path, rows)
-        else:
-            raise RuntimeError("pywin32 또는 openpyxl 패키지가 필요합니다.")
-
-    def _write_corrections_win32(self, out_path: str, rows: list) -> int:
-        import pythoncom
-        pythoncom.CoInitialize()
-        try:
-            abs_path = os.path.abspath(out_path)
-            xl = win32com.DispatchEx("Excel.Application")
-            xl.Visible = False
-            xl.DisplayAlerts = False
-            xl.ScreenUpdating = False
-            xl.EnableEvents = False
-            xl.Interactive = False
-            wb = None
-            try:
-                wb = xl.Workbooks.Open(abs_path, UpdateLinks=0, ReadOnly=False, AddToMru=False)
-                ws = wb.Worksheets(3)
-                for row_idx, new_val in rows:
-                    ws.Cells(row_idx, 2).Value = new_val
-                wb.Save()
-            finally:
-                if wb is not None:
-                    try:
-                        wb.Close(False)
-                    except Exception:
-                        pass
-                xl.Quit()
-        finally:
-            pythoncom.CoUninitialize()
-        return len(rows)
-
-    def _write_corrections_openpyxl(self, out_path: str, rows: list) -> int:
-        wb = openpyxl.load_workbook(out_path)
-        ws = wb.worksheets[2]
-        for row_idx, new_val in rows:
-            ws.cell(row=row_idx, column=2).value = new_val
-        wb.save(out_path)
-        return len(rows)
+        return get_excel_backend().write_cells(out_path, rows)
 
 
 def main():
