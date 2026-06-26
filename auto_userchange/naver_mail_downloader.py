@@ -259,7 +259,7 @@ class Win32Backend(ExcelBackend):
             changed, unmatched = 0, []
             for row in range(10, last_row + 1):
                 hospital = ws.Cells(row, 6).Value
-                if hospital and str(hospital).strip() == "윤병옥내과":
+                if hospital and "윤병옥내과" in str(hospital).strip():
                     product = ws.Cells(row, 9).Value
                     key = str(product).strip() if product is not None else ""
                     if key and key in clinic_mapping:
@@ -339,7 +339,7 @@ class OpenpyxlBackend(ExcelBackend):
         changed, unmatched = 0, []
         for row_idx in range(10, ws.max_row + 1):
             hospital = ws.cell(row=row_idx, column=6).value
-            if hospital and str(hospital).strip() == "윤병옥내과":
+            if hospital and "윤병옥내과" in str(hospital).strip():
                 product = ws.cell(row=row_idx, column=9).value
                 key = str(product).strip() if product is not None else ""
                 if key and key in clinic_mapping:
