@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -292,6 +292,17 @@ header h1 { font-size: 20px; font-weight: 700; }
   font-weight: 700;
 }
 
+.badge-invoice {
+  position: absolute;
+  top: 6px; right: 4px;
+  background: #c62828;
+  color: white;
+  font-size: 13px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-weight: 800;
+}
+
 /* Modal */
 .modal-overlay {
   display: none;
@@ -331,7 +342,7 @@ header h1 { font-size: 20px; font-weight: 700; }
 }
 
 .modal-type-bar { height: 5px; border-radius: 12px 12px 0 0; }
-.modal-body { padding: 20px 24px 24px; }
+.modal-body { padding: 14px 20px 18px; }
 
 .modal-header {
   display: flex;
@@ -359,11 +370,11 @@ header h1 { font-size: 20px; font-weight: 700; }
   margin-bottom: 13px;
 }
 
-.form-group { margin-bottom: 12px; }
+.form-group { margin-bottom: 9px; }
 
 .form-group label {
   display: block;
-  font-size: 13px;
+  font-size: 15px;
   color: #aaa;
   font-weight: 700;
   margin-bottom: 5px;
@@ -375,14 +386,15 @@ header h1 { font-size: 20px; font-weight: 700; }
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1.5px solid #e0e0e0;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 15px;
   font-family: inherit;
   color: #333;
   background: white;
   transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -421,7 +433,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   font-family: inherit;
 }
@@ -447,20 +459,24 @@ header h1 { font-size: 20px; font-weight: 700; }
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 
-.vat-check-label {
+label.vat-check-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border: 1.5px solid #e0e0e0;
   border-radius: 6px;
   cursor: pointer;
   font-size: 15px;
   color: #555;
   transition: border-color 0.15s;
+  margin-bottom: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
 }
-.vat-check-label:hover { border-color: #999; }
-.vat-check-label input[type="checkbox"] {
+label.vat-check-label:hover { border-color: #999; }
+label.vat-check-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -512,7 +528,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   border-radius: 6px;
   background: #f8f8f8;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   font-weight: 700;
   color: #888;
@@ -530,7 +546,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   background: #f5f5f5;
   border: 1.5px solid #e8e8e8;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   color: #777;
   margin-bottom: 10px;
 }
@@ -556,7 +572,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(0,0,0,0.08);
-  font-size: 13px;
+  font-size: 15px;
   color: #888;
   cursor: pointer;
   user-select: none;
@@ -576,7 +592,7 @@ header h1 { font-size: 20px; font-weight: 700; }
   border: 1.5px solid #e0e0e0;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #555;
   background: #f8f8f8;
@@ -595,18 +611,16 @@ header h1 { font-size: 20px; font-weight: 700; }
   flex-shrink: 0;
 }
 .month-pay-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
-  max-height: 158px;
-  overflow-y: auto;
   padding: 2px 0;
 }
 .month-pay-item {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
+  padding: 5px 6px;
   border: 1.5px solid #e0e0e0;
   border-radius: 6px;
   cursor: pointer;
@@ -628,6 +642,24 @@ header h1 { font-size: 20px; font-weight: 700; }
   accent-color: #26a69a;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.prorated-result {
+  padding: 9px 10px;
+  border: 1.5px solid #ffe082;
+  border-radius: 6px;
+  background: #fff8e1;
+  font-size: 14px;
+  font-weight: 800;
+  color: #bf360c;
+  white-space: nowrap;
+  text-align: center;
+  min-width: 84px;
+}
+.prorated-result.is-service {
+  border-color: #66bb6a;
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 </style>
 </head>
@@ -696,24 +728,32 @@ header h1 { font-size: 20px; font-weight: 700; }
       <div id="expiry-warn" class="expiry-warn" style="display:none;"></div>
       <div class="form-group">
         <label>상호명</label>
-        <input type="text" id="f-name" placeholder="상호명 입력 (개인이면 이름, 공실이면 비워두세요)">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="f-name" placeholder="상호명 입력 (개인이면 이름, 공실이면 비워두세요)" style="flex:1;">
+          <label class="vat-check-label" style="white-space:nowrap;flex:0 0 auto;height:37px;box-sizing:border-box;">
+            <input type="checkbox" id="f-invoice">
+            계산서발행
+          </label>
+        </div>
       </div>
-      <div class="form-group">
-        <label>입주자 이름</label>
-        <input type="text" id="f-tenant-name" placeholder="입주자 성함">
-      </div>
-      <div class="form-group">
-        <label>연락처</label>
-        <input type="text" id="f-phone" placeholder="010-0000-0000" oninput="formatPhone(this)" inputmode="numeric">
+      <div class="form-row">
+        <div class="form-group">
+          <label>입주자 이름</label>
+          <input type="text" id="f-tenant-name" placeholder="입주자 성함">
+        </div>
+        <div class="form-group">
+          <label>연락처</label>
+          <input type="text" id="f-phone" placeholder="010-0000-0000" oninput="formatPhone(this)" inputmode="numeric">
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>계약 시작일</label>
-          <input type="date" id="f-start" onchange="updateDailyRent(); renderMonthPayments();">
+          <input type="date" id="f-start" onchange="onStartChange()">
         </div>
         <div class="form-group">
           <label>계약 만료일</label>
-          <input type="date" id="f-end" onchange="renderMonthPayments()">
+          <input type="date" id="f-end" onchange="onEndChange()">
         </div>
       </div>
       <div class="base-rent-info" id="base-rent-row" style="display:none;">
@@ -721,54 +761,17 @@ header h1 { font-size: 20px; font-weight: 700; }
       </div>
       <div class="form-group" id="deposit-group" style="display:none;">
         <label>보증금</label>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <label class="vat-check-label">
-            <input type="checkbox" id="f-deposit-paid">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label class="vat-check-label" style="flex:1;min-width:0;">
+            <input type="checkbox" id="f-deposit-paid" onchange="onDepositPaidChange()">
             납부완료 &mdash; <strong id="deposit-amount-display" style="margin-left:2px;font-size:15px;color:#7b1fa2;"></strong>
           </label>
-          <select id="f-deposit-month" style="font-size:13px;padding:3px 8px;border:1px solid #ccc;border-radius:4px;color:#444;"></select>
+          <select id="f-deposit-month" style="width:auto;flex:0 0 auto;font-size:15px;padding:8px 8px;border:1.5px solid #e0e0e0;border-radius:6px;color:#444;box-sizing:border-box;"></select>
         </div>
       </div>
       <div class="form-group">
-        <label>VAT (부가세)</label>
-        <label class="vat-check-label">
-          <input type="checkbox" id="f-vat" onchange="updateRentCalc()">
-          부가세 포함 (×1.1)
-        </label>
-      </div>
-      <div class="form-group">
-        <label>할인율</label>
-        <div class="discount-options">
-          <button type="button" class="discount-btn selected" data-discount="0" onclick="selectDiscount(this)">표준가</button>
-          <button type="button" class="discount-btn" data-discount="0.1" onclick="selectDiscount(this)">10%</button>
-          <button type="button" class="discount-btn" data-discount="0.2" onclick="selectDiscount(this)">20%</button>
-          <button type="button" class="discount-btn" data-discount="0.25" onclick="selectDiscount(this)">25%</button>
-          <button type="button" class="discount-btn" data-discount="0.3" onclick="selectDiscount(this)">30%</button>
-        </div>
-      </div>
-      <div id="daily-rent-box" class="daily-rent-box" style="display:none;">
-        <div class="daily-rent-title">&#128197; 일할계산 요금</div>
-        <div id="daily-rent-content">
-          <div id="daily-rent-detail" class="daily-rent-detail"></div>
-          <div id="daily-rent-amount" class="daily-rent-amount"></div>
-        </div>
-        <div id="daily-service-msg" class="daily-service-msg" style="display:none;">이번달은 서비스 기간입니다.</div>
-        <label class="service-check-label">
-          <input type="checkbox" id="f-service" onchange="onServiceChange()">
-          서비스 기간 (이번달 요금 없음)
-        </label>
-      </div>
-      <div class="form-group">
-        <label>월 임대료 (원)</label>
-        <input type="text" id="f-rent" placeholder="예: 430,000" oninput="updateDailyRent()">
-      </div>
-      <div class="form-group" id="contract-status-group">
-        <label>계약 상태</label>
-        <div class="contract-status-options">
-          <button type="button" class="status-btn s-active" data-status="계약중" onclick="selectContractStatus(this)">계약중</button>
-          <button type="button" class="status-btn" data-status="계약만료" onclick="selectContractStatus(this)">계약만료</button>
-          <button type="button" class="status-btn" data-status="계약해지" onclick="selectContractStatus(this)">계약해지</button>
-        </div>
+        <label>보증금 메모</label>
+        <textarea id="f-memo" rows="1" placeholder="보증금 관련 메모"></textarea>
       </div>
       <div class="form-group">
         <label>납부 현황</label>
@@ -779,8 +782,51 @@ header h1 { font-size: 20px; font-weight: 700; }
         <div id="month-pay-grid" class="month-pay-grid"></div>
       </div>
       <div class="form-group">
-        <label>메모</label>
-        <textarea id="f-memo" rows="2" placeholder="특이사항 등"></textarea>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <div style="flex:1;">
+            <label>월 임대료 (원)</label>
+            <input type="text" id="f-rent" placeholder="예: 430,000" oninput="updateDailyRent()">
+          </div>
+          <div style="flex:0 0 auto;">
+            <label>부가세</label>
+            <label class="vat-check-label" style="white-space:nowrap;height:37px;box-sizing:border-box;">
+              <input type="checkbox" id="f-vat" onchange="updateRentCalc()">
+              ×1.1
+            </label>
+          </div>
+          <div style="flex:0 0 88px;">
+            <label>할인율</label>
+            <select id="f-discount-select" onchange="updateRentCalc()" style="width:100%;height:37px;box-sizing:border-box;padding:0 8px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:15px;font-family:inherit;color:#333;background:white;transition:border-color 0.15s;">
+              <option value="0">표준가</option>
+              <option value="0.1">10%</option>
+              <option value="0.2">20%</option>
+              <option value="0.25">25%</option>
+              <option value="0.3">30%</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="prorated-service-wrap" style="display:none;margin-bottom:8px;padding:10px 14px;background:#fff8e1;border:1.5px solid #ffe082;border-radius:8px;">
+        <div style="font-size:15px;color:#e65100;font-weight:700;margin-bottom:4px;">&#128197; 일할계산</div>
+        <div id="prorated-detail-line" style="font-size:15px;color:#888;margin-bottom:3px;"></div>
+        <div id="prorated-result" style="font-size:15px;font-weight:800;color:#bf360c;margin-bottom:4px;"></div>
+        <div id="daily-service-msg" style="display:none;font-size:15px;font-weight:800;color:#2e7d32;">이번달은 서비스 기간입니다.</div>
+        <label class="service-check-label">
+          <input type="checkbox" id="f-service" onchange="onServiceChange()">
+          서비스 기간 (이번달 요금 없음)
+        </label>
+      </div>
+      <div class="form-group">
+        <label>특이사항</label>
+        <textarea id="f-memo2" rows="2" placeholder="특이사항 등"></textarea>
+      </div>
+      <div class="form-group" id="contract-status-group">
+        <label>계약 상태</label>
+        <div class="contract-status-options">
+          <button type="button" class="status-btn s-active" data-status="계약중" onclick="selectContractStatus(this)">계약중</button>
+          <button type="button" class="status-btn" data-status="계약만료" onclick="selectContractStatus(this)">계약만료</button>
+          <button type="button" class="status-btn" data-status="계약해지" onclick="selectContractStatus(this)">계약해지</button>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-danger" id="btn-vacate" onclick="vacateRoom()" style="display:none;">퇴실처리</button>
@@ -821,7 +867,7 @@ header h1 { font-size: 20px; font-weight: 700; }
         <button class="btn-close" onclick="closeVirtualAdd()">&#215;</button>
       </div>
       <div class="form-group">
-        <label>고객 ID <span id="va-id-hint" style="font-size:11px;color:#aaa;font-weight:400;">(신규 시 직접 입력 가능)</span></label>
+        <label>고객 ID <span id="va-id-hint" style="font-size:11px;color:#aaa;font-weight:400;"></span></label>
         <input type="text" id="va-id" placeholder="예: V001" style="font-weight:700;">
       </div>
       <div class="form-group">
@@ -851,12 +897,12 @@ header h1 { font-size: 20px; font-weight: 700; }
         </div>
         <div class="form-group">
           <label>계약 만료일 (자동 계산)</label>
-          <input type="date" id="va-end" onchange="renderVaMonthPayments()">
+          <input type="date" id="va-end" onchange="onVaEndChange()">
         </div>
       </div>
       <div class="form-group">
         <label>계약 임대료 (원)</label>
-        <input type="text" id="va-rent" value="290,400" readonly style="background:#f5f5f5;color:#333;font-weight:700;">
+        <input type="text" id="va-rent" value="290,400" style="font-weight:700;">
       </div>
       <div class="form-group">
         <label>계약 상태</label>
@@ -889,863 +935,6 @@ header h1 { font-size: 20px; font-weight: 700; }
 <div class="toast" id="toast"></div>
 
 <script src="/office-domain.js"></script>
-<script>
-// ── 상태 ────────────────────────────────────────────
-let currentMonth = new Date().toISOString().slice(0, 7);
-let currentRoom  = null;
-
-// ── 데이터 레이어 (Candidate 4) ──────────────────────
-// _DATA는 이 블록 외부에서 직접 접근 금지 — getAllData() / store() 사용
-let _DATA = {};
-let _dataLoaded = false;
-
-function getAllData() { return _DATA; }
-
-async function store(data, force) {
-  if (!_dataLoaded && !force) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
-  const res = await fetch('/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
-  _DATA = data; // 서버 확인 후 메모리 업데이트
-}
-
-async function removeRoom(id) {
-  const data = Object.assign({}, getAllData());
-  delete data[id];
-  return store(data);
-}
-
-// ── 평면도 렌더 ─────────────────────────────────────
-function renderFloor() {
-  const data = getAllData();
-  const grid = document.getElementById('floor-grid');
-  grid.innerHTML = '';
-
-  LAYOUT.forEach(row => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'floor-row';
-
-    row.forEach(cell => {
-      const el = document.createElement('div');
-      el.className = 'cell';
-
-      if (!cell) {
-        el.classList.add('cell-empty');
-      } else if (cell === 'GAP') {
-        el.classList.add('cell-gap');
-      } else if (cell === 'U') {
-        el.classList.add('cell-util');
-      } else if (cell === 'CORR') {
-        el.classList.add('cell-corridor');
-        el.textContent = '복도';
-      } else {
-        const z  = zone(cell);
-        const st = statusClass(cell, data, currentMonth);
-        const d  = data[cell] || {};
-        const tag = daysLeft(d.end);
-        const color = ZONE[z].color;
-
-        el.classList.add('cell-room', st);
-        if (tag === '만료' && isOccupied(d)) el.classList.add('expired');
-        el.onclick = () => openModal(cell);
-
-        let html = `<div class="type-strip" style="background:${color}"></div>`;
-        html += `<div class="room-id">${cell}</div>`;
-        html += `<div class="room-name">${d.name || d.tenantName || '공실'}</div>`;
-        if (isOccupied(d) && d.rent) {
-          html += `<div class="room-rent">${fmtWon(d.rent)}원</div>`;
-        } else if (!isOccupied(d) && BASE_RENT[cell]) {
-          const base = BASE_RENT[cell];
-          const disc = calcRent(base, 0.3, false);
-          html += `<div class="room-vacant-price">${fmtWon(disc)}원</div>`;
-        }
-        const isExpired = tag === '만료';
-        if (isOccupied(d) && st === 'paid'   && !isExpired) html += `<div class="badge-paid">완</div>`;
-        if (isOccupied(d) && st === 'unpaid' && !isExpired) html += `<div class="badge-miss">미</div>`;
-        if (isOccupied(d) && st === 'pre-contract') html += `<div class="badge-pre">대기</div>`;
-        if (tag && isOccupied(d)) html += `<div class="badge-expiry">${tag}</div>`;
-        if (isVirtual(cell, d) && isOccupied(d)) html += `<div class="badge-virtual">비상주</div>`;
-
-        el.innerHTML = html;
-      }
-      rowEl.appendChild(el);
-    });
-    grid.appendChild(rowEl);
-  });
-}
-
-// ── 통계 렌더 ───────────────────────────────────────
-function renderStats() {
-  const data = getAllData();
-  const {
-    totalRooms, residentCount, virtualCount, vacantCount, occupancyRate,
-    rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
-    depositTotal, expiring, vExpiring, curMonthNum,
-  } = computeStats(data, currentMonth);
-
-  const vAlerts = vExpiring.map(a => {
-    const col = a.diff < 0 ? '#c62828' : a.diff <= 7 ? '#e91e63' : '#e65100';
-    const lbl = a.diff < 0 ? '계약만료' : `만료 D-${a.diff}`;
-    return `<div class="stat-card stat-card-btn" style="border:1.5px solid ${col};background:#fff;" onclick="openVirtualAdd('${a.id}')">
-      <div class="stat-value" style="color:${col};font-size:16px;">${a.id}</div>
-      <div class="stat-label" style="color:${col};">${lbl}</div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('stats-bar').innerHTML = `
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a1a1a">${totalRooms}</div>
-      <div class="stat-label" style="color:#666;">전체 호실</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#0d47a1">${residentCount}</div>
-      <div class="stat-label" style="color:#666;">상주</div>
-    </div>
-    <div class="stat-card stat-card-btn" style="background:#fff;border-color:#ddd;" onclick="showVirtualList()">
-      <div class="stat-value" style="color:#546e7a">${virtualCount}</div>
-      <div class="stat-label" style="color:#666;">비상주 &#9654;</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#888">${vacantCount}</div>
-      <div class="stat-label" style="color:#666;">공실</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a1a1a">${occupancyRate}%</div>
-      <div class="stat-label" style="color:#666;">점유율</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#00695c">${rPaidAmt.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">상주납부금액 (원)</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#7b1fa2">${depositTotal.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">보증금 합계 (원)</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#546e7a">${vPaidAmt.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">비상주납부금액 (원)</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#1a237e">${totalPaidAmt.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">${curMonthNum}월 합계금액 (원)</div>
-    </div>
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#c62828">${unpaidAmt.toLocaleString()}</div>
-      <div class="stat-label" style="color:#666;">미납 (원)</div>
-    </div>
-    ${expiring > 0 ? `
-    <div class="stat-card" style="background:#fff;border-color:#ddd;">
-      <div class="stat-value" style="color:#ff6f00">${expiring}건</div>
-      <div class="stat-label" style="color:#666;">만료임박·만료</div>
-    </div>` : ''}
-    <div style="flex:1;min-width:0;"></div>
-    ${vAlerts}
-    <button class="btn-excel" style="background:#546e7a;align-self:center;white-space:nowrap;font-size:14px;padding:7px 14px;" onclick="openVirtualAdd(null)">&#128203; 비상주 등록하기</button>
-  `;
-
-  document.getElementById('type-summary').innerHTML = ['A','B','C','D'].map(z => {
-    const rooms  = ALL_ROOMS.filter(r => zone(r) === z);
-    const zocc   = rooms.filter(r => isOccupied(data[r])).length;
-    const zunpaid = rooms.filter(r => isOccupied(data[r]) && !isBeforeStart(data[r]) && !isPaid(data[r], currentMonth)).length;
-    return `
-      <div class="type-card">
-        <div class="type-badge" style="background:${ZONE[z].color}">${z}</div>
-        <div class="type-info">
-          <strong>${ZONE[z].name} &nbsp; ${zocc}/${rooms.length}</strong>
-          ${zunpaid > 0
-            ? `<span style="color:#e91e63">미납 ${zunpaid}건</span>`
-            : `<span style="color:#26a69a">납부 완료</span>`}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ── 월 탐색 ─────────────────────────────────────────
-function changeMonth(delta) {
-  const [y, m] = currentMonth.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  currentMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  updateMonthDisplay();
-  renderFloor();
-  renderStats();
-}
-
-function updateMonthDisplay() {
-  const [y, m] = currentMonth.split('-').map(Number);
-  document.getElementById('month-display').textContent = y + '년 ' + m + '월';
-}
-
-// ── 모달 ────────────────────────────────────────────
-function openModal(id) {
-  currentRoom = id;
-  const d = getAllData()[id] || {};
-  const z = zone(id);
-  const color = ZONE[z].color;
-
-  document.getElementById('modal-type-bar').style.background = color;
-  document.getElementById('modal-title').textContent = id;
-  document.getElementById('modal-type-label').textContent = ZONE[z].name;
-  document.getElementById('modal-type-label').style.background = color;
-
-  document.getElementById('f-name').value        = d.name || '';
-  document.getElementById('f-tenant-name').value = d.tenantName || '';
-  document.getElementById('f-phone').value       = d.phone || '';
-  document.getElementById('f-start').value       = d.start || '';
-  document.getElementById('f-end').value         = d.end   || '';
-  var cStatus = d.contractStatus || '계약중';
-  document.querySelectorAll('.status-btn').forEach(function(b) {
-    b.classList.remove('s-active', 's-expired', 's-canceled');
-    if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
-  });
-  document.getElementById('f-memo').value        = d.memo  || '';
-
-  // 기준 임대료 표시
-  var base = BASE_RENT[id];
-  var baseRow = document.getElementById('base-rent-row');
-  var depositGroup = document.getElementById('deposit-group');
-  if (base) {
-    document.getElementById('base-rent-display').textContent = fmtWon(base) + '원';
-    baseRow.style.display = 'flex';
-    document.getElementById('deposit-amount-display').textContent = fmtWon(depositAmount(id)) + '원';
-    document.getElementById('f-deposit-paid').checked = !!(d.depositPaid);
-    populateDepositMonthSelect(d.start, d.depositPaidMonth);
-    depositGroup.style.display = '';
-  } else {
-    baseRow.style.display = 'none';
-    depositGroup.style.display = 'none';
-  }
-
-  // VAT 설정
-  document.getElementById('f-vat').checked = !!(d.vat);
-
-  // 할인율 버튼 설정
-  var savedDiscount = d.discount || 0;
-  document.querySelectorAll('.discount-btn').forEach(function(b) {
-    b.classList.remove('selected');
-    if (Math.abs(parseFloat(b.getAttribute('data-discount')) - savedDiscount) < 0.001) {
-      b.classList.add('selected');
-    }
-  });
-
-  // 임대료: 기존값 표시, 공실이면 기준가 자동계산
-  if (d.rent) {
-    document.getElementById('f-rent').value = fmtWon(d.rent);
-  } else if (base) {
-    var disc = savedDiscount || 0;
-    var vat  = !!(d.vat);
-    document.getElementById('f-rent').value = fmtWon(calcRent(base, disc, vat));
-  } else {
-    document.getElementById('f-rent').value = '';
-  }
-
-  document.getElementById('f-prepaid').checked = !!(d.prepaid);
-  document.getElementById('prepaid-wrap').classList.toggle('active', !!(d.prepaid));
-  document.getElementById('month-pay-grid').innerHTML = '';
-  renderMonthPayments();
-
-  const tag = daysLeft(d.end);
-  const warn = document.getElementById('expiry-warn');
-  if (tag && isOccupied(d)) {
-    warn.style.display = 'block';
-    warn.textContent = tag === '만료'
-      ? '⚠ 계약이 만료되었습니다 (' + d.end + ')'
-      : '⚠ 계약 만료 ' + tag + ' (만료일: ' + d.end + ')';
-  } else {
-    warn.style.display = 'none';
-  }
-
-  document.getElementById('f-service').checked = !!(d.dailyService);
-  document.getElementById('btn-vacate').style.display = isOccupied(d) ? 'inline-block' : 'none';
-  updateDailyRent();
-  document.getElementById('modal-overlay').classList.add('active');
-  setTimeout(() => document.getElementById('f-name').focus(), 60);
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('active');
-  resetOverlay();
-  currentRoom = null;
-}
-
-function updateRentCalc() {
-  if (!currentRoom) return;
-  var base = BASE_RENT[currentRoom];
-  if (!base) return;
-  var vat = document.getElementById('f-vat').checked;
-  var selBtn = document.querySelector('.discount-btn.selected');
-  var discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
-  var calc = calcRent(base, discount, vat);
-  document.getElementById('f-rent').value = fmtWon(calc);
-  updateDailyRent();
-}
-
-function selectDiscount(btn) {
-  document.querySelectorAll('.discount-btn').forEach(function(b) { b.classList.remove('selected'); });
-  btn.classList.add('selected');
-  updateRentCalc();
-}
-
-function updateDailyRent() {
-  var box = document.getElementById('daily-rent-box');
-  var startVal = document.getElementById('f-start').value;
-  if (!startVal) { box.style.display = 'none'; return; }
-
-  var rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
-  var monthlyRent = parseInt(rentRaw, 10);
-  if (!monthlyRent) { box.style.display = 'none'; return; }
-
-  var result = proratedRent(monthlyRent, startVal);
-  if (!result) { box.style.display = 'none'; return; }
-
-  document.getElementById('daily-rent-detail').textContent =
-    result.month + '월 ' + result.day + '일 ~ ' + result.daysInMonth + '일 (' + result.daysUsed + '일, ' + result.daysInMonth + '일 기준)';
-  document.getElementById('daily-rent-amount').textContent = fmtWon(result.amount) + '원';
-  box.style.display = 'block';
-  applyServiceState();
-}
-
-function applyServiceState() {
-  var isService = document.getElementById('f-service').checked;
-  var box = document.getElementById('daily-rent-box');
-  if (box.style.display === 'none') return;
-  box.classList.toggle('is-service', isService);
-  document.getElementById('daily-rent-content').style.display = isService ? 'none' : 'block';
-  document.getElementById('daily-service-msg').style.display = isService ? 'block' : 'none';
-}
-
-function onServiceChange() { applyServiceState(); }
-
-// Candidate 2: 모든 입력을 매개변수로 받음 — DOM 읽기를 호출부로 위임
-function _buildMonthGrid(cfg, startVal, endVal, prepaid) {
-  var d = getAllData()[cfg.dataKey] || {};
-  var months = getMonthRange(startVal, endVal);
-  if (months.length === 0) months = [currentMonth];
-
-  var grid = document.getElementById(cfg.gridId);
-
-  var saved = {};
-  grid.querySelectorAll('.' + cfg.cbClass).forEach(function(cb) {
-    saved[cb.value] = cb.checked;
-  });
-
-  grid.innerHTML = '';
-  months.forEach(function(m) {
-    var paidVal = (m in saved) ? saved[m] : (prepaid || !!(d['paid_' + m]));
-    var lbl = document.createElement('label');
-    lbl.className = 'month-pay-item' + (paidVal ? ' is-paid' : '');
-    lbl.innerHTML =
-      '<input type="checkbox" class="' + cfg.cbClass + '" value="' + m + '"' +
-      (paidVal ? ' checked' : '') + '> ' + m.replace('-', '.');
-    var cb = lbl.querySelector('input');
-    cb.addEventListener('change', function() {
-      lbl.classList.toggle('is-paid', this.checked);
-      if (!this.checked) {
-        document.getElementById(cfg.prepaidId).checked = false;
-        document.getElementById(cfg.wrapId).classList.remove('active');
-      }
-    });
-    grid.appendChild(lbl);
-  });
-}
-
-function renderMonthPayments() {
-  if (!currentRoom) return;
-  _buildMonthGrid(
-    { dataKey: currentRoom, prepaidId: 'f-prepaid', wrapId: 'prepaid-wrap', gridId: 'month-pay-grid', cbClass: 'month-pay-checkbox' },
-    document.getElementById('f-start').value,
-    document.getElementById('f-end').value,
-    document.getElementById('f-prepaid').checked
-  );
-}
-
-function renderVaMonthPayments() {
-  var id = document.getElementById('va-id').value;
-  if (!id) return;
-  _buildMonthGrid(
-    { dataKey: id, prepaidId: 'va-prepaid', wrapId: 'va-prepaid-wrap', gridId: 'va-month-pay-grid', cbClass: 'va-month-pay-cb' },
-    document.getElementById('va-start').value,
-    document.getElementById('va-end').value,
-    document.getElementById('va-prepaid').checked
-  );
-}
-
-function applyStatusClass(btn) {
-  var map = { '계약중': 's-active', '계약만료': 's-expired', '계약해지': 's-canceled' };
-  btn.classList.add(map[btn.getAttribute('data-status')] || 's-active');
-}
-
-function selectContractStatus(btn) {
-  document.querySelectorAll('#modal-overlay .status-btn').forEach(function(b) {
-    b.classList.remove('s-active', 's-expired', 's-canceled');
-  });
-  applyStatusClass(btn);
-}
-
-function _addMonths(ym, n) {
-  var y = parseInt(ym.slice(0, 4));
-  var m = parseInt(ym.slice(5, 7)) + n;
-  while (m > 12) { m -= 12; y++; }
-  while (m < 1)  { m += 12; y--; }
-  return y + '-' + String(m).padStart(2, '0');
-}
-
-function populateDepositMonthSelect(startStr, savedMonth) {
-  var sel = document.getElementById('f-deposit-month');
-  sel.innerHTML = '';
-  var base = startStr ? startStr.slice(0, 7) : currentMonth;
-  [['전전월', -2], ['전월', -1], ['금월', 0], ['익월', 1]].forEach(function(pair) {
-    var label = pair[0], offset = pair[1];
-    var ym = _addMonths(base, offset);
-    var y = ym.slice(0, 4), m = parseInt(ym.slice(5, 7));
-    var opt = document.createElement('option');
-    opt.value = ym;
-    opt.textContent = y + '년 ' + m + '월 (' + label + ')';
-    sel.appendChild(opt);
-  });
-  var target = savedMonth || base;
-  sel.value = (Array.from(sel.options).some(function(o) { return o.value === target; })) ? target : base;
-}
-
-function onPrepaidChange() {
-  var prepaid = document.getElementById('f-prepaid').checked;
-  document.getElementById('prepaid-wrap').classList.toggle('active', prepaid);
-  if (prepaid) {
-    document.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
-      cb.checked = true;
-      cb.closest('.month-pay-item').classList.add('is-paid');
-    });
-  }
-}
-
-async function saveRoom() {
-  if (!currentRoom) return;
-  const data = Object.assign({}, getAllData());
-  const prev = data[currentRoom] || {};
-  const name = document.getElementById('f-name').value.trim();
-
-  const tenantName = document.getElementById('f-tenant-name').value.trim();
-  if (!name && !tenantName) {
-    delete data[currentRoom];
-  } else {
-    const vat = document.getElementById('f-vat').checked;
-    const selBtn = document.querySelector('.discount-btn.selected');
-    const discount = selBtn ? parseFloat(selBtn.getAttribute('data-discount')) : 0;
-    const rentRaw = document.getElementById('f-rent').value.replace(/,/g, '').trim();
-    const rent = parseInt(rentRaw, 10) || 0;
-
-    var paymentData = { prepaid: document.getElementById('f-prepaid').checked, dailyService: document.getElementById('f-service').checked };
-    document.querySelectorAll('.month-pay-checkbox').forEach(function(cb) {
-      paymentData['paid_' + cb.value] = cb.checked;
-    });
-
-    data[currentRoom] = Object.assign({}, prev, {
-      name,
-      tenantName,
-      phone: document.getElementById('f-phone').value.trim(),
-      start: document.getElementById('f-start').value,
-      end:   document.getElementById('f-end').value,
-      rent,
-      vat,
-      discount,
-      depositPaid: document.getElementById('f-deposit-paid').checked,
-      depositPaidMonth: document.getElementById('f-deposit-paid').checked
-        ? document.getElementById('f-deposit-month').value
-        : null,
-      contractStatus: (function() {
-        var b = document.querySelector('#modal-overlay .status-btn.s-active, #modal-overlay .status-btn.s-expired, #modal-overlay .status-btn.s-canceled');
-        return b ? b.getAttribute('data-status') : '계약중';
-      })(),
-      memo:  document.getElementById('f-memo').value.trim(),
-    }, paymentData);
-  }
-
-  try {
-    await store(data);
-    closeModal();
-    renderFloor();
-    renderStats();
-    toast('저장되었습니다.');
-  } catch(e) {
-    toast('저장 실패 — 네트워크를 확인 후 다시 시도해주세요.');
-  }
-}
-
-async function vacateRoom() {
-  if (!currentRoom) return;
-  if (!confirm(currentRoom + ' 퇴실 처리하시겠습니까?\n입력된 모든 정보가 삭제됩니다.')) return;
-  try {
-    await removeRoom(currentRoom);
-    closeModal();
-    renderFloor();
-    renderStats();
-    toast('퇴실 처리되었습니다.');
-  } catch(e) {
-    toast('저장 실패 — 네트워크를 확인 후 다시 시도해주세요.');
-  }
-}
-
-async function importExcel(event) {
-  const file = event.target.files[0];
-  event.target.value = '';
-  if (!file) return;
-
-  if (!confirm('현재 데이터를 업로드한 엑셀 파일로 교체합니다.\n계속하시겠습니까?')) return;
-
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/import', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error(await res.text());
-
-    const imported = await res.json();
-    if (Object.keys(imported).length === 0) {
-      toast('업로드된 데이터가 없습니다. 파일을 확인해주세요.');
-      return;
-    }
-
-    await store(imported, true);
-    _dataLoaded = true;
-    renderFloor();
-    renderStats();
-    toast(Object.keys(imported).length + '개 호실 데이터를 업로드했습니다.');
-  } catch(e) {
-    toast('업로드 실패 — ' + e.message);
-  }
-}
-
-async function exportExcel() {
-  const data = getAllData();
-  if (Object.keys(data).length === 0) {
-    toast('저장된 데이터가 없습니다.');
-    return;
-  }
-  try {
-    const res = await fetch('/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data, month: currentMonth }),
-    });
-    if (!res.ok) throw new Error('서버 오류');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const today = new Date();
-    const yy = String(today.getFullYear()).slice(2);
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    a.download = `${yy}${mm}${dd} 공유오피스 운영 대시보드 백업.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('엑셀 파일이 저장되었습니다.');
-  } catch (e) {
-    toast('엑셀 내보내기는 대시보드 프로그램에서만 사용 가능합니다.');
-  }
-}
-
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 2000);
-}
-
-
-function showVirtualList() {
-  const data = getAllData();
-  const rooms = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]));
-  const content = document.getElementById('virtual-list-content');
-
-  const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
-  const addBtn = `<div style="margin-bottom:10px;"><button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null);">&#43; 새 고객 추가</button></div>`;
-  if (rooms.length === 0) {
-    content.innerHTML = addBtn + '<p style="color:#aaa;text-align:center;padding:20px;">등록된 비상주 고객이 없습니다.</p>';
-  } else {
-    const rows = rooms.map(r => {
-      const d = data[r];
-      const pre = isBeforeStart(d);
-      const ok  = !pre && isPaid(d, currentMonth);
-      const cs  = d.contractStatus || '계약중';
-      const payColor = ok ? '#26a69a' : pre ? '#9e9e9e' : '#e91e63';
-      const payLabel = ok ? '완납'   : pre ? '대기'    : '미납';
-      return `<tr onclick="closeVirtualModal();openVirtualAdd('${r}')">
-        <td><strong>${r}</strong></td>
-        <td>${d.name || '-'}</td>
-        <td>${d.tenantName || '-'}</td>
-        <td>${d.phone || '-'}</td>
-        <td>${d.start || '-'}</td>
-        <td>${d.end || '-'}</td>
-        <td>${fmtWon(d.rent) || '-'}</td>
-        <td><span style="color:${payColor};font-weight:700;">${payLabel}</span></td>
-        <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
-      </tr>`;
-    }).join('');
-    content.innerHTML = addBtn + `<table class="virtual-table">
-      <thead><tr>
-        <th>ID</th><th>상호명</th><th>입주자</th><th>연락처</th>
-        <th>계약시작</th><th>계약종료</th><th>월세(원)</th><th>납부현황</th><th>계약상태</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  }
-  document.getElementById('virtual-modal-overlay').classList.add('active');
-}
-
-function closeVirtualModal() {
-  document.getElementById('virtual-modal-overlay').classList.remove('active');
-}
-
-function formatPhone(input) {
-  var v = input.value.replace(/\D/g, '').slice(0, 11);
-  if (v.startsWith('02')) {
-    if (v.length <= 2) input.value = v;
-    else if (v.length <= 6) input.value = v.slice(0,2) + '-' + v.slice(2);
-    else input.value = v.slice(0,2) + '-' + v.slice(2, v.length-4) + '-' + v.slice(v.length-4);
-  } else {
-    if (v.length <= 3) input.value = v;
-    else if (v.length <= 7) input.value = v.slice(0,3) + '-' + v.slice(3);
-    else input.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7);
-  }
-}
-
-function nextVirtualId() {
-  const data = getAllData();
-  let max = 0;
-  Object.keys(data).forEach(id => {
-    const m = id.match(/^V(\d+)$/);
-    if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
-  });
-  return 'V' + String(max + 1).padStart(3, '0');
-}
-
-function openVirtualAdd(id) {
-  const data = getAllData();
-  const d = id ? (data[id] || {}) : {};
-  const newId = id || nextVirtualId();
-
-  document.getElementById('virtual-add-title').textContent = id ? (id + ' 수정') : '비상주 신규 등록';
-  var idInput = document.getElementById('va-id');
-  idInput.value = newId;
-  if (id) {
-    idInput.readOnly = true;
-    idInput.style.background = '#f5f5f5';
-    idInput.style.color = '#888';
-  } else {
-    idInput.readOnly = false;
-    idInput.style.background = '';
-    idInput.style.color = '';
-  }
-  document.getElementById('va-name').value     = d.name || '';
-  document.getElementById('va-tenant').value   = d.tenantName || '';
-  document.getElementById('va-phone').value    = d.phone || '';
-  document.getElementById('va-start').value    = d.start || '';
-  document.getElementById('va-end').value      = d.end   || '';
-  var years = inferContractYears(d);
-  document.querySelectorAll('.period-btn').forEach(function(b) {
-    b.classList.remove('selected');
-    if (parseInt(b.getAttribute('data-years'), 10) === years) b.classList.add('selected');
-  });
-  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * years);
-  document.getElementById('va-memo').value     = d.memo  || '';
-  document.getElementById('va-btn-delete').style.display = id ? 'inline-block' : 'none';
-
-  var cStatus = d.contractStatus || '계약중';
-  document.querySelectorAll('#va-status-options .status-btn').forEach(function(b) {
-    b.classList.remove('s-active', 's-expired', 's-canceled');
-    if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
-  });
-
-  document.getElementById('va-prepaid').checked = !!(d.prepaid);
-  document.getElementById('va-prepaid-wrap').classList.toggle('active', !!(d.prepaid));
-  document.getElementById('va-month-pay-grid').innerHTML = '';
-  renderVaMonthPayments();
-
-  document.getElementById('virtual-add-overlay').classList.add('active');
-}
-
-function closeVirtualAdd() {
-  document.getElementById('virtual-add-overlay').classList.remove('active');
-}
-
-function getVaPeriodYears() {
-  var sel = document.querySelector('.period-btn.selected');
-  return sel ? parseInt(sel.getAttribute('data-years'), 10) : 1;
-}
-
-function selectVaPeriod(btn) {
-  document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('selected'); });
-  btn.classList.add('selected');
-  var startVal = document.getElementById('va-start').value;
-  if (startVal) updateVaEndFromPeriod(startVal);
-  updateVaRent();
-}
-
-function updateVaEndFromPeriod(startVal) {
-  var years = getVaPeriodYears();
-  var d = new Date(startVal + 'T00:00:00');
-  d.setFullYear(d.getFullYear() + years);
-  document.getElementById('va-end').value = d.toISOString().slice(0, 10);
-  renderVaMonthPayments();
-}
-
-function updateVaRent() {
-  var years = getVaPeriodYears();
-  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * years);
-}
-
-function onVaStartChange() {
-  var startVal = document.getElementById('va-start').value;
-  if (!startVal) return;
-  updateVaEndFromPeriod(startVal);
-}
-
-function onVaPrepaidChange() {
-  var prepaid = document.getElementById('va-prepaid').checked;
-  document.getElementById('va-prepaid-wrap').classList.toggle('active', prepaid);
-  if (prepaid) {
-    document.querySelectorAll('.va-month-pay-cb').forEach(function(cb) {
-      cb.checked = true;
-      cb.closest('.month-pay-item').classList.add('is-paid');
-    });
-  }
-}
-
-function selectVaStatus(btn) {
-  document.querySelectorAll('#va-status-options .status-btn').forEach(function(b) {
-    b.classList.remove('s-active', 's-expired', 's-canceled');
-  });
-  applyStatusClass(btn);
-}
-
-async function saveVirtualCustomer() {
-  const data = Object.assign({}, getAllData());
-  const id   = document.getElementById('va-id').value.trim();
-  const name = document.getElementById('va-name').value.trim();
-  const tenantName = document.getElementById('va-tenant').value.trim();
-  if (!id) { toast('고객 ID를 입력해주세요.'); return; }
-  if (ALL_ROOMS.includes(id)) { toast('실호실 ID(' + id + ')는 비상주 ID로 사용할 수 없습니다.'); return; }
-  if (!name && !tenantName) { toast('상호명 또는 입주자 이름을 입력해주세요.'); return; }
-
-  const vat      = true;
-  const discount = 0;
-  const years    = getVaPeriodYears();
-  const rent     = VIRTUAL_RENT_BASE * years;
-  const statusBtn = document.querySelector('#va-status-options .status-btn.s-active, #va-status-options .status-btn.s-expired, #va-status-options .status-btn.s-canceled');
-  const contractStatus = statusBtn ? statusBtn.getAttribute('data-status') : '계약중';
-
-  var vaPayment = { prepaid: document.getElementById('va-prepaid').checked };
-  document.querySelectorAll('.va-month-pay-cb').forEach(function(cb) {
-    vaPayment['paid_' + cb.value] = cb.checked;
-  });
-
-  data[id] = Object.assign({}, data[id] || {}, {
-    name, tenantName,
-    phone: document.getElementById('va-phone').value.trim(),
-    start: document.getElementById('va-start').value,
-    end:   document.getElementById('va-end').value,
-    vat, discount, rent, contractYears: years, contractType: '비상주', contractStatus,
-    memo: document.getElementById('va-memo').value.trim(),
-  }, vaPayment);
-
-  try {
-    await store(data);
-    closeVirtualAdd();
-    renderFloor();
-    renderStats();
-    toast('저장되었습니다.');
-    setTimeout(showVirtualList, 80);
-  } catch(e) { toast('저장 실패 — 네트워크를 확인해주세요.'); }
-}
-
-async function deleteVirtualCustomer() {
-  const id = document.getElementById('va-id').value;
-  if (!id || !confirm(id + ' 고객을 삭제하시겠습니까?')) return;
-  try {
-    await removeRoom(id);
-    closeVirtualAdd();
-    renderFloor();
-    renderStats();
-    toast('삭제되었습니다.');
-    setTimeout(showVirtualList, 80);
-  } catch(e) { toast('삭제 실패.'); }
-}
-
-// ── 이벤트 ──────────────────────────────────────────
-document.getElementById('virtual-modal-overlay').addEventListener('click', e => {
-  if (e.target.id === 'virtual-modal-overlay') closeVirtualModal();
-});
-document.getElementById('virtual-add-overlay').addEventListener('click', e => {
-  if (e.target.id === 'virtual-add-overlay') closeVirtualAdd();
-});
-document.getElementById('modal-overlay').addEventListener('click', e => {
-  if (e.target.id === 'modal-overlay') closeModal();
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-// 모바일/태블릿: 키보드가 올라올 때 오버레이 높이를 시각적 뷰포트에 맞게 조정
-function adjustOverlayForKeyboard() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const overlay = document.getElementById('modal-overlay');
-  if (!overlay.classList.contains('active')) return;
-  overlay.style.top    = vv.offsetTop + 'px';
-  overlay.style.height = vv.height + 'px';
-  overlay.style.bottom = 'auto';
-  // 포커스된 요소가 중앙에 오도록 스크롤
-  const focused = overlay.querySelector('input:focus, select:focus, textarea:focus');
-  if (focused) focused.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function resetOverlay() {
-  const overlay = document.getElementById('modal-overlay');
-  overlay.style.top    = '';
-  overlay.style.height = '';
-  overlay.style.bottom = '';
-}
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', adjustOverlayForKeyboard);
-  window.visualViewport.addEventListener('scroll', adjustOverlayForKeyboard);
-}
-
-document.getElementById('modal-overlay').addEventListener('focusin', e => {
-  if (e.target.matches('input, select, textarea')) {
-    setTimeout(adjustOverlayForKeyboard, 300);
-  }
-});
-
-// ── 초기화 ──────────────────────────────────────────
-document.getElementById('today-display').textContent =
-  new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
-
-async function init() {
-  updateMonthDisplay();
-  renderFloor();
-  renderStats();
-  try {
-    const res = await fetch('/data', { credentials: 'same-origin' });
-    if (res.status === 401) { window.location.href = '/login'; return; }
-    if (!res.ok) throw new Error('서버 오류 ' + res.status);
-    _DATA = await res.json();
-    _dataLoaded = true;
-  } catch(e) {
-    _dataLoaded = false;
-    // 토스트 대신 화면에 고정 배너로 표시 (모바일에서 놓치지 않도록)
-    const banner = document.createElement('div');
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;text-align:center;padding:12px;font-size:15px;z-index:9999;';
-    banner.textContent = '데이터 로드 실패 — 탭을 새로고침 해주세요.';
-    document.body.appendChild(banner);
-  }
-  renderFloor();
-  renderStats();
-}
-
-init();
-</script>
+<script src="/dashboard.js"></script>
 </body>
 </html>

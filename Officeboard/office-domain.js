@@ -106,7 +106,7 @@ function computeStats(data, month) {
     virtualCount:  virtual.length,
     vacantCount:   ALL_ROOMS.length - resident.length,
     occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
-    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt, unpaidAmt, depositTotal,
+    rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt + depositTotal, unpaidAmt, depositTotal,
     expiring, vExpiring,
     curMonthNum: parseInt(month.split('-')[1]),
   };

@@ -213,6 +213,11 @@ def office_domain():
     return send_from_directory(BASE_DIR, 'office-domain.js')
 
 
+@app.route('/dashboard.js')
+def dashboard_js():
+    return send_from_directory(BASE_DIR, 'dashboard.js')
+
+
 def open_browser():
     webbrowser.open(f'http://127.0.0.1:{PORT}')
 
