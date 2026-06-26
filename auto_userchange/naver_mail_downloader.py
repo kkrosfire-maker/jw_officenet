@@ -396,6 +396,38 @@ def convert_file(input_path: str, mapping: dict, clinic_mapping: dict, output_di
     return get_excel_backend().convert(input_path, mapping, clinic_mapping, output_dir)
 
 
+def _append_to_reference(ref_path: str, ref_additions: list):
+    """기준 파일에 신규 매핑 추가. ref_additions: [(biz_raw_or_clinic_key, 수탁업체명)]"""
+    wb = openpyxl.load_workbook(ref_path)
+
+    normal = [(k, v) for k, v in ref_additions if not k.startswith("[윤병옥]")]
+    clinic = [(k[len("[윤병옥] "):], v) for k, v in ref_additions if k.startswith("[윤병옥]")]
+
+    if normal:
+        ws0 = wb.worksheets[0]
+        existing = set()
+        for row in ws0.iter_rows(min_row=2, values_only=True):
+            if row and row[0] is not None:
+                existing.add(normalize_biz_no(row[0]))
+        for biz_raw, consignment in normal:
+            norm = normalize_biz_no(biz_raw)
+            if norm and norm not in existing:
+                ws0.append([biz_raw, None, consignment])
+                existing.add(norm)
+
+    if clinic:
+        for ws in wb.worksheets:
+            if ws.title == "윤병옥내과":
+                existing = {str(r[0]).strip() for r in ws.iter_rows(min_row=2, values_only=True) if r and r[0]}
+                for product, consignment in clinic:
+                    if product and product not in existing:
+                        ws.append([product, consignment])
+                        existing.add(product)
+                break
+
+    wb.save(ref_path)
+
+
 # ── 앱 ────────────────────────────────────────────────────────────────────────
 
 class NaverMailApp:
@@ -1206,7 +1238,7 @@ class NaverMailApp:
             iid = self.tree_unmatched.insert("", "end", values=(
                 label, item["row"], item["biz_raw"], item["current_b"], "",
             ), tags=tag)
-            self._unmatched_data[iid] = {"out_path": out_path, "row": item["row"]}
+            self._unmatched_data[iid] = {"out_path": out_path, "row": item["row"], "biz_raw": item["biz_raw"]}
 
         total = len(rows_to_add)
         self.lbl_unmatched_count.config(text=f"총 {total}건 / 미입력 {total}건")
@@ -1245,7 +1277,12 @@ class NaverMailApp:
         entry.event_generate("<Down>")
         self._edit_entry = entry
 
+        _done = [False]
+
         def commit(event=None):
+            if _done[0]:
+                return
+            _done[0] = True
             val = entry.get().strip()
             self.tree_unmatched.set(iid, "수탁업체명 입력", val)
             try:
@@ -1256,17 +1293,43 @@ class NaverMailApp:
             self._update_unmatched_count()
 
         def cancel(event=None):
+            if _done[0]:
+                return
+            _done[0] = True
             try:
                 entry.destroy()
             except Exception:
                 pass
             self._edit_entry = None
 
+        def on_focus_out(event=None):
+            # ComboboxSelected 가 먼저 처리되도록 150ms 대기
+            entry.after(150, commit)
+
+        def on_key_release(event=None):
+            if event and event.keysym in (
+                "Return", "Tab", "Escape", "BackSpace", "Delete",
+                "Left", "Right", "Up", "Down", "Home", "End",
+            ):
+                return
+            typed = entry.get()
+            if not typed:
+                entry["values"] = self._ref_data.names
+                return
+            low = typed.lower()
+            matches = [n for n in self._ref_data.names if low in n.lower()]
+            entry["values"] = matches if matches else self._ref_data.names
+            # 유일 매칭이면 자동완성
+            if len(matches) == 1 and entry.get() != matches[0]:
+                entry.set(matches[0])
+                entry.icursor(tk.END)
+
         entry.bind("<<ComboboxSelected>>", commit)
         entry.bind("<Return>", commit)
         entry.bind("<Tab>", commit)
-        entry.bind("<FocusOut>", commit)
+        entry.bind("<FocusOut>", on_focus_out)
         entry.bind("<Escape>", cancel)
+        entry.bind("<KeyRelease>", on_key_release)
 
     def _update_unmatched_count(self):
         children = self.tree_unmatched.get_children()
@@ -1286,6 +1349,7 @@ class NaverMailApp:
 
     def _apply_corrections(self):
         corrections: dict = {}
+        ref_additions: list = []
         applied_iids = []
         for iid in self.tree_unmatched.get_children():
             new_val = self.tree_unmatched.set(iid, "수탁업체명 입력").strip()
@@ -1295,6 +1359,7 @@ class NaverMailApp:
             if not meta:
                 continue
             corrections.setdefault(meta["out_path"], []).append((meta["row"], new_val))
+            ref_additions.append((meta.get("biz_raw", ""), new_val))
             applied_iids.append(iid)
 
         if not corrections:
@@ -1306,6 +1371,7 @@ class NaverMailApp:
 
         self.btn_convert.config(state="disabled")
         self._status("수정 적용 중...")
+        ref_path = self._ref_file_path
 
         def run():
             errors = []
@@ -1316,15 +1382,24 @@ class NaverMailApp:
                     succeeded_paths.add(out_path)
                 except Exception as e:
                     errors.append(f"{os.path.basename(out_path)}: {e}")
+
+            ref_ok = False
+            if ref_additions and ref_path and os.path.exists(ref_path):
+                try:
+                    _append_to_reference(ref_path, ref_additions)
+                    ref_ok = True
+                except Exception as e:
+                    errors.append(f"기준파일 업데이트 실패: {e}")
+
             total = sum(len(v) for k, v in corrections.items() if k in succeeded_paths)
             self.root.after(
                 0,
-                lambda: self._corrections_done(errors, total, applied_iids, succeeded_paths),
+                lambda: self._corrections_done(errors, total, applied_iids, succeeded_paths, ref_ok),
             )
 
         threading.Thread(target=run, daemon=True).start()
 
-    def _corrections_done(self, errors, total, applied_iids, succeeded_paths):
+    def _corrections_done(self, errors, total, applied_iids, succeeded_paths, ref_ok=False):
         self.btn_convert.config(state="normal")
         if errors:
             messagebox.showwarning(
@@ -1332,7 +1407,15 @@ class NaverMailApp:
                 f"{total}건 적용 완료.\n\n오류:\n" + "\n".join(errors),
             )
         else:
-            messagebox.showinfo("수정 완료", f"{total}건 수정 완료.")
+            suffix = "\n기준파일에도 추가되었습니다." if ref_ok else ""
+            messagebox.showinfo("수정 완료", f"{total}건 수정 완료.{suffix}")
+
+        if ref_ok and self._ref_file_path:
+            threading.Thread(
+                target=self._load_ref_file,
+                args=(self._ref_file_path,),
+                daemon=True,
+            ).start()
 
         for iid in applied_iids:
             meta = self._unmatched_data.get(iid)
