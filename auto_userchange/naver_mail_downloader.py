@@ -1319,10 +1319,10 @@ class NaverMailApp:
             low = typed.lower()
             matches = [n for n in self._ref_data.names if low in n.lower()]
             entry["values"] = matches if matches else self._ref_data.names
-            # 유일 매칭이면 자동완성
-            if len(matches) == 1 and entry.get() != matches[0]:
-                entry.set(matches[0])
-                entry.icursor(tk.END)
+            # entry.set() 은 한글 IME 조합 중 버퍼 리셋으로 글자 중복 유발 — 제거
+            # 유일 매칭이면 드롭다운만 열어 사용자가 선택하도록 유도
+            if len(matches) == 1:
+                entry.event_generate("<Down>")
 
         entry.bind("<<ComboboxSelected>>", commit)
         entry.bind("<Return>", commit)
