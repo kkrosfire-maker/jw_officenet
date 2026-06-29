@@ -566,8 +566,9 @@ function renderFloor() {
         el.textContent = '복도';
       } else {
         const z     = zone(cell);
-        const st    = statusClass(cell, data, currentMonth);
-        const d     = data[cell] || {};
+        const raw   = data[cell] || {};
+        const d     = isVirtual(cell, raw) ? {} : raw; // 비상주 ID는 상주 상황판에서 공실로 표시
+        const st    = statusClass(cell, { ...data, [cell]: d }, currentMonth);
         const tag   = daysLeft(d.end);
         const color = ZONE[z].color;
 
