@@ -488,7 +488,6 @@ async function saveVirtualCustomer() {
   const name        = document.getElementById('va-name').value.trim();
   const tenantName  = document.getElementById('va-tenant').value.trim();
   if (!id)                    { toast('고객 ID를 입력해주세요.'); return; }
-  if (ALL_ROOMS.includes(id)) { toast('실호실 ID(' + id + ')는 비상주 ID로 사용할 수 없습니다.'); return; }
   if (!name && !tenantName)   { toast('상호명 또는 입주자 이름을 입력해주세요.'); return; }
 
   // ID가 바뀐 경우 이전 키 삭제 후 신규 키로 이동
@@ -845,15 +844,6 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', adjustOverlayForKeyboard);
 }
 
-document.getElementById('virtual-modal-overlay').addEventListener('click', e => {
-  if (e.target.id === 'virtual-modal-overlay') closeVirtualModal();
-});
-document.getElementById('virtual-add-overlay').addEventListener('click', e => {
-  if (e.target.id === 'virtual-add-overlay') closeVirtualAdd();
-});
-document.getElementById('modal-overlay').addEventListener('click', e => {
-  if (e.target.id === 'modal-overlay') closeModal();
-});
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 document.getElementById('modal-overlay').addEventListener('focusin', e => {
   if (e.target.matches('input, select, textarea')) setTimeout(adjustOverlayForKeyboard, 300);
