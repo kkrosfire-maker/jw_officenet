@@ -50,9 +50,13 @@ function todayLocal() {
 
 const pKey = (m) => 'paid_' + m;
 
+const INACTIVE_STATUSES = ['계약만료', '계약해지'];
+
 function isOccupied(d) { return !!(d && (d.name || d.tenantName)); }
 
 function isVirtual(id, d) { return !!(d && d.contractType === '비상주') || /^V\d+$/.test(id); }
+
+function isActiveContract(d) { return !INACTIVE_STATUSES.includes(d && d.contractStatus); }
 
 function isPaid(d, m) { return !!(d && (d.prepaid || d[pKey(m)])); }
 
@@ -100,10 +104,13 @@ function computeStats(data, month) {
     return diff <= 30 ? { id: r, name: d.name || d.tenantName || r, diff } : null;
   }).filter(Boolean).sort((a,b) => a.diff - b.diff);
 
+  const activeVirtualCount = virtual.filter(r => isActiveContract(data[r])).length;
+
   return {
     totalRooms:    ALL_ROOMS.length,
     residentCount: resident.length,
     virtualCount:  virtual.length,
+    activeVirtualCount,
     vacantCount:   ALL_ROOMS.length - resident.length,
     occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
     rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt + depositTotal, unpaidAmt, depositTotal,

@@ -2,6 +2,7 @@
 let currentMonth   = new Date().toISOString().slice(0, 7);
 let currentRoom    = null;
 let _editingVaId   = null; // VA 수정 시 원본 ID 추적 (ID 변경 감지용)
+let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여부 유지
 
 // ── 데이터 레이어 ────────────────────────────────────
 let _DATA       = {};
@@ -602,7 +603,7 @@ function renderFloor() {
 function renderStats() {
   const data = getAllData();
   const {
-    totalRooms, residentCount, virtualCount, vacantCount, occupancyRate,
+    totalRooms, residentCount, activeVirtualCount, vacantCount, occupancyRate,
     rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
     depositTotal, expiring, vExpiring, curMonthNum,
   } = computeStats(data, currentMonth);
@@ -626,7 +627,7 @@ function renderStats() {
       <div class="stat-label" style="color:#666;">상주</div>
     </div>
     <div class="stat-card stat-card-btn" style="background:#fff;border-color:#ddd;" onclick="showVirtualList()">
-      <div class="stat-value" style="color:#546e7a">${virtualCount}</div>
+      <div class="stat-value" style="color:#546e7a">${activeVirtualCount}</div>
       <div class="stat-label" style="color:#666;">비상주 &#9654;</div>
     </div>
     <div class="stat-card" style="background:#fff;border-color:#ddd;">
@@ -702,17 +703,31 @@ function updateMonthDisplay() {
 }
 
 // ── 비상주 목록 ─────────────────────────────────────
-function showVirtualList() {
+function renderVirtualList(showInactive) {
   const data    = getAllData();
-  const rooms   = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]))
+  const rooms   = Object.keys(data)
+                    .filter(r => isOccupied(data[r]) && isVirtual(r, data[r]))
+                    .filter(r => showInactive || isActiveContract(data[r]))
                     .sort((a, b) => (data[a].start || '').localeCompare(data[b].start || ''));
   const content = document.getElementById('virtual-list-content');
 
   const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
-  const addBtn = `<div style="margin-bottom:10px;"><button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null);">&#43; 새 고객 추가</button></div>`;
+  const addBtn = `<div style="margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null);">&#43; 새 고객 추가</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="va-show-inactive" ${showInactive ? 'checked' : ''} onchange="_vaShowInactive=this.checked;renderVirtualList(this.checked)" style="width:15px;height:15px;cursor:pointer;">
+      계약해지·만료 포함
+    </label>
+  </div>`;
+
+  const allRooms = Object.keys(getAllData()).filter(r => isOccupied(getAllData()[r]) && isVirtual(r, getAllData()[r]));
+  const hasHidden = !showInactive && allRooms.length > rooms.length;
+  const emptyMsg = hasHidden
+    ? '계약중인 비상주 고객이 없습니다. (계약해지·만료 포함 체크 시 전체 표시)'
+    : '등록된 비상주 고객이 없습니다.';
 
   if (rooms.length === 0) {
-    content.innerHTML = addBtn + '<p style="color:#aaa;text-align:center;padding:20px;">등록된 비상주 고객이 없습니다.</p>';
+    content.innerHTML = addBtn + `<p style="color:#aaa;text-align:center;padding:20px;">${emptyMsg}</p>`;
   } else {
     const rows = rooms.map(r => {
       const d   = data[r];
@@ -721,7 +736,8 @@ function showVirtualList() {
       const cs  = d.contractStatus || '계약중';
       const payColor = ok ? '#26a69a' : pre ? '#9e9e9e' : '#e91e63';
       const payLabel = ok ? '완납'    : pre ? '대기'    : '미납';
-      return `<tr onclick="closeVirtualModal();openVirtualAdd('${r}')">
+      const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
+      return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}')">
         <td><strong>${r}</strong></td>
         <td>${d.name || '-'}</td>
         <td>${d.tenantName || '-'}</td>
@@ -741,6 +757,10 @@ function showVirtualList() {
       <tbody>${rows}</tbody>
     </table>`;
   }
+}
+
+function showVirtualList() {
+  renderVirtualList(_vaShowInactive);
   document.getElementById('virtual-modal-overlay').classList.add('active');
 }
 
