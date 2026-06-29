@@ -704,7 +704,8 @@ function updateMonthDisplay() {
 // ── 비상주 목록 ─────────────────────────────────────
 function showVirtualList() {
   const data    = getAllData();
-  const rooms   = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]));
+  const rooms   = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]))
+                    .sort((a, b) => (data[a].start || '').localeCompare(data[b].start || ''));
   const content = document.getElementById('virtual-list-content');
 
   const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
