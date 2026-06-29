@@ -3,6 +3,7 @@ let currentMonth   = new Date().toISOString().slice(0, 7);
 let currentRoom    = null;
 let _editingVaId   = null; // VA 수정 시 원본 ID 추적 (ID 변경 감지용)
 let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여부 유지
+let _vaSort = { col: 'start', asc: true }; // 비상주 목록 정렬 상태
 
 // ── 데이터 레이어 ────────────────────────────────────
 let _DATA       = {};
@@ -705,12 +706,29 @@ function updateMonthDisplay() {
 }
 
 // ── 비상주 목록 ─────────────────────────────────────
+function _vaSortRooms(rooms, data) {
+  const { col, asc } = _vaSort;
+  return rooms.slice().sort((a, b) => {
+    const va = col === 'id' ? a : (data[a].start || '');
+    const vb = col === 'id' ? b : (data[b].start || '');
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+
+function _vaSortToggle(col) {
+  if (_vaSort.col === col) _vaSort.asc = !_vaSort.asc;
+  else _vaSort = { col, asc: true };
+  renderVirtualList(_vaShowInactive);
+}
+
 function renderVirtualList(showInactive) {
   const data    = getAllData();
-  const rooms   = Object.keys(data)
-                    .filter(r => isOccupied(data[r]) && isVirtual(r, data[r]))
-                    .filter(r => showInactive || isActiveContract(data[r]))
-                    .sort((a, b) => (data[a].start || '').localeCompare(data[b].start || ''));
+  const rooms   = _vaSortRooms(
+    Object.keys(data)
+      .filter(r => isOccupied(data[r]) && isVirtual(r, data[r]))
+      .filter(r => showInactive || isActiveContract(data[r])),
+    data
+  );
   const content = document.getElementById('virtual-list-content');
 
   const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
@@ -751,10 +769,14 @@ function renderVirtualList(showInactive) {
         <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
       </tr>`;
     }).join('');
+    const arrow = (col) => _vaSort.col === col ? (_vaSort.asc ? ' ▲' : ' ▼') : '';
+    const thStyle = 'cursor:pointer;user-select:none;';
     content.innerHTML = addBtn + `<table class="virtual-table">
       <thead><tr>
-        <th>ID</th><th>상호명</th><th>입주자</th><th>연락처</th>
-        <th>계약시작</th><th>계약종료</th><th>월세(원)</th><th>납부현황</th><th>계약상태</th>
+        <th style="${thStyle}" onclick="_vaSortToggle('id')">ID${arrow('id')}</th>
+        <th>상호명</th><th>입주자</th><th>연락처</th>
+        <th style="${thStyle}" onclick="_vaSortToggle('start')">계약시작${arrow('start')}</th>
+        <th>계약종료</th><th>월세(원)</th><th>납부현황</th><th>계약상태</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
