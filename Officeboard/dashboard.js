@@ -397,7 +397,7 @@ function openVirtualAdd(id) {
   const newId = id || nextVirtualId();
   _editingVaId = id || null;
 
-  document.getElementById('virtual-add-title').textContent = id ? (id + ' 수정') : '비상주 신규 등록';
+  document.getElementById('virtual-add-title').textContent = id ? (displayVaId(id) + ' 수정') : '비상주 신규 등록';
   var idInput = document.getElementById('va-id');
   idInput.value      = newId;
   idInput.readOnly   = false;
@@ -491,9 +491,10 @@ async function saveVirtualCustomer() {
   if (!id)                    { toast('고객 ID를 입력해주세요.'); return; }
   if (!name && !tenantName)   { toast('상호명 또는 입주자 이름을 입력해주세요.'); return; }
 
-  // ID가 바뀐 경우 이전 키 삭제 후 신규 키로 이동
+  // 신규 등록 시 ID 충돌이면 자동으로 A018-2, A018-3 등 부여
+  const finalId  = _editingVaId ? id : nextSuffixedVaId(id, data);
   const prevData = _editingVaId ? (data[_editingVaId] || {}) : {};
-  if (_editingVaId && _editingVaId !== id) delete data[_editingVaId];
+  if (_editingVaId && _editingVaId !== finalId) delete data[_editingVaId];
 
   var years     = getVaPeriodYears();
   var rentInput = parseInt(document.getElementById('va-rent').value.replace(/,/g, '').trim(), 10) || 0;
@@ -503,7 +504,7 @@ async function saveVirtualCustomer() {
     '#va-status-options .status-btn.s-canceled'
   );
 
-  data[id] = Object.assign({}, prevData, {
+  data[finalId] = Object.assign({}, prevData, {
     name, tenantName,
     phone:         document.getElementById('va-phone').value.trim(),
     start:         document.getElementById('va-start').value,
@@ -523,7 +524,7 @@ async function saveVirtualCustomer() {
     closeVirtualAdd();
     renderFloor();
     renderStats();
-    toast('저장되었습니다.');
+    toast(finalId !== id ? `${displayVaId(finalId)}로 저장되었습니다.` : '저장되었습니다.');
     setTimeout(showVirtualList, 80);
   } catch(e) { toast('저장 실패 — 네트워크를 확인해주세요.'); }
 }
@@ -613,7 +614,7 @@ function renderStats() {
     const col = a.diff < 0 ? '#c62828' : a.diff <= 7 ? '#e91e63' : '#e65100';
     const lbl = a.diff < 0 ? '계약만료' : `만료 D-${a.diff}`;
     return `<div class="stat-card stat-card-btn" style="border:1.5px solid ${col};background:#fff;" onclick="openVirtualAdd('${a.id}')">
-      <div class="stat-value" style="color:${col};font-size:16px;">${a.id}</div>
+      <div class="stat-value" style="color:${col};font-size:16px;">${displayVaId(a.id)}</div>
       <div class="stat-label" style="color:${col};">${lbl}</div>
     </div>`;
   }).join('');
@@ -739,7 +740,7 @@ function renderVirtualList(showInactive) {
       const payLabel = ok ? '완납'    : pre ? '대기'    : '미납';
       const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
       return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}')">
-        <td><strong>${r}</strong></td>
+        <td><strong>${displayVaId(r)}</strong></td>
         <td>${d.name || '-'}</td>
         <td>${d.tenantName || '-'}</td>
         <td>${d.phone || '-'}</td>

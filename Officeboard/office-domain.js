@@ -58,6 +58,21 @@ function isVirtual(id, d) { return !!(d && d.contractType === '비상주') || /^
 
 function isActiveContract(d) { return !INACTIVE_STATUSES.includes(d && d.contractStatus); }
 
+// "A018-2" → "A018(2)", "A018" → "A018"
+function displayVaId(id) {
+  const m = id.match(/^(.+)-(\d+)$/);
+  return m ? `${m[1]}(${m[2]})` : id;
+}
+
+// 신규 등록 시 baseId가 이미 존재하면 충돌 없는 다음 키 반환
+// A018 → A018, A018 이미 있으면 → A018-2, A018-2도 있으면 → A018-3
+function nextSuffixedVaId(baseId, data) {
+  if (!data[baseId]) return baseId;
+  let n = 2;
+  while (data[`${baseId}-${n}`]) n++;
+  return `${baseId}-${n}`;
+}
+
 function isPaid(d, m) { return !!(d && (d.prepaid || d[pKey(m)])); }
 
 function isBeforeStart(d) { return !!(d && d.start && d.start > todayLocal()); }
