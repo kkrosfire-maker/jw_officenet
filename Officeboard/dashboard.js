@@ -595,7 +595,6 @@ function renderFloor() {
         const isExpired = tag === '만료';
         if (isOccupied(d) && st === 'paid'         && !isExpired) html += `<div class="badge-paid">완</div>`;
         if (isOccupied(d) && st === 'unpaid'       && !isExpired) html += `<div class="badge-miss">미</div>`;
-        if (isOccupied(d) && st === 'pre-contract')               html += `<div class="badge-pre">대기</div>`;
         if (isOccupied(d) && d.invoice && !isExpired)             html += `<div class="badge-invoice">완</div>`;
         if (tag && isOccupied(d))                                 html += `<div class="badge-expiry">${tag}</div>`;
         if (isVirtual(cell, d) && isOccupied(d))                  html += `<div class="badge-virtual">비상주</div>`;
@@ -681,7 +680,7 @@ function renderStats() {
     const rooms   = ALL_ROOMS.filter(r => zone(r) === z);
     const zocc    = rooms.filter(r => isOccupied(data[r])).length;
     const zunpaid = rooms.filter(r =>
-      isOccupied(data[r]) && !isBeforeStart(data[r]) && !isPaid(data[r], currentMonth)
+      isOccupied(data[r]) && !isBeforeStart(data[r], currentMonth) && !isPaid(data[r], currentMonth)
     ).length;
     return `
       <div class="type-card">

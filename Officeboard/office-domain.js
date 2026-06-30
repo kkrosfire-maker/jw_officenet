@@ -82,7 +82,10 @@ function isPaidThisMonth(d, m) {
   return !!(d[pKey(m)]);
 }
 
-function isBeforeStart(d) { return !!(d && d.start && d.start > todayLocal()); }
+function isBeforeStart(d, month) {
+  if (!d || !d.start) return false;
+  return d.start.slice(0, 7) > month;
+}
 
 function daysLeft(end) {
   if (!end) return null;
@@ -99,7 +102,7 @@ function zone(id) { return id[0]; }
 function statusClass(id, data, month) {
   const d = data[id];
   if (!isOccupied(d)) return 'vacant';
-  if (isBeforeStart(d)) return 'pre-contract';
+  if (isBeforeStart(d, month)) return 'pre-contract';
   return isPaid(d, month) ? 'paid' : 'unpaid';
 }
 
@@ -108,16 +111,16 @@ function computeStats(data, month) {
   const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys.filter(r => !ALL_ROOMS.includes(r))];
   const virtual  = occ.filter(r => isVirtual(r, data[r]));
   const resident = occ.filter(r => !isVirtual(r, data[r]));
-  const paid     = occ.filter(r => !isBeforeStart(data[r]) && isPaid(data[r], month));
-  const unpaid   = occ.filter(r => !isBeforeStart(data[r]) && !isPaid(data[r], month));
-  const paidThisMonth = occ.filter(r => !isBeforeStart(data[r]) && isPaidThisMonth(data[r], month));
+  const paid     = occ.filter(r => !isBeforeStart(data[r], month) && isPaid(data[r], month));
+  const unpaid   = occ.filter(r => !isBeforeStart(data[r], month) && !isPaid(data[r], month));
+  const paidThisMonth = occ.filter(r => !isBeforeStart(data[r], month) && isPaidThisMonth(data[r], month));
   const rPaidAmt    = paidThisMonth.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const vPaidAmt    = paidThisMonth.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const unpaidAmt   = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const depositTotal = ALL_ROOMS
     .filter(r => isOccupied(data[r]) && !isVirtual(r, data[r]) && data[r] && data[r].depositPaid && data[r].depositPaidMonth === month)
     .reduce((s, r) => s + depositAmount(r), 0);
-  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && !isBeforeStart(data[r]) && daysLeft(data[r] && data[r].end) !== null).length;
+  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && !isBeforeStart(data[r], month) && daysLeft(data[r] && data[r].end) !== null).length;
 
   const today = new Date(); today.setHours(0,0,0,0);
   const vExpiring = vKeys.map(r => {
