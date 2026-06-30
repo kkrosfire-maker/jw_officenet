@@ -23,12 +23,16 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
         if '호실' not in headers:
             continue
 
-        # 납부 컬럼을 모두 수집 (break 없이)
+        # 납부 컬럼 및 세금계산서 컬럼 수집
         paid_cols = []
+        invoice_cols = []
         for i, h in enumerate(headers):
             if '납부' in h:
                 month_str = h.replace('납부', '').strip()
                 paid_cols.append((i, month_str))
+            elif '세금계산서' in h:
+                month_str = h.replace('세금계산서', '').strip()
+                invoice_cols.append((i, month_str))
 
         col = {h: i for i, h in enumerate(headers)}
 
@@ -97,6 +101,11 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
                 entry['paid_' + paid_month] = (str(paid_val).strip() == '완납')
                 paid_months_all.append(paid_month)
 
+            # 세금계산서 컬럼 처리
+            for inv_idx, inv_month in invoice_cols:
+                inv_val = row[inv_idx]
+                entry['invoice_' + inv_month] = (str(inv_val).strip() == '완료')
+
             # 계약기간 내 모든 월이 완납이면 prepaid 복원
             if paid_months_all and entry.get('start') and entry.get('end'):
                 from datetime import date as _date
@@ -134,20 +143,29 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
         months = set()
         for r in room_ids:
             d = data.get(r, {})
-            if d.get('prepaid'):
-                # 선납은 계약기간 전체를 포괄하므로 start~end 범위 추가
-                pass
             for k in d:
                 if k.startswith('paid_'):
                     months.add(k[5:])
-        # 현재 month가 없으면 추가 (최소 1개 보장)
+        months.add(month)
+        return sorted(months)
+
+    def get_invoice_months(room_ids):
+        """해당 시트 호실들의 모든 invoice_* 월을 수집해 정렬 반환."""
+        months = set()
+        for r in room_ids:
+            d = data.get(r, {})
+            for k in d:
+                if k.startswith('invoice_'):
+                    months.add(k[8:])
         months.add(month)
         return sorted(months)
 
     def write_sheet(ws, room_ids):
-        paid_months = get_paid_months(room_ids)
-        pay_headers = [m + ' 납부' for m in paid_months]
-        all_headers = base_headers + pay_headers + ['메모', '계약상태']
+        paid_months    = get_paid_months(room_ids)
+        invoice_months = get_invoice_months(room_ids)
+        pay_headers     = [m + ' 납부' for m in paid_months]
+        invoice_headers = [m + ' 세금계산서' for m in invoice_months]
+        all_headers = base_headers + pay_headers + invoice_headers + ['메모', '계약상태']
 
         for col_idx, h in enumerate(all_headers, 1):
             cell = ws.cell(row=1, column=col_idx, value=h)
@@ -170,13 +188,20 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
                 else:
                     pay_vals.append('')
 
+            inv_vals = []
+            for m in invoice_months:
+                if occupied:
+                    inv_vals.append('완료' if d.get('invoice_' + m) else '미발행')
+                else:
+                    inv_vals.append('')
+
             row_data = [
                 room_id, d.get('name', ''), d.get('tenantName', ''),
                 d.get('phone', ''), d.get('start', ''), d.get('end', ''),
                 '유' if d.get('vat') else '무', discount_str,
                 d.get('rent', 0) or '', d.get('contractType', ''),
                 d.get('prepaidAt', '') or '',
-            ] + pay_vals + [
+            ] + pay_vals + inv_vals + [
                 d.get('memo', ''),
                 d.get('contractStatus', '계약중'),
             ]

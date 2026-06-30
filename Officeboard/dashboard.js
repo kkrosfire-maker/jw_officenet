@@ -208,7 +208,7 @@ function _roomToForm(roomId, d) {
     document.getElementById('deposit-group').style.display  = 'none';
   }
 
-  document.getElementById('f-invoice').checked = !!(d.invoice);
+  document.getElementById('f-invoice').checked = !!(d['invoice_' + currentMonth]);
   document.getElementById('f-vat').checked = !!(d.vat);
   var discSel = document.getElementById('f-discount-select');
   if (discSel) discSel.value = String(d.discount || 0);
@@ -252,7 +252,7 @@ function _formToRoom(prev) {
   return Object.assign({}, prev, {
     name:       document.getElementById('f-name').value.trim(),
     tenantName: document.getElementById('f-tenant-name').value.trim(),
-    invoice:    document.getElementById('f-invoice').checked,
+    ['invoice_' + currentMonth]: document.getElementById('f-invoice').checked,
     phone:      document.getElementById('f-phone').value.trim(),
     start:      document.getElementById('f-start').value,
     end:        document.getElementById('f-end').value,
@@ -595,7 +595,7 @@ function renderFloor() {
         const isExpired = tag === '만료';
         if (isOccupied(d) && st === 'paid'         && !isExpired) html += `<div class="badge-paid">완</div>`;
         if (isOccupied(d) && st === 'unpaid'       && !isExpired) html += `<div class="badge-miss">미</div>`;
-        if (isOccupied(d) && d.invoice && !isExpired)             html += `<div class="badge-invoice">완</div>`;
+        if (isOccupied(d) && d['invoice_' + currentMonth] && !isExpired) html += `<div class="badge-invoice">완</div>`;
         if (tag && isOccupied(d))                                 html += `<div class="badge-expiry">${tag}</div>`;
         if (isVirtual(cell, d) && isOccupied(d))                  html += `<div class="badge-virtual">비상주</div>`;
 
