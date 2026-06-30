@@ -613,8 +613,9 @@ function renderStats() {
   const {
     totalRooms, residentCount, activeVirtualCount, vacantCount, occupancyRate,
     rPaidAmt, vPaidAmt, totalPaidAmt, unpaidAmt,
-    depositTotal, expiring, vExpiring, curMonthNum,
+    depositTotal, curMonthNum,
   } = computeStats(data, currentMonth);
+  const { expiring, vExpiring } = computeExpiryAlerts(data);
 
   const vAlerts = vExpiring.map(a => {
     const col = a.diff < 0 ? '#c62828' : a.diff <= 7 ? '#e91e63' : '#e65100';
@@ -756,7 +757,7 @@ function renderVirtualList(showInactive) {
   } else {
     const rows = rooms.map(r => {
       const d   = data[r];
-      const pre = isBeforeStart(d);
+      const pre = isBeforeStart(d, currentMonth);
       const ok  = !pre && isPaid(d, currentMonth);
       const cs  = d.contractStatus || '계약중';
       const payColor = ok ? '#26a69a' : pre ? '#9e9e9e' : '#e91e63';

@@ -107,8 +107,8 @@ function statusClass(id, data, month) {
 }
 
 function computeStats(data, month) {
-  const vKeys    = Object.keys(data).filter(r => /^V\d+$/.test(r) && isOccupied(data[r]));
-  const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys.filter(r => !ALL_ROOMS.includes(r))];
+  const vKeys    = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]) && !ALL_ROOMS.includes(r));
+  const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys];
   const virtual  = occ.filter(r => isVirtual(r, data[r]));
   const resident = occ.filter(r => !isVirtual(r, data[r]));
   const paid     = occ.filter(r => !isBeforeStart(data[r], month) && isPaid(data[r], month));
@@ -120,16 +120,6 @@ function computeStats(data, month) {
   const depositTotal = ALL_ROOMS
     .filter(r => isOccupied(data[r]) && !isVirtual(r, data[r]) && data[r] && data[r].depositPaid && data[r].depositPaidMonth === month)
     .reduce((s, r) => s + depositAmount(r), 0);
-  const expiring    = occ.filter(r => !isVirtual(r, data[r]) && !isBeforeStart(data[r], month) && daysLeft(data[r] && data[r].end) !== null).length;
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const vExpiring = vKeys.map(r => {
-    const d = data[r]; if (!d.end) return null;
-    const end = new Date(d.end + 'T00:00:00');
-    const diff = Math.ceil((end - today) / 86400000);
-    return diff <= 30 ? { id: r, name: d.name || d.tenantName || r, diff } : null;
-  }).filter(Boolean).sort((a,b) => a.diff - b.diff);
-
   const activeVirtualCount = virtual.filter(r => isActiveContract(data[r])).length;
 
   return {
@@ -140,9 +130,31 @@ function computeStats(data, month) {
     vacantCount:   ALL_ROOMS.length - resident.length,
     occupancyRate: Math.round(resident.length / ALL_ROOMS.length * 100),
     rPaidAmt, vPaidAmt, totalPaidAmt: rPaidAmt + vPaidAmt + depositTotal, unpaidAmt, depositTotal,
-    expiring, vExpiring,
     curMonthNum: parseInt(month.split('-')[1]),
   };
+}
+
+// 만료 알림 — 항상 오늘 기준 (뷰 월과 무관하게 지금 당장 임박한 계약을 표시)
+function computeExpiryAlerts(data) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const residentExpiring = ALL_ROOMS.filter(r => {
+    const d = data[r];
+    return isOccupied(d) && !isVirtual(r, d) && daysLeft(d.end) !== null;
+  }).length;
+
+  const vExpiring = Object.keys(data)
+    .filter(r => isOccupied(data[r]) && isVirtual(r, data[r]) && !ALL_ROOMS.includes(r))
+    .map(r => {
+      const d = data[r]; if (!d.end) return null;
+      const end  = new Date(d.end + 'T00:00:00');
+      const diff = Math.ceil((end - today) / 86400000);
+      return diff <= 30 ? { id: r, name: d.name || d.tenantName || r, diff } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.diff - b.diff);
+
+  return { expiring: residentExpiring, vExpiring };
 }
 
 function calcRent(baseRent, discount, vat) {
