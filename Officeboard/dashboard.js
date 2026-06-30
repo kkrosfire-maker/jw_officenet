@@ -272,6 +272,9 @@ function _formToRoom(prev) {
     memo:         document.getElementById('f-memo').value.trim(),
     memo2:        document.getElementById('f-memo2').value.trim(),
     prepaid:      document.getElementById('f-prepaid').checked,
+    prepaidAt:    document.getElementById('f-prepaid').checked
+      ? (prev.prepaidAt || currentMonth)
+      : null,
     dailyService: document.getElementById('f-service').checked,
   }, residentGrid.getValues());
 }
@@ -518,6 +521,9 @@ async function saveVirtualCustomer() {
     contractStatus: statusBtn ? statusBtn.getAttribute('data-status') : '계약중',
     memo:          document.getElementById('va-memo').value.trim(),
     prepaid:       document.getElementById('va-prepaid').checked,
+    prepaidAt:     document.getElementById('va-prepaid').checked
+      ? (prevData.prepaidAt || currentMonth)
+      : null,
   }, vaGrid.getValues());
 
   try {

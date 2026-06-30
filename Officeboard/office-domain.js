@@ -75,6 +75,13 @@ function nextSuffixedVaId(baseId, data) {
 
 function isPaid(d, m) { return !!(d && (d.prepaid || d[pKey(m)])); }
 
+// 이 달에 납부금액으로 집계되는지 (선납은 선납 처리한 달에만, 개별납부는 해당 달에만)
+function isPaidThisMonth(d, m) {
+  if (!d) return false;
+  if (d.prepaid) return d.prepaidAt === m;
+  return !!(d[pKey(m)]);
+}
+
 function isBeforeStart(d) { return !!(d && d.start && d.start > todayLocal()); }
 
 function daysLeft(end) {
@@ -103,8 +110,9 @@ function computeStats(data, month) {
   const resident = occ.filter(r => !isVirtual(r, data[r]));
   const paid     = occ.filter(r => !isBeforeStart(data[r]) && isPaid(data[r], month));
   const unpaid   = occ.filter(r => !isBeforeStart(data[r]) && !isPaid(data[r], month));
-  const rPaidAmt    = paid.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
-  const vPaidAmt    = paid.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const paidThisMonth = occ.filter(r => !isBeforeStart(data[r]) && isPaidThisMonth(data[r], month));
+  const rPaidAmt    = paidThisMonth.filter(r => !isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
+  const vPaidAmt    = paidThisMonth.filter(r =>  isVirtual(r, data[r])).reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const unpaidAmt   = unpaid.reduce((s,r) => s + ((data[r] && data[r].rent)||0), 0);
   const depositTotal = ALL_ROOMS
     .filter(r => isOccupied(data[r]) && !isVirtual(r, data[r]) && data[r] && data[r].depositPaid && data[r].depositPaidMonth === month)

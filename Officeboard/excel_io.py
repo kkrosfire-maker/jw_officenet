@@ -85,6 +85,11 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
                 if cs in ('계약중', '계약만료', '계약해지'):
                     entry['contractStatus'] = cs
 
+            if '선납처리월' in col:
+                prepaid_at = str(row[col['선납처리월']] or '').strip()
+                if prepaid_at:
+                    entry['prepaidAt'] = prepaid_at
+
             # 모든 납부 컬럼 처리
             paid_months_all = []
             for paid_idx, paid_month in paid_cols:
@@ -118,7 +123,7 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
     """data dict → 엑셀 Workbook 생성 (export 용)."""
     base_headers = [
         '호실', '상호명', '입주자 이름', '연락처',
-        '계약시작', '계약종료', 'VAT', '할인율', '월세(원)', '계약유형',
+        '계약시작', '계약종료', 'VAT', '할인율', '월세(원)', '계약유형', '선납처리월',
     ]
     header_font = Font(bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill('solid', fgColor='2C2C2C')
@@ -170,6 +175,7 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
                 d.get('phone', ''), d.get('start', ''), d.get('end', ''),
                 '유' if d.get('vat') else '무', discount_str,
                 d.get('rent', 0) or '', d.get('contractType', ''),
+                d.get('prepaidAt', '') or '',
             ] + pay_vals + [
                 d.get('memo', ''),
                 d.get('contractStatus', '계약중'),
