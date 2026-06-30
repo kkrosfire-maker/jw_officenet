@@ -1278,11 +1278,24 @@ class NaverMailApp:
         self._edit_entry = entry
 
         _done = [False]
+        _filter_job = [None]
+
+        def _is_popup_open():
+            try:
+                popup = entry.tk.call('ttk::combobox::PopdownWindow', entry._w)
+                return bool(entry.tk.call('winfo', 'ismapped', popup))
+            except Exception:
+                return False
 
         def commit(event=None):
             if _done[0]:
                 return
             _done[0] = True
+            if _filter_job[0]:
+                try:
+                    entry.after_cancel(_filter_job[0])
+                except Exception:
+                    pass
             val = entry.get().strip()
             self.tree_unmatched.set(iid, "수탁업체명 입력", val)
             try:
@@ -1296,6 +1309,11 @@ class NaverMailApp:
             if _done[0]:
                 return
             _done[0] = True
+            if _filter_job[0]:
+                try:
+                    entry.after_cancel(_filter_job[0])
+                except Exception:
+                    pass
             try:
                 entry.destroy()
             except Exception:
@@ -1303,14 +1321,19 @@ class NaverMailApp:
             self._edit_entry = None
 
         def on_focus_out(event=None):
-            # ComboboxSelected 가 먼저 처리되도록 150ms 대기
-            entry.after(150, commit)
+            # 드롭다운 팝업이 열려있는 동안은 commit하지 않고 재대기
+            def _try_commit():
+                if _done[0]:
+                    return
+                if _is_popup_open():
+                    entry.after(150, _try_commit)
+                else:
+                    commit()
+            entry.after(150, _try_commit)
 
-        def on_key_release(event=None):
-            if event and event.keysym in (
-                "Return", "Tab", "Escape", "BackSpace", "Delete",
-                "Left", "Right", "Up", "Down", "Home", "End",
-            ):
+        def _do_filter():
+            _filter_job[0] = None
+            if _done[0]:
                 return
             typed = entry.get()
             if not typed:
@@ -1319,10 +1342,20 @@ class NaverMailApp:
             low = typed.lower()
             matches = [n for n in self._ref_data.names if low in n.lower()]
             entry["values"] = matches if matches else self._ref_data.names
-            # entry.set() 은 한글 IME 조합 중 버퍼 리셋으로 글자 중복 유발 — 제거
-            # 유일 매칭이면 드롭다운만 열어 사용자가 선택하도록 유도
-            if len(matches) == 1:
-                entry.event_generate("<Down>")
+
+        def on_key_release(event=None):
+            if event and event.keysym in (
+                "Return", "Tab", "Escape", "BackSpace", "Delete",
+                "Left", "Right", "Up", "Down", "Home", "End",
+            ):
+                return
+            # 한글 IME 조합 중 values 즉시 갱신 시 입력 중단 방지 — 디바운스 처리
+            if _filter_job[0]:
+                try:
+                    entry.after_cancel(_filter_job[0])
+                except Exception:
+                    pass
+            _filter_job[0] = entry.after(150, _do_filter)
 
         entry.bind("<<ComboboxSelected>>", commit)
         entry.bind("<Return>", commit)
