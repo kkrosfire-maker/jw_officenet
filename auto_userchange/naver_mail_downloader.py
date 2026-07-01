@@ -8,6 +8,7 @@ import sys
 import json
 import base64
 import threading
+import webbrowser
 from dataclasses import dataclass, field
 from datetime import datetime
 import tkinter as tk
@@ -493,11 +494,18 @@ class NaverMailApp:
         self.btn_logout = tk.Button(frame, text="연결 해제", width=9, command=self._on_logout)
         self.btn_logout.grid(row=0, column=6, padx=4)
 
+        tk.Button(
+            frame, text="로그인설정", width=9,
+            command=lambda: webbrowser.open(
+                "https://nid.naver.com/user2/help/myInfo?m=viewSecurity&lang=ko_KR"
+            ),
+        ).grid(row=0, column=7, padx=4)
+
         tk.Label(
             frame,
             text="※ 네이버 메일 설정 > POP3/IMAP 설정 > IMAP 사용함 으로 변경 후 앱 비밀번호를 사용하세요.",
             fg="gray", font=("", 8),
-        ).grid(row=1, column=0, columnspan=7, sticky="w", pady=(2, 0))
+        ).grid(row=1, column=0, columnspan=8, sticky="w", pady=(2, 0))
 
     # ── 메일 검색 ─────────────────────────────────────────────────────────────
 
@@ -695,31 +703,43 @@ class NaverMailApp:
 
     # ── 상태 관리 ──────────────────────────────────────────────────────────────
 
-    def _apply_login_mode(self):
+    def _apply_state(self, mode: str):
+        """mode: 'disconnected' | 'connected' | 'busy'
+        버튼 상태 선언 테이블 — 새 버튼 추가 시 이 메서드 한 곳만 수정.
+        """
+        connected = mode in ("connected", "busy")
+        operable  = mode == "connected"
+
         for w in (self.entry_user, self.entry_pw):
-            w.config(state="normal")
-        self.btn_login.config(state="normal")
-        self.btn_logout.config(state="disabled")
-        self.btn_search.config(state="disabled")
-        self.btn_download.config(state="disabled")
-        self.btn_select_all.config(state="disabled")
-        self.btn_deselect_all.config(state="disabled")
+            w.config(state="disabled" if connected else "normal")
+        self.btn_login.config(state="disabled" if connected else "normal")
+        self.btn_logout.config(state="normal" if operable else "disabled")
+        self.btn_search.config(state="normal" if operable else "disabled")
+        self.btn_download.config(state="normal" if operable else "disabled")
+        sel = "normal" if connected else "disabled"
+        self.btn_select_all.config(state=sel)
+        self.btn_deselect_all.config(state=sel)
+
+    def _apply_login_mode(self):
+        self._apply_state("disconnected")
 
     def _apply_connected_mode(self):
-        for w in (self.entry_user, self.entry_pw):
-            w.config(state="disabled")
-        self.btn_login.config(state="disabled")
-        self.btn_logout.config(state="normal")
-        self.btn_search.config(state="normal")
-        self.btn_download.config(state="normal")
-        self.btn_select_all.config(state="normal")
-        self.btn_deselect_all.config(state="normal")
+        self._apply_state("connected")
 
     def _set_busy(self, busy: bool):
-        state = "disabled" if busy else "normal"
-        self.btn_logout.config(state=state)
-        self.btn_search.config(state=state)
-        self.btn_download.config(state=state)
+        self._apply_state("busy" if busy else "connected")
+
+    def _run_async(self, worker, on_done, on_error=None):
+        """백그라운드 스레드에서 worker() 실행 후 결과를 메인 스레드로 전달."""
+        def _wrapper():
+            try:
+                result = worker()
+                self.root.after(0, lambda r=result: on_done(r))
+            except Exception as e:
+                err = str(e)
+                if on_error:
+                    self.root.after(0, lambda m=err: on_error(m))
+        threading.Thread(target=_wrapper, daemon=True).start()
 
     def _status(self, msg):
         self.root.after(0, self.status_var.set, msg)
@@ -740,32 +760,30 @@ class NaverMailApp:
         imap.login(login_id, pw)
         return imap
 
+    def _reconnect(self):
+        """락 보유 상태에서 호출. 끊긴 IMAP 세션을 재연결한다."""
+        self._status("연결이 끊겼습니다. 재연결 중...")
+        try:
+            self.imap.logout()
+        except Exception:
+            pass
+        self.imap = self._connect(self._saved_user, self._saved_pw)
+        self._status("재연결 성공.")
+
     def _ensure_connected(self):
         with self._imap_lock:
             try:
                 self.imap.noop()
             except Exception:
-                self._status("연결이 끊겼습니다. 재연결 중...")
-                try:
-                    self.imap.logout()
-                except Exception:
-                    pass
-                self.imap = self._connect(self._saved_user, self._saved_pw)
-                self._status("재연결 성공.")
+                self._reconnect()
 
     def _select_inbox(self):
         with self._imap_lock:
             try:
                 self.imap.select("INBOX")
             except Exception:
-                self._status("연결이 끊겼습니다. 재연결 중...")
-                try:
-                    self.imap.logout()
-                except Exception:
-                    pass
-                self.imap = self._connect(self._saved_user, self._saved_pw)
+                self._reconnect()
                 self.imap.select("INBOX")
-                self._status("재연결 성공.")
 
     # ── 로그인 ────────────────────────────────────────────────────────────────
 
@@ -839,14 +857,10 @@ class NaverMailApp:
         self._persist_config()
 
         def search():
-            try:
-                self._ensure_connected()
-                results = self._fetch_mails(sender, subject)
-                self.root.after(0, lambda: self._search_done(results))
-            except Exception as e:
-                self.root.after(0, lambda: self._search_fail(str(e)))
+            self._ensure_connected()
+            return self._fetch_mails(sender, subject)
 
-        threading.Thread(target=search, daemon=True).start()
+        self._run_async(search, self._search_done, self._search_fail)
 
     def _fetch_mails(self, sender, subject):
         self._select_inbox()
@@ -1127,9 +1141,9 @@ class NaverMailApp:
                     results.append((path, out_path, changed, unmatched, None))
                 except Exception as e:
                     results.append((path, None, 0, [], str(e)))
-            self.root.after(0, lambda: self._convert_done(results))
+            return results
 
-        threading.Thread(target=run, daemon=True).start()
+        self._run_async(run, self._convert_done)
 
     def _convert_done(self, results):
         self.btn_convert.config(state="normal")
