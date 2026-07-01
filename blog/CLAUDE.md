@@ -61,7 +61,7 @@ draft.md의 `[IMAGE: ...]` 마커를 실제 경로로 치환
 `agents/assembler.md` 지시에 따라 최종 파일 생성  
 산출물: `output/[yymmdd_주제]/final.md`, `output/[yymmdd_주제]/final.html`
 
-완료 후 final.html 브라우저 열기 안내.
+완료 후 final.html을 직접 브라우저로 열어서 확인 (사용자에게 열라고 안내하지 않는다).
 
 ---
 
