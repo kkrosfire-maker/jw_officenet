@@ -23,7 +23,8 @@ const BASE_RENT = {
   C015:430000, C016:430000, C017:430000, C018:430000,
 };
 
-const VIRTUAL_RENT_BASE = 290400;
+const VIRTUAL_RENT_INDIVIDUAL = 22000;
+const VIRTUAL_RENT_CORP       = 44000;
 
 const LAYOUT = [
   [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A001'],
@@ -161,6 +162,14 @@ function calcRent(baseRent, discount, vat) {
   return Math.floor(Math.round(baseRent * (1 - discount) * (vat ? 1.1 : 1)) / 100) * 100;
 }
 
+// 비상주 계약금액 — 선납이면 계약 개월수 전체를 일괄 청구, 월납이면 단가만.
+// VAT 10% 포함. 자세한 공식은 CONTEXT.md "비상주 임대료" 참고.
+function computeVaRent(isCorp, prepaid, months) {
+  var base   = isCorp ? VIRTUAL_RENT_CORP : VIRTUAL_RENT_INDIVIDUAL;
+  var amount = prepaid ? base * months : base;
+  return calcRent(amount, 0, true);
+}
+
 function proratedRent(monthlyRent, startDateStr) {
   if (!startDateStr) return null;
   var startDate = new Date(startDateStr + 'T00:00:00');
@@ -175,9 +184,9 @@ function proratedRent(monthlyRent, startDateStr) {
   };
 }
 
-function inferContractYears(d) {
-  if (d && d.contractYears) return d.contractYears;
-  return Math.max(1, Math.min(3, Math.round(((d && d.rent) || VIRTUAL_RENT_BASE) / VIRTUAL_RENT_BASE)));
+function inferContractMonths(d) {
+  if (d && d.contractMonths) return d.contractMonths;
+  return 12;
 }
 
 function depositAmount(roomId) {

@@ -4,6 +4,7 @@ let currentRoom    = null;
 let _editingVaId   = null; // VA 수정 시 원본 ID 추적 (ID 변경 감지용)
 let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여부 유지
 let _vaSort = { col: 'start', asc: true }; // 비상주 목록 정렬 상태
+let _vaCameFromList = false; // 등록/수정 모달을 비상주 목록에서 열었는지 (닫을 때 목록으로 복귀할지 결정)
 
 // ── 데이터 레이어 ────────────────────────────────────
 let _DATA       = {};
@@ -395,11 +396,12 @@ function nextVirtualId() {
   return 'V' + String(max + 1).padStart(3, '0');
 }
 
-function openVirtualAdd(id) {
+function openVirtualAdd(id, fromList) {
   const data  = getAllData();
   const d     = id ? (data[id] || {}) : {};
   const newId = id || nextVirtualId();
   _editingVaId = id || null;
+  _vaCameFromList = !!fromList;
 
   document.getElementById('virtual-add-title').textContent = id ? (displayVaId(id) + ' 수정') : '비상주 신규 등록';
   var idInput = document.getElementById('va-id');
@@ -415,12 +417,13 @@ function openVirtualAdd(id) {
   document.getElementById('va-end').value    = d.end        || '';
   document.getElementById('va-memo').value   = d.memo       || '';
 
-  var years = inferContractYears(d);
+  var months = inferContractMonths(d);
   document.querySelectorAll('.period-btn').forEach(function(b) {
     b.classList.remove('selected');
-    if (parseInt(b.getAttribute('data-years'), 10) === years) b.classList.add('selected');
+    if (parseInt(b.getAttribute('data-months'), 10) === months) b.classList.add('selected');
   });
-  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * years);
+  var isCorp = !!d.isCorp;
+  document.getElementById('va-corp').checked = isCorp;
   document.getElementById('va-btn-delete').style.display = id ? 'inline-block' : 'none';
 
   var cStatus = d.contractStatus || '계약중';
@@ -429,8 +432,11 @@ function openVirtualAdd(id) {
     if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
   });
 
-  document.getElementById('va-prepaid').checked = !!(d.prepaid);
-  document.getElementById('va-prepaid-wrap').classList.toggle('active', !!(d.prepaid));
+  // prepaid 체크박스 상태를 먼저 정해야 vaComputeRent()가 선납/월납 여부를 올바르게 반영함
+  var isPrepaid = id ? !!(d.prepaid) : true; // 비상주는 계약 시작월에 전체 금액 일괄 선납이 기본
+  document.getElementById('va-prepaid').checked = isPrepaid;
+  document.getElementById('va-prepaid-wrap').classList.toggle('active', isPrepaid);
+  document.getElementById('va-rent').value = fmtWon(d.rent || vaComputeRent());
   vaGrid.load(d, _gridMonths(d.start));
 
   document.getElementById('virtual-add-overlay').classList.add('active');
@@ -438,11 +444,12 @@ function openVirtualAdd(id) {
 
 function closeVirtualAdd() {
   document.getElementById('virtual-add-overlay').classList.remove('active');
+  if (_vaCameFromList) setTimeout(showVirtualList, 80);
 }
 
-function getVaPeriodYears() {
+function getVaPeriodMonths() {
   var sel = document.querySelector('.period-btn.selected');
-  return sel ? parseInt(sel.getAttribute('data-years'), 10) : 1;
+  return sel ? parseInt(sel.getAttribute('data-months'), 10) : 12;
 }
 
 function selectVaPeriod(btn) {
@@ -450,16 +457,29 @@ function selectVaPeriod(btn) {
   btn.classList.add('selected');
   var startVal = document.getElementById('va-start').value;
   if (startVal) _updateVaEndFromPeriod(startVal);
-  document.getElementById('va-rent').value = fmtWon(VIRTUAL_RENT_BASE * getVaPeriodYears());
+  document.getElementById('va-rent').value = fmtWon(vaComputeRent());
 }
 
 function _updateVaEndFromPeriod(startVal) {
-  var years = getVaPeriodYears();
+  var months = getVaPeriodMonths();
   var d     = new Date(startVal + 'T00:00:00');
-  d.setFullYear(d.getFullYear() + years);
+  d.setMonth(d.getMonth() + months);
   document.getElementById('va-end').value = d.toISOString().slice(0, 10);
   var storedData = getAllData()[document.getElementById('va-id').value] || {};
   vaGrid.setMonths(_gridMonths(startVal), storedData);
+}
+
+// 폼에서 읽은 값을 순수 함수 computeVaRent()(office-domain.js)에 넘기기만 하는 얇은 어댑터.
+// 계산 공식/근거는 CONTEXT.md "비상주 임대료" 참고.
+function vaComputeRent() {
+  var isCorp  = document.getElementById('va-corp').checked;
+  var prepaid = document.getElementById('va-prepaid').checked;
+  var months  = getVaPeriodMonths();
+  return computeVaRent(isCorp, prepaid, months);
+}
+
+function onVaCorpChange() {
+  document.getElementById('va-rent').value = fmtWon(vaComputeRent());
 }
 
 function onVaStartChange() {
@@ -478,6 +498,7 @@ function onVaPrepaidChange() {
   var prepaid = document.getElementById('va-prepaid').checked;
   document.getElementById('va-prepaid-wrap').classList.toggle('active', prepaid);
   vaGrid.setAll(prepaid);
+  document.getElementById('va-rent').value = fmtWon(vaComputeRent());
 }
 
 function selectVaStatus(btn) {
@@ -500,7 +521,7 @@ async function saveVirtualCustomer() {
   const prevData = _editingVaId ? (data[_editingVaId] || {}) : {};
   if (_editingVaId && _editingVaId !== finalId) delete data[_editingVaId];
 
-  var years     = getVaPeriodYears();
+  var months    = getVaPeriodMonths();
   var rentInput = parseInt(document.getElementById('va-rent').value.replace(/,/g, '').trim(), 10) || 0;
   var statusBtn = document.querySelector(
     '#va-status-options .status-btn.s-active,' +
@@ -508,21 +529,23 @@ async function saveVirtualCustomer() {
     '#va-status-options .status-btn.s-canceled'
   );
 
+  var startVal = document.getElementById('va-start').value;
   data[finalId] = Object.assign({}, prevData, {
     name, tenantName,
+    isCorp:        document.getElementById('va-corp').checked,
     phone:         document.getElementById('va-phone').value.trim(),
-    start:         document.getElementById('va-start').value,
+    start:         startVal,
     end:           document.getElementById('va-end').value,
     vat:           true,
     discount:      0,
     rent:          rentInput,
-    contractYears: years,
+    contractMonths: months,
     contractType:  '비상주',
     contractStatus: statusBtn ? statusBtn.getAttribute('data-status') : '계약중',
     memo:          document.getElementById('va-memo').value.trim(),
     prepaid:       document.getElementById('va-prepaid').checked,
     prepaidAt:     document.getElementById('va-prepaid').checked
-      ? (prevData.prepaidAt || currentMonth)
+      ? (prevData.prepaidAt || (startVal ? startVal.slice(0, 7) : currentMonth))
       : null,
   }, vaGrid.getValues());
 
@@ -532,7 +555,6 @@ async function saveVirtualCustomer() {
     renderFloor();
     renderStats();
     toast(finalId !== id ? `${displayVaId(finalId)}로 저장되었습니다.` : '저장되었습니다.');
-    setTimeout(showVirtualList, 80);
   } catch(e) { toast('저장 실패 — 네트워크를 확인해주세요.'); }
 }
 
@@ -545,7 +567,6 @@ async function deleteVirtualCustomer() {
     renderFloor();
     renderStats();
     toast('삭제되었습니다.');
-    setTimeout(showVirtualList, 80);
   } catch(e) { toast('삭제 실패.'); }
 }
 
@@ -739,7 +760,7 @@ function renderVirtualList(showInactive) {
 
   const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
   const addBtn = `<div style="margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null);">&#43; 새 고객 추가</button>
+    <button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null, true);">&#43; 새 고객 추가</button>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;user-select:none;">
       <input type="checkbox" id="va-show-inactive" ${showInactive ? 'checked' : ''} onchange="_vaShowInactive=this.checked;renderVirtualList(this.checked)" style="width:15px;height:15px;cursor:pointer;">
       계약해지·만료 포함
@@ -763,8 +784,9 @@ function renderVirtualList(showInactive) {
       const payColor = ok ? '#26a69a' : pre ? '#9e9e9e' : '#e91e63';
       const payLabel = ok ? '완납'    : pre ? '대기'    : '미납';
       const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
-      return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}')">
+      return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}', true)">
         <td><strong>${displayVaId(r)}</strong></td>
+        <td>${d.isCorp ? '법인' : '개인'}</td>
         <td>${d.name || '-'}</td>
         <td>${d.tenantName || '-'}</td>
         <td>${d.phone || '-'}</td>
@@ -780,9 +802,10 @@ function renderVirtualList(showInactive) {
     content.innerHTML = addBtn + `<table class="virtual-table">
       <thead><tr>
         <th style="${thStyle}" onclick="_vaSortToggle('id')">ID${arrow('id')}</th>
+        <th>구분</th>
         <th>상호명</th><th>입주자</th><th>연락처</th>
         <th style="${thStyle}" onclick="_vaSortToggle('start')">계약시작${arrow('start')}</th>
-        <th>계약종료</th><th>월세(원)</th><th>납부현황</th><th>계약상태</th>
+        <th>계약종료</th><th>계약금액(원)</th><th>납부현황</th><th>계약상태</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;

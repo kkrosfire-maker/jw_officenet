@@ -869,7 +869,12 @@ label.vat-check-label input[type="checkbox"] {
       </div>
       <div class="form-group">
         <label>고객 ID <span id="va-id-hint" style="font-size:11px;color:#aaa;font-weight:400;"></span></label>
-        <input type="text" id="va-id" placeholder="예: V001" style="font-weight:700;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="text" id="va-id" placeholder="예: V001" style="font-weight:700;flex:1;">
+          <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:#555;cursor:pointer;user-select:none;white-space:nowrap;">
+            <input type="checkbox" id="va-corp" onchange="onVaCorpChange()" style="width:15px;height:15px;cursor:pointer;"> 법인
+          </label>
+        </div>
       </div>
       <div class="form-group">
         <label>상호명</label>
@@ -886,9 +891,10 @@ label.vat-check-label input[type="checkbox"] {
       <div class="form-group">
         <label>계약 기간</label>
         <div class="contract-period-options">
-          <button type="button" class="period-btn selected" data-years="1" onclick="selectVaPeriod(this)">1년</button>
-          <button type="button" class="period-btn" data-years="2" onclick="selectVaPeriod(this)">2년</button>
-          <button type="button" class="period-btn" data-years="3" onclick="selectVaPeriod(this)">3년</button>
+          <button type="button" class="period-btn" data-months="6" onclick="selectVaPeriod(this)">6개월</button>
+          <button type="button" class="period-btn selected" data-months="12" onclick="selectVaPeriod(this)">1년</button>
+          <button type="button" class="period-btn" data-months="24" onclick="selectVaPeriod(this)">2년</button>
+          <button type="button" class="period-btn" data-months="36" onclick="selectVaPeriod(this)">3년</button>
         </div>
       </div>
       <div class="form-row">
@@ -903,7 +909,7 @@ label.vat-check-label input[type="checkbox"] {
       </div>
       <div class="form-group">
         <label>계약 임대료 (원)</label>
-        <input type="text" id="va-rent" value="290,400" style="font-weight:700;">
+        <input type="text" id="va-rent" value="22,000" style="font-weight:700;">
       </div>
       <div class="form-group">
         <label>계약 상태</label>

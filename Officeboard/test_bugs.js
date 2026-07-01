@@ -63,6 +63,31 @@ console.log('\n[정상] isPaidThisMonth 선납달 외 미합산');
   assert(isPaid(d, '2026-07') === true,           '7월 paid 상태는 여전히 true');
 }
 
+// ── Bug 5: computeVaRent — 개월수 곱셈 누락 회귀 ──
+// (6개월/1년치를 선납해도 월 단가만 잡히던 버그)
+console.log('\n[Bug 5] computeVaRent 선납 시 개월수 곱셈 누락 회귀');
+{
+  assert(computeVaRent(false, true, 6)  === 145200, '개인 6개월 선납 = 22,000×6×1.1');
+  assert(computeVaRent(false, true, 12) === 290400, '개인 1년 선납 = 22,000×12×1.1');
+  assert(computeVaRent(true,  true, 24) === 1161600, '법인 2년 선납 = 44,000×24×1.1');
+}
+
+// ── Bug 6: computeVaRent — VAT 누락 회귀 ──
+// (부가세 10%를 빼먹어서 264,000으로 잡히던 버그 — 290,400이 맞는 값)
+console.log('\n[Bug 6] computeVaRent VAT 10% 누락 회귀');
+{
+  assert(computeVaRent(false, true, 12) === 290400,
+    '개인 1년 선납 VAT 포함 290,400 (VAT 빠지면 264,000이 나옴 — 버그)');
+}
+
+// ── 정상 동작 확인: computeVaRent 월납은 개월수를 곱하지 않음 ──
+// (곱했다면 매달 결제 체크할 때마다 전체 계약금이 중복 집계되는 버그가 생김)
+console.log('\n[정상] computeVaRent 월납은 단가만 (개월수 곱하면 안 됨)');
+{
+  assert(computeVaRent(false, false, 12) === 24200, '개인 월납 = 22,000×1.1 (12를 곱하면 안 됨)');
+  assert(computeVaRent(true,  false, 24) === 48400,  '법인 월납 = 44,000×1.1 (24를 곱하면 안 됨)');
+}
+
 // ── computeExpiryAlerts — 오늘 기준 독립 동작 확인 ──
 console.log('\n[후보4] computeExpiryAlerts 오늘 기준 분리');
 {
