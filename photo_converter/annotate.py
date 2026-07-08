@@ -55,6 +55,71 @@ def rect_corners(r):
     return [(cx + lx * cos_a - ly * sin_a, cy + lx * sin_a + ly * cos_a) for lx, ly in local]
 
 
+def hit_zone(r, cx, cy, scale, ox, oy, resize_hit, rotate_hit):
+    """
+    캔버스 좌표(cx,cy)가 rect r의 모서리 핸들 근처인지 판정.
+    scale/ox/oy는 이미지→캔버스 변환(ix*scale+ox, iy*scale+oy).
+    ("resize"|"rotate", corner_idx) 또는 None을 반환.
+    """
+    for i, (ix, iy) in enumerate(rect_corners(r)):
+        px, py = ix * scale + ox, iy * scale + oy
+        dist = math.hypot(px - cx, py - cy)
+        if dist <= resize_hit:
+            return "resize", i
+        if dist <= rotate_hit:
+            return "rotate", i
+    return None
+
+
+def point_in_rect(r, ix, iy):
+    """이미지 좌표(ix,iy)가 회전된 rect r 내부에 있는지 판정."""
+    a = math.radians(r.get("angle", 0.0))
+    dx, dy = ix - r["cx"], iy - r["cy"]
+    cos_a, sin_a = math.cos(-a), math.sin(-a)
+    lx = dx * cos_a - dy * sin_a
+    ly = dx * sin_a + dy * cos_a
+    return abs(lx) <= r["hw"] and abs(ly) <= r["hh"]
+
+
+def resize_rect(fixed_pt, drag_pt, angle, min_half=8):
+    """
+    고정된 대각 반대쪽 꼭짓점(fixed_pt, 이미지 좌표)을 기준으로 드래그 지점
+    (drag_pt, 이미지 좌표)까지 리사이즈했을 때의 새 (cx, cy, hw, hh)를 반환.
+    """
+    fx, fy = fixed_pt
+    ix, iy = drag_pt
+    a = math.radians(angle)
+    u = (math.cos(a), math.sin(a))
+    v = (-math.sin(a), math.cos(a))
+    dx, dy = ix - fx, iy - fy
+    new_hw = max(min_half, abs(dx * u[0] + dy * u[1]) / 2)
+    new_hh = max(min_half, abs(dx * v[0] + dy * v[1]) / 2)
+    return (fx + ix) / 2, (fy + iy) / 2, new_hw, new_hh
+
+
+def rotate_angle(start_angle, start_mouse_angle, cur_mouse_angle, snap_step=None):
+    """
+    드래그 시작 각도들로부터 새 회전각(0~360)을 계산.
+    snap_step이 주어지면 그 단위(도)로 스냅한다.
+    """
+    new_angle = start_angle + (cur_mouse_angle - start_mouse_angle)
+    if snap_step:
+        new_angle = round(new_angle / snap_step) * snap_step
+    return new_angle % 360
+
+
+def move_rect_center(origin_cx, origin_cy, start_pt, cur_pt, bounds_wh):
+    """
+    드래그 시작점(start_pt)에서 현재점(cur_pt)까지 이동한 만큼 중심(origin_cx,
+    origin_cy)을 옮기되, 이미지 범위(bounds_wh=(w,h)) 안으로 clamp한 (cx, cy) 반환.
+    좌표는 모두 이미지 좌표.
+    """
+    w_img, h_img = bounds_wh
+    dx, dy = cur_pt[0] - start_pt[0], cur_pt[1] - start_pt[1]
+    return (max(0.0, min(float(w_img), origin_cx + dx)),
+            max(0.0, min(float(h_img), origin_cy + dy)))
+
+
 def draw_rects(image, rects, color=(0, 0, 255)):
     """
     rects: [{"cx","cy","hw","hh","angle","thickness"}, ...] (이미지 좌표, 픽셀)

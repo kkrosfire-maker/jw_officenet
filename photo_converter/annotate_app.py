@@ -1,6 +1,5 @@
 """2단계(annotate.py) 단독 테스트용 GUI. main.py와는 독립적으로 실행된다."""
 import math
-import subprocess
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -12,7 +11,11 @@ import openpyxl
 from PIL import Image, ImageGrab, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
-from annotate import parse_filename, build_label, annotate_image, rect_corners
+from annotate import (parse_filename, build_label, annotate_image, rect_corners,
+                       hit_zone, point_in_rect, resize_rect, rotate_angle, move_rect_center)
+from imageio_utils import read_image, write_image, unique_path
+from thumb_panel import ThumbPanel
+from undo_stack import UndoStack
 
 IMAGE_EXT     = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 EXCEL_EXT     = {".xlsx", ".xlsm"}
@@ -25,31 +28,6 @@ ROTATE_HIT    = RESIZE_HIT + 16  # 이 반지름 안쪽(리사이즈 바깥쪽):
 MIN_HALF      = 8        # 리사이즈 시 최소 반너비/반높이(이미지 px)
 MONTHS        = [f"{i}월" for i in range(1, 13)]
 UNDO_LIMIT    = 50
-
-THUMB_W, THUMB_H = 112, 84
-THUMB_PANEL_W    = 148
-
-
-def read_image(path: str):
-    buf = np.fromfile(str(path), dtype=np.uint8)
-    return cv2.imdecode(buf, cv2.IMREAD_COLOR)
-
-
-def write_image(path: str, img) -> bool:
-    ext = Path(path).suffix.lower() or ".png"
-    ok, buf = cv2.imencode(ext, img)
-    if ok:
-        buf.tofile(str(path))
-    return bool(ok)
-
-
-def unique_path(directory: Path, stem: str, suffix: str) -> Path:
-    p = directory / (stem + suffix)
-    n = 1
-    while p.exists():
-        p = directory / f"{stem}_{n}{suffix}"
-        n += 1
-    return p
 
 
 def load_reference_excel(path: str):
@@ -186,8 +164,7 @@ class App(TkinterDnD.Tk):
         self._drag_mode     = None
         self._pre_drag_snapshot = None
 
-        self._undo_stack = []
-        self._redo_stack = []
+        self._history = UndoStack(limit=UNDO_LIMIT)
 
         self._hospital_list = []
         self._pharma_list   = []
@@ -198,10 +175,6 @@ class App(TkinterDnD.Tk):
         # 파일 목록 (좌측 패널)
         self._folder_files = []
         self._folder_idx   = 0
-        self._thumbs        = []
-        self._thumb_photos  = []
-        self._thumb_gen     = 0
-        self._thumb_cache   = {}
 
         self._build_ui()
         self._setup_dnd()
@@ -282,7 +255,13 @@ class App(TkinterDnD.Tk):
         body = tk.Frame(self, bg="#242424")
         body.pack(fill="both", expand=True, padx=6, pady=6)
 
-        self._build_thumb_panel(body)
+        self._thumb_panel = ThumbPanel(
+            body,
+            on_select=self._select_file,
+            on_delete=self._remove_file,
+            on_delete_selected=self._delete_selected_files,
+            checkbox_default=False,
+        )
 
         left = tk.Frame(body, bg="#242424")
         left.pack(side="left", fill="both", expand=True, padx=(0, 3))
@@ -309,232 +288,13 @@ class App(TkinterDnD.Tk):
                              anchor="w", font=("Segoe UI", 9), padx=8, pady=4)
         self._st.pack(fill="x", side="bottom")
 
-    # ── 좌측 파일 목록 패널 ──────────────────────────────────────────────
-
-    def _build_thumb_panel(self, parent):
-        panel = tk.Frame(parent, bg="#1e1e1e", width=THUMB_PANEL_W)
-        panel.pack(side="left", fill="y", padx=(0, 4))
-        panel.pack_propagate(False)
-
-        hdr_row = tk.Frame(panel, bg="#1e1e1e")
-        hdr_row.pack(fill="x")
-        self._thumb_hdr = tk.Label(hdr_row, text="파일 목록", bg="#1e1e1e", fg="#555",
-                                    font=("Segoe UI", 8), anchor="w", padx=6, pady=3)
-        self._thumb_hdr.pack(side="left")
-        tk.Button(hdr_row, text="선택삭제", command=self._delete_selected_files,
-                  bg="#3d4043", fg="#ddd", relief="flat", padx=5, pady=0,
-                  font=("Segoe UI", 7), cursor="hand2", bd=0,
-                  activebackground="#6b3a3a", activeforeground="white"
-                  ).pack(side="right", padx=4, pady=2)
-
-        inner = tk.Frame(panel, bg="#1e1e1e")
-        inner.pack(fill="both", expand=True)
-
-        self._thumb_canvas = tk.Canvas(inner, bg="#1e1e1e", highlightthickness=0, bd=0)
-        scr = tk.Scrollbar(inner, orient="vertical", command=self._thumb_canvas.yview)
-        self._thumb_canvas.configure(yscrollcommand=scr.set)
-        scr.pack(side="right", fill="y")
-        self._thumb_canvas.pack(side="left", fill="both", expand=True)
-
-        self._thumb_list = tk.Frame(self._thumb_canvas, bg="#1e1e1e")
-        self._thumb_canvas.create_window((0, 0), window=self._thumb_list, anchor="nw")
-
-        self._thumb_list.bind("<Configure>", lambda e: self._thumb_canvas.configure(
-            scrollregion=self._thumb_canvas.bbox("all")))
-        self._bind_wheel_recursive(panel)
-
-    def _bind_wheel_recursive(self, widget):
-        widget.bind("<MouseWheel>", self._on_thumb_wheel)
-        for child in widget.winfo_children():
-            self._bind_wheel_recursive(child)
-
-    def _on_thumb_wheel(self, event):
-        self._thumb_canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
-
-    def _rebuild_thumbs(self):
-        for w in self._thumb_list.winfo_children():
-            w.destroy()
-        self._thumbs.clear()
-        self._thumb_photos.clear()
-
-        n = len(self._folder_files)
-        self._thumb_hdr.config(text=f"파일 목록  {n}개" if n else "파일 목록")
-        if not self._folder_files:
-            return
-
-        for i, fpath in enumerate(self._folder_files):
-            item = self._create_thumb_item(i, fpath)
-            self._thumbs.append(item)
-            self._thumb_photos.append(None)
-
-        self._highlight_thumb(self._folder_idx)
-        self._thumb_canvas.update_idletasks()
-        self._thumb_canvas.configure(scrollregion=self._thumb_canvas.bbox("all"))
-
-        self._thumb_gen += 1
-        gen = self._thumb_gen
-
-        to_load = []
-        for i, fpath in enumerate(self._folder_files):
-            cached = self._thumb_cache.get(fpath)
-            if cached is not None:
-                self._apply_thumb_photo(i, cached, gen)
-            else:
-                to_load.append(fpath)
-
-        if not to_load:
-            return
-
-        def load_all():
-            for fpath in to_load:
-                if gen != self._thumb_gen:
-                    return
-                photo = self._make_thumb_photo(fpath)
-                if gen != self._thumb_gen:
-                    return
-                if photo is not None:
-                    self._thumb_cache[fpath] = photo
-                self.after(0, lambda p=fpath, ph=photo, g=gen: self._apply_thumb_photo_by_path(p, ph, g))
-
-        threading.Thread(target=load_all, daemon=True).start()
-
-    def _remove_thumb_item(self, idx: int):
-        if not (0 <= idx < len(self._thumbs)):
-            return
-        item = self._thumbs.pop(idx)
-        self._thumb_photos.pop(idx)
-        item["frame"].destroy()
-        for it in self._thumbs[idx:]:
-            it["idx"] -= 1
-
-        n = len(self._folder_files)
-        self._thumb_hdr.config(text=f"파일 목록  {n}개" if n else "파일 목록")
-        self._highlight_thumb(self._folder_idx)
-        self._thumb_canvas.update_idletasks()
-        self._thumb_canvas.configure(scrollregion=self._thumb_canvas.bbox("all"))
-
-    def _create_thumb_item(self, idx: int, fpath: str) -> dict:
-        BG = "#252525"
-        frame = tk.Frame(self._thumb_list, bg=BG, padx=3, pady=3,
-                         cursor="hand2", highlightthickness=0)
-        frame.pack(fill="x", padx=2, pady=1)
-
-        img_lbl = tk.Label(frame, bg="#1a1a1a",
-                            width=THUMB_W // 8, height=THUMB_H // 16)
-        img_lbl.pack(fill="x")
-
-        bot = tk.Frame(frame, bg=BG)
-        bot.pack(fill="x", pady=(2, 0))
-
-        name = Path(fpath).name
-        if len(name) > 13:
-            name = name[:10] + "..."
-        name_lbl = tk.Label(bot, text=name, bg=BG, fg="#888",
-                             font=("Segoe UI", 7), anchor="w")
-        name_lbl.pack(side="left", fill="x", expand=True)
-
-        var = tk.BooleanVar(value=False)
-        cb = tk.Checkbutton(bot, variable=var, bg=BG,
-                             activebackground=BG, selectcolor="#555",
-                             bd=0, highlightthickness=0, padx=0)
-        cb.pack(side="right")
-
-        bg_widgets = [frame, img_lbl, bot, name_lbl, cb]
-        item = {"frame": frame, "var": var, "img_lbl": img_lbl,
-                "bg_widgets": bg_widgets, "idx": idx, "path": fpath}
-
-        for w in (frame, img_lbl, name_lbl):
-            w.bind("<Button-1>", lambda e, it=item: self._select_file(it["idx"]))
-            w.bind("<Button-3>", lambda e, it=item: self._thumb_context_menu(e, it["idx"]))
-
-        self._bind_wheel_recursive(frame)
-        return item
-
-    def _make_thumb_photo(self, fpath: str):
-        try:
-            buf = np.fromfile(fpath, dtype=np.uint8)
-            img = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-            if img is None:
-                return None
-            h, w   = img.shape[:2]
-            scale  = min(THUMB_W / w, THUMB_H / h)
-            nh, nw = max(1, int(h * scale)), max(1, int(w * scale))
-            small  = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_AREA)
-            rgb    = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-            return ImageTk.PhotoImage(Image.fromarray(rgb))
-        except Exception:
-            return None
-
-    def _apply_thumb_photo(self, idx: int, photo, gen: int):
-        if gen != self._thumb_gen or idx >= len(self._thumbs) or photo is None:
-            return
-        self._thumb_photos[idx] = photo
-        self._thumbs[idx]["img_lbl"].configure(image=photo, width=0, height=0)
-        self._thumb_canvas.configure(scrollregion=self._thumb_canvas.bbox("all"))
-
-    def _apply_thumb_photo_by_path(self, path: str, photo, gen: int):
-        if gen != self._thumb_gen or photo is None:
-            return
-        for i, item in enumerate(self._thumbs):
-            if item["path"] == path:
-                self._apply_thumb_photo(i, photo, gen)
-                return
-
-    def _highlight_thumb(self, idx: int):
-        for i, item in enumerate(self._thumbs):
-            active = (i == idx)
-            bg = "#1e4a7a" if active else "#252525"
-            sc = "#3a7abf" if active else "#555"
-            item["frame"].configure(
-                highlightthickness=1 if active else 0,
-                highlightbackground="#4a9eff" if active else "#252525")
-            for w in item["bg_widgets"]:
-                try:
-                    w.configure(bg=bg)
-                    if isinstance(w, tk.Checkbutton):
-                        w.configure(selectcolor=sc, activebackground=bg)
-                except Exception:
-                    pass
-
-    def _scroll_to_active_thumb(self):
-        idx = self._folder_idx
-        if not self._thumbs or idx >= len(self._thumbs):
-            return
-        frame   = self._thumbs[idx]["frame"]
-        self._thumb_list.update_idletasks()
-        total_h = self._thumb_list.winfo_reqheight()
-        if total_h <= 0:
-            return
-        y       = frame.winfo_y()
-        h       = frame.winfo_height()
-        view    = self._thumb_canvas.yview()
-        vis_top = view[0] * total_h
-        vis_bot = vis_top + self._thumb_canvas.winfo_height()
-        if y < vis_top:
-            self._thumb_canvas.yview_moveto(y / total_h)
-        elif y + h > vis_bot:
-            self._thumb_canvas.yview_moveto(
-                max(0, (y + h - self._thumb_canvas.winfo_height()) / total_h))
-
-    def _thumb_context_menu(self, event, idx: int):
-        if not (0 <= idx < len(self._folder_files)):
-            return
-        menu = tk.Menu(self, tearoff=0)
-        menu.add_command(label="탐색기에서 열기", command=lambda: self._open_in_explorer(self._folder_files[idx]))
-        menu.add_command(label="목록에서 삭제", command=lambda: self._remove_file(idx))
-        try:
-            menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            menu.grab_release()
-
-    def _open_in_explorer(self, fpath: str):
-        subprocess.Popen(f'explorer /select,"{fpath}"', shell=True)
+    # ── 좌측 파일 목록 패널 연동 ─────────────────────────────────────────
 
     def _remove_file(self, idx: int):
         if not self._folder_files or not (0 <= idx < len(self._folder_files)):
             return
         active = self._folder_idx
-        self._thumb_cache.pop(self._folder_files[idx], None)
+        self._thumb_panel.forget_cache(self._folder_files[idx])
         self._folder_files.pop(idx)
         if not self._folder_files:
             self._folder_idx = 0
@@ -543,13 +303,12 @@ class App(TkinterDnD.Tk):
             self._current_path = None
             self._rects.clear()
             self._selected_idx = None
-            self._undo_stack.clear()
-            self._redo_stack.clear()
+            self._history.clear()
             self._orig_canvas.delete("all")
             self._res_canvas.delete("all")
             self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
             self._nav.pack_forget()
-            self._rebuild_thumbs()
+            self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
             return
 
         if idx == active:
@@ -562,7 +321,7 @@ class App(TkinterDnD.Tk):
         if reload_preview:
             self._load_image(self._folder_files[self._folder_idx])
         self._update_nav()
-        self._remove_thumb_item(idx)
+        self._thumb_panel.remove_item(idx, self._folder_idx)
 
     def _on_key_delete_file(self, event):
         focused = self.focus_get()
@@ -572,7 +331,7 @@ class App(TkinterDnD.Tk):
             self._remove_file(self._folder_idx)
 
     def _delete_selected_files(self):
-        idxs = [i for i, item in enumerate(self._thumbs) if item["var"].get()]
+        idxs = self._thumb_panel.checked_indices()
         if not idxs:
             messagebox.showinfo("알림", "선택된 파일이 없습니다.\n썸네일 체크박스를 확인해 주세요.")
             return
@@ -592,8 +351,8 @@ class App(TkinterDnD.Tk):
             return
         self._folder_idx = idx
         self._update_nav()
-        self._highlight_thumb(idx)
-        self._scroll_to_active_thumb()
+        self._thumb_panel.highlight(idx)
+        self._thumb_panel.scroll_to(idx)
         self._load_image(self._folder_files[idx])
 
     def _prev(self):
@@ -644,10 +403,7 @@ class App(TkinterDnD.Tk):
         return [dict(r) for r in self._rects]
 
     def _push_undo(self):
-        self._undo_stack.append(self._snapshot())
-        if len(self._undo_stack) > UNDO_LIMIT:
-            self._undo_stack.pop(0)
-        self._redo_stack.clear()
+        self._history.push(self._snapshot())
 
     def _restore(self, snapshot):
         self._rects = [dict(r) for r in snapshot]
@@ -659,11 +415,10 @@ class App(TkinterDnD.Tk):
         focused = self.focus_get()
         if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
             return None
-        if not self._undo_stack:
+        prev = self._history.undo(self._snapshot())
+        if prev is None:
             self._st.config(text="더 되돌릴 내용이 없습니다.")
             return "break"
-        self._redo_stack.append(self._snapshot())
-        prev = self._undo_stack.pop()
         self._restore(prev)
         self._st.config(text=f"실행 취소함 (테두리 {len(self._rects)}개)")
         return "break"
@@ -672,11 +427,10 @@ class App(TkinterDnD.Tk):
         focused = self.focus_get()
         if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
             return None
-        if not self._redo_stack:
+        nxt = self._history.redo(self._snapshot())
+        if nxt is None:
             self._st.config(text="다시 실행할 내용이 없습니다.")
             return "break"
-        self._undo_stack.append(self._snapshot())
-        nxt = self._redo_stack.pop()
         self._restore(nxt)
         self._st.config(text=f"다시 실행함 (테두리 {len(self._rects)}개)")
         return "break"
@@ -744,7 +498,7 @@ class App(TkinterDnD.Tk):
             self._nav.pack(side="right", padx=8)
         self._load_image(self._folder_files[first_new])
         self._update_nav()
-        self._rebuild_thumbs()
+        self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
 
     def _load_image(self, path: str):
         img = read_image(path)
@@ -757,8 +511,7 @@ class App(TkinterDnD.Tk):
         self._cv_result = None
         self._rects.clear()
         self._selected_idx = None
-        self._undo_stack.clear()
-        self._redo_stack.clear()
+        self._history.clear()
 
         fields = parse_filename(path)
         if fields:
@@ -813,8 +566,7 @@ class App(TkinterDnD.Tk):
         self._cv_result = None
         self._rects.clear()
         self._selected_idx = None
-        self._undo_stack.clear()
-        self._redo_stack.clear()
+        self._history.clear()
         self._hospital_var.set("")
         self._month_var.set("")
         self._pharma_var.set("")
@@ -893,23 +645,11 @@ class App(TkinterDnD.Tk):
 
     def _hit_zone(self, r, cx, cy):
         """corner 근처 히트테스트. ("resize"|"rotate", corner_idx) 또는 None."""
-        for i, (ix, iy) in enumerate(rect_corners(r)):
-            px, py = self._image_to_canvas(ix, iy)
-            dist = math.hypot(px - cx, py - cy)
-            if dist <= RESIZE_HIT:
-                return "resize", i
-            if dist <= ROTATE_HIT:
-                return "rotate", i
-        return None
+        return hit_zone(r, cx, cy, self._scale, self._ox, self._oy, RESIZE_HIT, ROTATE_HIT)
 
     def _point_in_rect(self, r, cx, cy):
         ix, iy = self._canvas_to_image(cx, cy)
-        a = math.radians(r.get("angle", 0.0))
-        dx, dy = ix - r["cx"], iy - r["cy"]
-        cos_a, sin_a = math.cos(-a), math.sin(-a)
-        lx = dx * cos_a - dy * sin_a
-        ly = dx * sin_a + dy * cos_a
-        return abs(lx) <= r["hw"] and abs(ly) <= r["hh"]
+        return point_in_rect(r, ix, iy)
 
     # ── 테두리 추가/삭제 ─────────────────────────────────────────────────
 
@@ -1000,33 +740,24 @@ class App(TkinterDnD.Tk):
         ix, iy = self._canvas_to_image(event.x, event.y)
 
         if mode == "resize":
-            fx, fy = self._drag_mode[2]
-            a = math.radians(r.get("angle", 0.0))
-            u = (math.cos(a), math.sin(a))
-            v = (-math.sin(a), math.cos(a))
-            dx, dy = ix - fx, iy - fy
-            new_hw = abs(dx * u[0] + dy * u[1]) / 2
-            new_hh = abs(dx * v[0] + dy * v[1]) / 2
-            r["hw"] = max(MIN_HALF, new_hw)
-            r["hh"] = max(MIN_HALF, new_hh)
-            r["cx"] = (fx + ix) / 2
-            r["cy"] = (fy + iy) / 2
+            fixed_pt = self._drag_mode[2]
+            r["cx"], r["cy"], r["hw"], r["hh"] = resize_rect(
+                fixed_pt, (ix, iy), r.get("angle", 0.0), MIN_HALF)
 
         elif mode == "rotate":
             _, _, start_angle, start_mouse_angle = self._drag_mode
             ccx, ccy = self._image_to_canvas(r["cx"], r["cy"])
             cur_mouse_angle = math.degrees(math.atan2(event.y - ccy, event.x - ccx))
-            new_angle = start_angle + (cur_mouse_angle - start_mouse_angle)
+            snap_step = None
             if self._alt_held:
-                step = 5 if self._ctrl_held else 15
-                new_angle = round(new_angle / step) * step
-            r["angle"] = new_angle % 360
+                snap_step = 5 if self._ctrl_held else 15
+            r["angle"] = rotate_angle(start_angle, start_mouse_angle, cur_mouse_angle, snap_step)
 
         else:  # move
             _, _, start_ix, start_iy, ocx, ocy = self._drag_mode
             h_img, w_img = self._cv_img.shape[:2]
-            r["cx"] = max(0.0, min(float(w_img), ocx + (ix - start_ix)))
-            r["cy"] = max(0.0, min(float(h_img), ocy + (iy - start_iy)))
+            r["cx"], r["cy"] = move_rect_center(
+                ocx, ocy, (start_ix, start_iy), (ix, iy), (w_img, h_img))
 
         self._draw_rect_overlay()
 
@@ -1035,10 +766,7 @@ class App(TkinterDnD.Tk):
         self._drag_mode = None
         if had_drag:
             if self._pre_drag_snapshot is not None and self._pre_drag_snapshot != self._rects:
-                self._undo_stack.append(self._pre_drag_snapshot)
-                if len(self._undo_stack) > UNDO_LIMIT:
-                    self._undo_stack.pop(0)
-                self._redo_stack.clear()
+                self._history.push(self._pre_drag_snapshot)
             self._pre_drag_snapshot = None
             self._apply(silent=True)   # 테두리 조작이 끝나면 바로 결과 미리보기 갱신
 
