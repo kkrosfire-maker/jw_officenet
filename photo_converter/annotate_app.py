@@ -1,6 +1,4 @@
 """2단계(annotate.py) 단독 테스트용 GUI. main.py와는 독립적으로 실행된다."""
-import math
-import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
@@ -11,21 +9,18 @@ import openpyxl
 from PIL import Image, ImageGrab, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
-from annotate import (parse_filename, build_label, annotate_image, rect_corners,
-                       hit_zone, point_in_rect, resize_rect, rotate_angle, move_rect_center)
+from annotate import parse_filename, build_label, annotate_image
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
-from undo_stack import UndoStack
+from undo_stack import HistoryController
+from file_list_controller import FileListController
+from rect_canvas import RectCanvas
 
 IMAGE_EXT     = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 EXCEL_EXT     = {".xlsx", ".xlsm"}
 SAVE_FOLDER   = "라벨완료"
 CANVAS_W      = 620
 CANVAS_H      = 620
-HANDLE_R      = 5       # 모서리 핸들 canvas 반지름
-RESIZE_HIT    = HANDLE_R * 2.5   # 이 반지름 안쪽: 리사이즈
-ROTATE_HIT    = RESIZE_HIT + 16  # 이 반지름 안쪽(리사이즈 바깥쪽): 회전
-MIN_HALF      = 8        # 리사이즈 시 최소 반너비/반높이(이미지 px)
 MONTHS        = [f"{i}월" for i in range(1, 13)]
 UNDO_LIMIT    = 50
 
@@ -154,32 +149,30 @@ class App(TkinterDnD.Tk):
         self._cv_result     = None
         self._current_path  = None
 
-        self._scale = 1.0
-        self._ox = self._oy = 0
-
-        # [{"cx","cy","hw","hh","angle","thickness"}, ...] (이미지 좌표, angle: 도 단위)
-        self._rects        = []
-        self._selected_idx  = None
-        # ("resize", idx, fixed_pt(img)) | ("rotate", idx, start_angle, start_mouse_angle) | ("move", idx, ix, iy, cx, cy)
-        self._drag_mode     = None
-        self._pre_drag_snapshot = None
-
-        self._history = UndoStack(limit=UNDO_LIMIT)
-
         self._hospital_list = []
         self._pharma_list   = []
 
-        self._alt_held  = False
-        self._ctrl_held = False
-
-        # 파일 목록 (좌측 패널)
-        self._folder_files = []
-        self._folder_idx   = 0
-
         self._build_ui()
+
+        self._history = HistoryController(
+            snapshot_fn=self._orig_canvas.get_rects,
+            restore_fn=self._restore_rects,
+            limit=UNDO_LIMIT,
+        )
+        self._files = FileListController(
+            self._thumb_panel,
+            on_load=self._load_image,
+            on_empty=self._on_files_empty,
+            nav=self._nav,
+            nav_label=self._nav_lbl,
+            status=lambda t: self._st.config(text=t),
+        )
+
+        self._orig_canvas.bind_keyboard_rotate(self)
+        self._history.bind_keys(self, ignore_types=(tk.Entry, tk.Spinbox, ttk.Entry),
+                                 status_fn=self._history_status)
+
         self._setup_dnd()
-        self._setup_rotate_keys()
-        self._setup_history_keys()
         self.bind_all("<Control-v>", self._on_paste_shortcut)
         self.bind("<Delete>", self._on_key_delete_file)
 
@@ -201,12 +194,11 @@ class App(TkinterDnD.Tk):
         self._excel_lbl.pack(side="left", padx=10)
 
         self._nav = tk.Frame(top, bg="#2e2e2e")
-        tk.Button(self._nav, text="◀", command=self._prev, **B).pack(side="left", padx=2)
+        tk.Button(self._nav, text="◀", command=lambda: self._files.prev(), **B).pack(side="left", padx=2)
         self._nav_lbl = tk.Label(self._nav, text="", bg="#2e2e2e", fg="#aaa",
                                   font=("Segoe UI", 9), width=10)
         self._nav_lbl.pack(side="left")
-        tk.Button(self._nav, text="▶", command=self._next, **B).pack(side="left", padx=2)
-        self._nav.pack(side="right", padx=8)
+        tk.Button(self._nav, text="▶", command=lambda: self._files.next(), **B).pack(side="left", padx=2)
 
         form = tk.Frame(self, bg="#2e2e2e", pady=6)
         form.pack(fill="x")
@@ -248,8 +240,10 @@ class App(TkinterDnD.Tk):
         form2.pack(fill="x")
         tk.Button(form2, text="미리보기 적용", command=self._apply, **B).pack(side="left", padx=10)
         tk.Button(form2, text=f"'{SAVE_FOLDER}' 폴더에 저장", command=self._save, **B).pack(side="left", padx=4)
-        tk.Button(form2, text="↶ 실행 취소 (Ctrl+Z)", command=self._undo, **B).pack(side="left", padx=(14, 4))
-        tk.Button(form2, text="↷ 다시 실행 (Ctrl+Y)", command=self._redo, **B).pack(side="left", padx=4)
+        tk.Button(form2, text="↶ 실행 취소 (Ctrl+Z)",
+                  command=lambda: self._history_status("undo", self._history.undo()), **B).pack(side="left", padx=(14, 4))
+        tk.Button(form2, text="↷ 다시 실행 (Ctrl+Y)",
+                  command=lambda: self._history_status("redo", self._history.redo()), **B).pack(side="left", padx=4)
         tk.Button(form2, text="테두리 전체 지우기", command=self._clear_all_rects, **B).pack(side="left", padx=4)
 
         body = tk.Frame(self, bg="#242424")
@@ -257,9 +251,9 @@ class App(TkinterDnD.Tk):
 
         self._thumb_panel = ThumbPanel(
             body,
-            on_select=self._select_file,
-            on_delete=self._remove_file,
-            on_delete_selected=self._delete_selected_files,
+            on_select=lambda idx: self._files.select(idx),
+            on_delete=lambda idx: self._files.remove(idx),
+            on_delete_selected=lambda: self._files.remove_selected(),
             checkbox_default=False,
         )
 
@@ -268,13 +262,9 @@ class App(TkinterDnD.Tk):
         tk.Label(left, text="원본  |  몸통 드래그: 이동  /  모서리: 크기 조절  /  모서리 바깥쪽: 회전  /  "
                              "선택 후 ALT+←→: 15°, CTRL+ALT+←→: 5° 회전",
                  bg="#242424", fg="#888", font=("Segoe UI", 9)).pack(anchor="w")
-        self._orig_canvas = tk.Canvas(left, bg="#1a1a1a", width=CANVAS_W, height=CANVAS_H,
-                                       highlightthickness=1, highlightbackground="#3a3a3a")
+        self._orig_canvas = RectCanvas(left, width=CANVAS_W, height=CANVAS_H,
+                                        on_edit=self._on_rect_edit, on_select=self._on_rect_select)
         self._orig_canvas.pack(fill="both", expand=True)
-        self._orig_canvas.bind("<Button-1>", self._on_canvas_press)
-        self._orig_canvas.bind("<B1-Motion>", self._on_canvas_motion)
-        self._orig_canvas.bind("<ButtonRelease-1>", self._on_canvas_release)
-        self._orig_canvas.bind("<Motion>", self._on_canvas_hover)
 
         right = tk.Frame(body, bg="#242424")
         right.pack(side="right", fill="both", expand=True, padx=(3, 0))
@@ -288,162 +278,69 @@ class App(TkinterDnD.Tk):
                              anchor="w", font=("Segoe UI", 9), padx=8, pady=4)
         self._st.pack(fill="x", side="bottom")
 
-    # ── 좌측 파일 목록 패널 연동 ─────────────────────────────────────────
+    # ── 파일 목록 빈 상태 / 로드 ─────────────────────────────────────────
 
-    def _remove_file(self, idx: int):
-        if not self._folder_files or not (0 <= idx < len(self._folder_files)):
-            return
-        active = self._folder_idx
-        self._thumb_panel.forget_cache(self._folder_files[idx])
-        self._folder_files.pop(idx)
-        if not self._folder_files:
-            self._folder_idx = 0
-            self._cv_img     = None
-            self._cv_result  = None
-            self._current_path = None
-            self._rects.clear()
-            self._selected_idx = None
-            self._history.clear()
-            self._orig_canvas.delete("all")
-            self._res_canvas.delete("all")
-            self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
-            self._nav.pack_forget()
-            self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
-            return
-
-        if idx == active:
-            self._folder_idx = min(idx, len(self._folder_files) - 1)
-            reload_preview = True
-        else:
-            self._folder_idx = active - 1 if idx < active else active
-            reload_preview = False
-
-        if reload_preview:
-            self._load_image(self._folder_files[self._folder_idx])
-        self._update_nav()
-        self._thumb_panel.remove_item(idx, self._folder_idx)
+    def _on_files_empty(self):
+        self._cv_img       = None
+        self._cv_result     = None
+        self._current_path  = None
+        self._history.clear()
+        self._orig_canvas.clear()
+        self._res_canvas.delete("all")
+        self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
 
     def _on_key_delete_file(self, event):
         focused = self.focus_get()
         if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
             return
-        if self._folder_files and 0 <= self._folder_idx < len(self._folder_files):
-            self._remove_file(self._folder_idx)
-
-    def _delete_selected_files(self):
-        idxs = self._thumb_panel.checked_indices()
-        if not idxs:
-            messagebox.showinfo("알림", "선택된 파일이 없습니다.\n썸네일 체크박스를 확인해 주세요.")
-            return
-        if not messagebox.askyesno(
-                "선택 삭제",
-                f"체크된 {len(idxs)}개 파일을 목록에서 삭제할까요?\n"
-                f"(실제 파일은 삭제되지 않고, 목록에서만 제외됩니다)"):
-            return
-        for i in sorted(idxs, reverse=True):
-            self._remove_file(i)
-
-    def _update_nav(self):
-        self._nav_lbl.config(text=f"{self._folder_idx + 1} / {len(self._folder_files)}")
-
-    def _select_file(self, idx: int):
-        if not self._folder_files or not (0 <= idx < len(self._folder_files)):
-            return
-        self._folder_idx = idx
-        self._update_nav()
-        self._thumb_panel.highlight(idx)
-        self._thumb_panel.scroll_to(idx)
-        self._load_image(self._folder_files[idx])
-
-    def _prev(self):
-        self._select_file(self._folder_idx - 1)
-
-    def _next(self):
-        self._select_file(self._folder_idx + 1)
-
-    # ── 키보드 회전 (ALT+←→: 15°, CTRL+ALT+←→: 5°) ────────────────────────
-
-    def _setup_rotate_keys(self):
-        def set_alt(v):
-            self._alt_held = v
-        def set_ctrl(v):
-            self._ctrl_held = v
-
-        for key in ("Alt_L", "Alt_R"):
-            self.bind_all(f"<KeyPress-{key}>", lambda e: set_alt(True))
-            self.bind_all(f"<KeyRelease-{key}>", lambda e: set_alt(False))
-        for key in ("Control_L", "Control_R"):
-            self.bind_all(f"<KeyPress-{key}>", lambda e: set_ctrl(True))
-            self.bind_all(f"<KeyRelease-{key}>", lambda e: set_ctrl(False))
-
-        self.bind_all("<Left>", self._on_key_rotate)
-        self.bind_all("<Right>", self._on_key_rotate)
-
-    def _on_key_rotate(self, event):
-        if not self._alt_held or self._selected_idx is None:
-            return None
-        step = 5 if self._ctrl_held else 15
-        if event.keysym == "Left":
-            step = -step
-        self._push_undo()
-        r = self._rects[self._selected_idx]
-        r["angle"] = (r["angle"] + step) % 360
-        self._draw_rect_overlay()
-        self._apply(silent=True)
-        return "break"
+        self._files.remove_current()
 
     # ── 실행 취소 / 다시 실행 ─────────────────────────────────────────────
 
-    def _setup_history_keys(self):
-        self.bind_all("<Control-z>", self._undo)
-        self.bind_all("<Control-y>", self._redo)
-        self.bind_all("<Control-Z>", self._redo)   # Ctrl+Shift+Z
-
-    def _snapshot(self):
-        return [dict(r) for r in self._rects]
-
-    def _push_undo(self):
-        self._history.push(self._snapshot())
-
-    def _restore(self, snapshot):
-        self._rects = [dict(r) for r in snapshot]
-        self._selected_idx = None
-        self._draw_rect_overlay()
+    def _restore_rects(self, snapshot):
+        self._orig_canvas.set_rects(snapshot)
         self._apply(silent=True)
 
-    def _undo(self, event=None):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
-            return None
-        prev = self._history.undo(self._snapshot())
-        if prev is None:
-            self._st.config(text="더 되돌릴 내용이 없습니다.")
-            return "break"
-        self._restore(prev)
-        self._st.config(text=f"실행 취소함 (테두리 {len(self._rects)}개)")
-        return "break"
+    def _history_status(self, action, ok):
+        n = len(self._orig_canvas.get_rects())
+        if action == "undo":
+            self._st.config(text=f"실행 취소함 (테두리 {n}개)" if ok else "더 되돌릴 내용이 없습니다.")
+        else:
+            self._st.config(text=f"다시 실행함 (테두리 {n}개)" if ok else "다시 실행할 내용이 없습니다.")
 
-    def _redo(self, event=None):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
-            return None
-        nxt = self._history.redo(self._snapshot())
-        if nxt is None:
-            self._st.config(text="다시 실행할 내용이 없습니다.")
-            return "break"
-        self._restore(nxt)
-        self._st.config(text=f"다시 실행함 (테두리 {len(self._rects)}개)")
-        return "break"
+    # ── 테두리 편집 콜백 (RectCanvas) ─────────────────────────────────────
+
+    def _on_rect_edit(self, kind, pre_snapshot, index=None):
+        self._history.push(pre_snapshot)
+        self._apply(silent=True)
+
+    def _on_rect_select(self, idx):
+        if idx is not None:
+            self._thick_var.set(self._orig_canvas.selected_thickness())
+
+    def _add_rect(self):
+        if self._cv_img is None:
+            messagebox.showwarning("알림", "먼저 이미지를 열어주세요.")
+            return
+        self._orig_canvas.add_rect(hw_ratio=0.125, hh_ratio=0.125, thickness=self._thick_var.get())
+
+    def _delete_selected_rect(self):
+        if self._orig_canvas.selected_index() is None:
+            messagebox.showinfo("알림", "선택된 테두리가 없습니다. 테두리를 클릭해 선택하세요.")
+            return
+        self._orig_canvas.delete_selected()
 
     def _clear_all_rects(self):
-        if not self._rects:
+        if not self._orig_canvas.clear_rects():
             return
-        self._push_undo()
-        self._rects.clear()
-        self._selected_idx = None
-        self._draw_rect_overlay()
-        self._apply(silent=True)
         self._st.config(text="테두리를 모두 지웠습니다.")
+
+    def _on_thickness_change(self, *args):
+        if self._orig_canvas.selected_index() is not None:
+            try:
+                self._orig_canvas.set_selected_thickness(self._thick_var.get())
+            except tk.TclError:
+                return
 
     # ── DnD ─────────────────────────────────────────────────────────────
 
@@ -459,7 +356,7 @@ class App(TkinterDnD.Tk):
         others = [f for f in files if f not in images and f not in excels]
 
         if images:
-            self._add_files(images)
+            self._files.add_files(images)
         if excels:
             self._load_excel(excels[0])
         if others:
@@ -472,7 +369,7 @@ class App(TkinterDnD.Tk):
             filetypes=[("이미지", "*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.webp"),
                        ("모든 파일", "*.*")])
         if paths:
-            self._add_files(list(paths))
+            self._files.add_files(list(paths))
 
     def _open_folder(self):
         folder = filedialog.askdirectory()
@@ -483,22 +380,7 @@ class App(TkinterDnD.Tk):
         if not files:
             messagebox.showinfo("알림", "지원하는 이미지가 없습니다.")
             return
-        self._add_files(files)
-
-    def _add_files(self, new_paths: list):
-        existing = set(self._folder_files)
-        to_add   = [p for p in new_paths if p not in existing]
-        if not to_add:
-            self._st.config(text="추가할 새 파일이 없습니다. (모두 이미 목록에 있음)")
-            return
-        first_new = len(self._folder_files)
-        self._folder_files.extend(to_add)
-        self._folder_idx = first_new
-        if len(self._folder_files) > 1:
-            self._nav.pack(side="right", padx=8)
-        self._load_image(self._folder_files[first_new])
-        self._update_nav()
-        self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
+        self._files.add_files(files)
 
     def _load_image(self, path: str):
         img = read_image(path)
@@ -509,8 +391,6 @@ class App(TkinterDnD.Tk):
         self._current_path = path
         self._cv_img    = img
         self._cv_result = None
-        self._rects.clear()
-        self._selected_idx = None
         self._history.clear()
 
         fields = parse_filename(path)
@@ -525,7 +405,8 @@ class App(TkinterDnD.Tk):
             self._pharma_var.set("")
             self._st.config(text="파일명에서 자동 인식 실패 — 병원명/월/제약사명을 직접 입력하세요.")
 
-        self._render_original()
+        self._orig_canvas.show(img)
+        self._orig_canvas.set_rects([])
         self._res_canvas.delete("all")
 
     # ── 클립보드 붙여넣기 ────────────────────────────────────────────────
@@ -547,7 +428,7 @@ class App(TkinterDnD.Tk):
         if isinstance(data, list) and data:
             images = [f for f in data if Path(f).suffix.lower() in IMAGE_EXT]
             if images:
-                self._add_files(images)
+                self._files.add_files(images)
                 return
             self._st.config(text="클립보드의 파일 중 지원하는 이미지가 없습니다.")
             return
@@ -564,15 +445,14 @@ class App(TkinterDnD.Tk):
         self._current_path = None
         self._cv_img    = img
         self._cv_result = None
-        self._rects.clear()
-        self._selected_idx = None
         self._history.clear()
         self._hospital_var.set("")
         self._month_var.set("")
         self._pharma_var.set("")
         self._st.config(text="클립보드에서 이미지를 붙여넣었습니다 — 병원명/월/제약사명을 입력하세요. "
                               "(파일명이 없어 저장 시 위치를 직접 지정합니다)")
-        self._render_original()
+        self._orig_canvas.show(img)
+        self._orig_canvas.set_rects([])
         self._res_canvas.delete("all")
 
     # ── 기준 엑셀 ────────────────────────────────────────────────────────
@@ -596,194 +476,6 @@ class App(TkinterDnD.Tk):
             text=f"기준 엑셀: {Path(path).name}  (병원 {len(hospitals)}개 / 제약사 {len(pharmas)}개)")
         self._st.config(text="기준 엑셀 로드 완료 — 병원명/제약사명에 2글자 이상 입력하면 목록이 좁혀집니다.")
 
-    # ── 원본 캔버스 렌더링 ────────────────────────────────────────────────
-
-    def _render_original(self):
-        self._orig_canvas.delete("all")
-        if self._cv_img is None:
-            return
-        h, w = self._cv_img.shape[:2]
-        self._scale = min((CANVAS_W - 4) / w, (CANVAS_H - 4) / h)
-        nw, nh = max(1, int(w * self._scale)), max(1, int(h * self._scale))
-        self._ox = (CANVAS_W - nw) // 2
-        self._oy = (CANVAS_H - nh) // 2
-
-        resized = cv2.resize(self._cv_img, (nw, nh), interpolation=cv2.INTER_AREA)
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        self._tk_orig = ImageTk.PhotoImage(Image.fromarray(rgb))
-        self._orig_canvas.create_image(self._ox, self._oy, anchor="nw", image=self._tk_orig)
-        self._draw_rect_overlay()
-
-    # ── 좌표 변환 ───────────────────────────────────────────────────────
-
-    def _image_to_canvas(self, ix, iy):
-        return ix * self._scale + self._ox, iy * self._scale + self._oy
-
-    def _canvas_to_image(self, cx, cy):
-        return (cx - self._ox) / self._scale, (cy - self._oy) / self._scale
-
-    # ── 테두리 오버레이 렌더링 ───────────────────────────────────────────
-
-    def _draw_rect_overlay(self):
-        self._orig_canvas.delete("rect_overlay")
-        if self._cv_img is None:
-            return
-        for idx, r in enumerate(self._rects):
-            corners = [self._image_to_canvas(x, y) for x, y in rect_corners(r)]
-            selected = (idx == self._selected_idx)
-            outline = "#FFDD33" if selected else "#FF4444"
-            flat = [v for p in corners for v in p]
-            self._orig_canvas.create_polygon(*flat, outline=outline, fill="",
-                                              width=2, tags="rect_overlay")
-            for hx, hy in corners:
-                fill = "#FFDD33" if selected else "white"
-                self._orig_canvas.create_rectangle(
-                    hx - HANDLE_R, hy - HANDLE_R, hx + HANDLE_R, hy + HANDLE_R,
-                    fill=fill, outline="#333", tags="rect_overlay")
-
-    # ── 테두리 히트테스트 ────────────────────────────────────────────────
-
-    def _hit_zone(self, r, cx, cy):
-        """corner 근처 히트테스트. ("resize"|"rotate", corner_idx) 또는 None."""
-        return hit_zone(r, cx, cy, self._scale, self._ox, self._oy, RESIZE_HIT, ROTATE_HIT)
-
-    def _point_in_rect(self, r, cx, cy):
-        ix, iy = self._canvas_to_image(cx, cy)
-        return point_in_rect(r, ix, iy)
-
-    # ── 테두리 추가/삭제 ─────────────────────────────────────────────────
-
-    def _add_rect(self):
-        if self._cv_img is None:
-            messagebox.showwarning("알림", "먼저 이미지를 열어주세요.")
-            return
-        self._push_undo()
-        h, w = self._cv_img.shape[:2]
-        self._rects.append({
-            "cx": w / 2, "cy": h / 2,
-            "hw": w * 0.125, "hh": h * 0.125,
-            "angle": 0.0,
-            "thickness": self._thick_var.get(),
-        })
-        self._selected_idx = len(self._rects) - 1
-        self._draw_rect_overlay()
-        self._apply(silent=True)
-
-    def _delete_selected_rect(self):
-        if self._selected_idx is None:
-            messagebox.showinfo("알림", "선택된 테두리가 없습니다. 테두리를 클릭해 선택하세요.")
-            return
-        self._push_undo()
-        del self._rects[self._selected_idx]
-        self._selected_idx = None
-        self._draw_rect_overlay()
-        self._apply(silent=True)
-
-    def _sync_thickness_spinbox(self):
-        if self._selected_idx is not None:
-            self._thick_var.set(self._rects[self._selected_idx]["thickness"])
-
-    def _on_thickness_change(self, *args):
-        if self._selected_idx is not None and 0 <= self._selected_idx < len(self._rects):
-            try:
-                self._rects[self._selected_idx]["thickness"] = self._thick_var.get()
-            except tk.TclError:
-                return
-            self._draw_rect_overlay()
-
-    # ── 테두리 드래그(이동/리사이즈/회전) ─────────────────────────────────
-
-    def _on_canvas_press(self, event):
-        if self._cv_img is None:
-            return
-
-        for idx in reversed(range(len(self._rects))):
-            zone = self._hit_zone(self._rects[idx], event.x, event.y)
-            if zone is None:
-                continue
-            kind, corner_idx = zone
-            r = self._rects[idx]
-            self._selected_idx = idx
-            self._pre_drag_snapshot = self._snapshot()
-            if kind == "resize":
-                fixed_pt = rect_corners(r)[(corner_idx + 2) % 4]   # 대각선 반대쪽 꼭짓점(고정)
-                self._drag_mode = ("resize", idx, fixed_pt)
-            else:  # rotate
-                start_mouse_angle = math.degrees(math.atan2(
-                    event.y - self._image_to_canvas(r["cx"], r["cy"])[1],
-                    event.x - self._image_to_canvas(r["cx"], r["cy"])[0]))
-                self._drag_mode = ("rotate", idx, r["angle"], start_mouse_angle)
-            self._sync_thickness_spinbox()
-            self._draw_rect_overlay()
-            return
-
-        for idx in reversed(range(len(self._rects))):
-            if self._point_in_rect(self._rects[idx], event.x, event.y):
-                r = self._rects[idx]
-                ix, iy = self._canvas_to_image(event.x, event.y)
-                self._selected_idx = idx
-                self._pre_drag_snapshot = self._snapshot()
-                self._drag_mode = ("move", idx, ix, iy, r["cx"], r["cy"])
-                self._sync_thickness_spinbox()
-                self._draw_rect_overlay()
-                return
-
-        self._selected_idx = None
-        self._drag_mode = None
-        self._draw_rect_overlay()
-
-    def _on_canvas_motion(self, event):
-        if not self._drag_mode:
-            return
-        mode, idx = self._drag_mode[0], self._drag_mode[1]
-        r = self._rects[idx]
-        ix, iy = self._canvas_to_image(event.x, event.y)
-
-        if mode == "resize":
-            fixed_pt = self._drag_mode[2]
-            r["cx"], r["cy"], r["hw"], r["hh"] = resize_rect(
-                fixed_pt, (ix, iy), r.get("angle", 0.0), MIN_HALF)
-
-        elif mode == "rotate":
-            _, _, start_angle, start_mouse_angle = self._drag_mode
-            ccx, ccy = self._image_to_canvas(r["cx"], r["cy"])
-            cur_mouse_angle = math.degrees(math.atan2(event.y - ccy, event.x - ccx))
-            snap_step = None
-            if self._alt_held:
-                snap_step = 5 if self._ctrl_held else 15
-            r["angle"] = rotate_angle(start_angle, start_mouse_angle, cur_mouse_angle, snap_step)
-
-        else:  # move
-            _, _, start_ix, start_iy, ocx, ocy = self._drag_mode
-            h_img, w_img = self._cv_img.shape[:2]
-            r["cx"], r["cy"] = move_rect_center(
-                ocx, ocy, (start_ix, start_iy), (ix, iy), (w_img, h_img))
-
-        self._draw_rect_overlay()
-
-    def _on_canvas_release(self, event):
-        had_drag = self._drag_mode is not None
-        self._drag_mode = None
-        if had_drag:
-            if self._pre_drag_snapshot is not None and self._pre_drag_snapshot != self._rects:
-                self._history.push(self._pre_drag_snapshot)
-            self._pre_drag_snapshot = None
-            self._apply(silent=True)   # 테두리 조작이 끝나면 바로 결과 미리보기 갱신
-
-    def _on_canvas_hover(self, event):
-        if self._drag_mode or self._cv_img is None:
-            return
-        for r in reversed(self._rects):
-            zone = self._hit_zone(r, event.x, event.y)
-            if zone:
-                kind, _ = zone
-                self._orig_canvas.configure(cursor="sizing" if kind == "resize" else "exchange")
-                return
-            if self._point_in_rect(r, event.x, event.y):
-                self._orig_canvas.configure(cursor="fleur")
-                return
-        self._orig_canvas.configure(cursor="")
-
     # ── 미리보기 & 저장 ──────────────────────────────────────────────────
 
     def _apply(self, silent=False):
@@ -800,9 +492,10 @@ class App(TkinterDnD.Tk):
             return
 
         label = build_label(hospital, month, pharma)
-        self._cv_result = annotate_image(self._cv_img, label, rects=self._rects)
+        rects = self._orig_canvas.get_rects()
+        self._cv_result = annotate_image(self._cv_img, label, rects=rects)
         self._render_result()
-        self._st.config(text=f"미리보기 적용됨: {label}  (테두리 {len(self._rects)}개)")
+        self._st.config(text=f"미리보기 적용됨: {label}  (테두리 {len(rects)}개)")
 
     def _render_result(self):
         self._res_canvas.delete("all")

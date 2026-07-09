@@ -13,12 +13,11 @@ from pathlib import Path
 from converter import auto_detect_corners, process_image
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
+from file_list_controller import FileListController
 
 SUPPORTED_EXT      = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 SAVE_FOLDER        = "변환파일"
 POINT_COLORS       = ["#FF5555", "#55DD55", "#5599FF", "#FFEE44"]
-HIT_RADIUS         = 18
-NEAR_RADIUS        = 55
 DEBOUNCE_MS        = 60
 DOUBLE_CLICK_MS    = 400
 ZOOM_MIN, ZOOM_MAX = 0.3, 15.0
@@ -35,11 +34,12 @@ class ImageCanvas(tk.Canvas):
     - 더블클릭: 줌·패닝 초기화
     """
 
-    def __init__(self, parent, label: str, on_change=None, **kw):
+    def __init__(self, parent, label: str, on_change=None, pannable=True, **kw):
         super().__init__(parent, bg="#1a1a1a", highlightthickness=1,
                          highlightbackground="#3a3a3a", **kw)
         self._label     = label
         self._on_change = on_change
+        self._pannable  = pannable
 
         self._cv_img     = None
         self._tk_img     = None
@@ -67,9 +67,10 @@ class ImageCanvas(tk.Canvas):
         self.bind("<ButtonRelease-1>", self._drag_end)
         self.bind("<Double-Button-1>", self._on_double_click)
         self.bind("<Motion>",          self._hover)
-        self.bind("<MouseWheel>",      self._on_scroll)
-        self.bind("<Button-2>",        self._pan_start)
-        self.bind("<B2-Motion>",       self._pan_motion)
+        if self._pannable:
+            self.bind("<MouseWheel>",      self._on_scroll)
+            self.bind("<Button-2>",        self._pan_start)
+            self.bind("<B2-Motion>",       self._pan_motion)
 
         self._draw_label()
 
@@ -209,20 +210,12 @@ class ImageCanvas(tk.Canvas):
         iy = max(0.0, min(float(h), (cy - self._oy) / self._scale))
         return ix, iy
 
-    def _nearest_idx(self, cx, cy):
-        for i, (px, py) in enumerate(self._canvas_pts()):
-            if (cx - px) ** 2 + (cy - py) ** 2 <= HIT_RADIUS ** 2:
-                return i
-        return None
-
-    def _closest_idx_within(self, cx, cy, radius):
-        """radius 안에서 가장 가까운 꼭짓점의 인덱스 (없으면 None)."""
+    def _closest_idx(self, cx, cy):
+        """캔버스 어디를 클릭하든 4개 꼭짓점 중 가장 가까운 것의 인덱스."""
         pts = self._canvas_pts()
         if not pts:
             return None
-        idx = min(range(len(pts)), key=lambda i: (cx - pts[i][0]) ** 2 + (cy - pts[i][1]) ** 2)
-        d2 = (cx - pts[idx][0]) ** 2 + (cy - pts[idx][1]) ** 2
-        return idx if d2 <= radius ** 2 else None
+        return min(range(len(pts)), key=lambda i: (cx - pts[i][0]) ** 2 + (cy - pts[i][1]) ** 2)
 
     def _drag_start(self, event):
         # 더블클릭(뷰 초기화) 판별: 직전 클릭과 짧은 시간 안이면 같은 제스처로 보고
@@ -231,21 +224,20 @@ class ImageCanvas(tk.Canvas):
             self._pts_before_click = [list(p) for p in self._pts]
         self._last_click_time = event.time
 
-        idx = self._nearest_idx(event.x, event.y)
-        if idx is None and len(self._pts) == 4:
-            # 정확히 짚지 않아도 "근처"면 가장 가까운 꼭짓점을 클릭 위치로 즉시 이동
-            idx = self._closest_idx_within(event.x, event.y, NEAR_RADIUS)
-            if idx is not None:
-                coord = self._img_coord(event.x, event.y)
-                if coord:
-                    self._pts[idx] = list(coord)
-                    self._redraw()
-                    if self._on_change:
-                        self._on_change(self._pts)
+        idx = None
+        if len(self._pts) == 4:
+            # 어디를 클릭해도 가장 가까운 꼭짓점을 클릭 위치로 즉시 이동
+            idx = self._closest_idx(event.x, event.y)
+            coord = self._img_coord(event.x, event.y)
+            if coord:
+                self._pts[idx] = list(coord)
+                self._redraw()
+                if self._on_change:
+                    self._on_change(self._pts)
         self._drag_idx = idx
 
-        if idx is None:
-            # 꼭짓점 근처가 아닌 빈 영역을 클릭하면 왼쪽 버튼 드래그로 화면을 이동(패닝)
+        if idx is None and self._pannable:
+            # 꼭짓점이 4개가 아니면(=조정 대상 없음) 왼쪽 버튼 드래그로 화면을 이동(패닝)
             self._pan_anchor = (event.x - self._pan_x, event.y - self._pan_y)
 
     def _drag_motion(self, event):
@@ -268,10 +260,7 @@ class ImageCanvas(tk.Canvas):
         self._redraw()
 
     def _hover(self, event):
-        idx = self._nearest_idx(event.x, event.y)
-        if idx is None and len(self._pts) == 4:
-            idx = self._closest_idx_within(event.x, event.y, NEAR_RADIUS)
-        if idx is not None:
+        if len(self._pts) == 4:
             self.configure(cursor="fleur")
         elif self._cv_img is not None:
             self.configure(cursor="hand2")
@@ -328,11 +317,19 @@ class App(TkinterDnD.Tk):
         self._cv_orig       = None
         self._cv_result     = None
         self._current_path  = None
-        self._folder_files  = []
-        self._folder_idx    = 0
         self._transform_job = None
 
         self._build_ui()
+
+        self._files = FileListController(
+            self._thumb_panel,
+            on_load=self._load,
+            on_empty=self._on_files_empty,
+            nav=self._nav,
+            nav_label=self._nav_lbl,
+            status=lambda t: self._st.config(text=t),
+        )
+
         self._setup_dnd()
         self.bind("<Delete>", self._on_key_delete)
         self.after(120, self._show_hint)
@@ -365,11 +362,11 @@ class App(TkinterDnD.Tk):
 
         # 배치 네비 (폴더·다중 파일 로드 시 표시)
         self._nav = tk.Frame(tb, bg="#2e2e2e")
-        tk.Button(self._nav, text="◀", command=self._prev, **B).pack(side="left", padx=2)
+        tk.Button(self._nav, text="◀", command=lambda: self._files.prev(), **B).pack(side="left", padx=2)
         self._nav_lbl = tk.Label(self._nav, text="", bg="#2e2e2e", fg="#aaa",
                                   font=("Segoe UI", 9), width=10)
         self._nav_lbl.pack(side="left")
-        tk.Button(self._nav, text="▶", command=self._next, **B).pack(side="left", padx=2)
+        tk.Button(self._nav, text="▶", command=lambda: self._files.next(), **B).pack(side="left", padx=2)
         tk.Button(self._nav, text="전체 자동 처리", command=self._batch, **B).pack(side="left", padx=6)
 
         # 메인 컨텐츠 영역
@@ -379,9 +376,9 @@ class App(TkinterDnD.Tk):
         # 좌측: 썸네일 패널
         self._thumb_panel = ThumbPanel(
             content,
-            on_select=self._select_file,
-            on_delete=self._remove_file,
-            on_delete_selected=self._delete_selected,
+            on_select=lambda idx: self._files.select(idx),
+            on_delete=lambda idx: self._files.remove(idx),
+            on_delete_selected=lambda: self._files.remove_selected(),
             extra_menu_items=[("Copy", self._select_and_copy)],
             checkbox_default=True,
             open_label="Open",
@@ -394,8 +391,9 @@ class App(TkinterDnD.Tk):
 
         self._orig_cv = ImageCanvas(
             pv,
-            "원본  |  꼭짓점 근처 클릭·드래그: 영역 조정   /   빈 곳 드래그: 화면 이동   /   휠: 줌   /   더블클릭: 뷰 초기화",
+            "원본  |  클릭·드래그: 가장 가까운 꼭짓점 이동",
             on_change=self._on_pts_change,
+            pannable=False,
         )
         self._orig_cv.pack(side="left", fill="both", expand=True, padx=(0, 3))
 
@@ -418,61 +416,19 @@ class App(TkinterDnD.Tk):
     # ── 썸네일 패널 연동 ─────────────────────────────────────────────────
 
     def _select_and_copy(self, idx: int):
-        self._select_file(idx)
+        self._files.select(idx)
         self._copy_to_clipboard()
 
-    def _remove_file(self, idx: int):
-        if not self._folder_files or not (0 <= idx < len(self._folder_files)):
-            return
-        active = self._folder_idx
-        self._thumb_panel.forget_cache(self._folder_files[idx])
-        self._folder_files.pop(idx)
-        if not self._folder_files:
-            self._folder_idx    = 0
-            self._cv_orig       = None
-            self._cv_result     = None
-            self._current_path  = None
-            self._orig_cv.show_hint()
-            self._res_cv.show_hint("변환 결과가 여기에 표시됩니다")
-            self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
-            self._nav.pack_forget()
-            self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
-            return
-
-        # 지금 보고 있던 파일이 아닌 다른 항목을 지운 경우, 미리보기를 바꾸지 않고
-        # 인덱스만 목록 축소분만큼 보정한다 (지금까지는 무조건 idx 기준으로 다시 로드해
-        # 엉뚱한 사진으로 화면이 튀었음).
-        if idx == active:
-            self._folder_idx = min(idx, len(self._folder_files) - 1)
-            reload_preview = True
-        else:
-            self._folder_idx = active - 1 if idx < active else active
-            reload_preview = False
-
-        if len(self._folder_files) == 1:
-            self._nav.pack_forget()
-        if reload_preview:
-            self._load(self._folder_files[self._folder_idx])
-        self._update_nav()
-        self._thumb_panel.remove_item(idx, self._folder_idx)   # 전체 재구성 대신 항목 하나만 제거 (버벅임 방지)
+    def _on_files_empty(self):
+        self._cv_orig       = None
+        self._cv_result     = None
+        self._current_path  = None
+        self._orig_cv.show_hint()
+        self._res_cv.show_hint("변환 결과가 여기에 표시됩니다")
+        self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
 
     def _on_key_delete(self, event):
-        if self._folder_files and 0 <= self._folder_idx < len(self._folder_files):
-            self._remove_file(self._folder_idx)
-
-    def _delete_selected(self):
-        """썸네일 체크박스가 선택된(체크된) 항목들을 목록에서 한번에 삭제."""
-        idxs = self._thumb_panel.checked_indices()
-        if not idxs:
-            messagebox.showinfo("알림", "선택된 파일이 없습니다.\n썸네일 체크박스를 확인해 주세요.")
-            return
-        if not messagebox.askyesno(
-                "선택 삭제",
-                f"체크된 {len(idxs)}개 파일을 목록에서 삭제할까요?\n"
-                f"(실제 파일은 삭제되지 않고, 목록에서만 제외됩니다)"):
-            return
-        for i in sorted(idxs, reverse=True):
-            self._remove_file(i)
+        self._files.remove_current()
 
     # ── DnD ─────────────────────────────────────────────────────────────
 
@@ -487,7 +443,7 @@ class App(TkinterDnD.Tk):
         if not imgs:
             self._st.config(text="지원하지 않는 파일 형식입니다.")
             return
-        self._add_files(imgs)
+        self._files.add_files(imgs)
 
     # ── 파일 열기 ────────────────────────────────────────────────────────
 
@@ -496,7 +452,7 @@ class App(TkinterDnD.Tk):
             filetypes=[("이미지", "*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.webp"),
                        ("모든 파일", "*.*")])
         if p:
-            self._add_files([p])
+            self._files.add_files([p])
 
     def _open_folder(self):
         folder = filedialog.askdirectory()
@@ -507,23 +463,7 @@ class App(TkinterDnD.Tk):
         if not files:
             messagebox.showinfo("알림", "지원하는 이미지가 없습니다.")
             return
-        self._add_files(files)
-
-    def _add_files(self, new_paths: list):
-        """중복 경로 제외 후 목록에 추가. 첫 번째 새 파일로 이동."""
-        existing = set(self._folder_files)
-        to_add   = [p for p in new_paths if p not in existing]
-        if not to_add:
-            self._st.config(text="추가할 새 파일이 없습니다. (모두 이미 목록에 있음)")
-            return
-        first_new = len(self._folder_files)
-        self._folder_files.extend(to_add)
-        self._folder_idx = first_new
-        if len(self._folder_files) > 1:
-            self._nav.pack(side="right", padx=8)
-        self._load(self._folder_files[first_new])
-        self._update_nav()
-        self._thumb_panel.rebuild(self._folder_files, self._folder_idx)
+        self._files.add_files(files)
 
     # ── 이미지 로드 & 감지 ───────────────────────────────────────────────
 
@@ -673,31 +613,12 @@ class App(TkinterDnD.Tk):
         else:
             messagebox.showerror("오류", "저장 실패")
 
-    # ── 내비게이션 & 배치 ────────────────────────────────────────────────
-
-    def _update_nav(self):
-        self._nav_lbl.config(text=f"{self._folder_idx + 1} / {len(self._folder_files)}")
-
-    def _select_file(self, idx: int):
-        """썸네일 클릭 또는 ◀▶ 로 파일 이동 — 저장 없이 전환."""
-        if not self._folder_files or not (0 <= idx < len(self._folder_files)):
-            return
-        self._folder_idx = idx
-        self._update_nav()
-        self._thumb_panel.highlight(idx)
-        self._thumb_panel.scroll_to(idx)
-        self._load(self._folder_files[idx])
-
-    def _prev(self):
-        self._select_file(self._folder_idx - 1)
-
-    def _next(self):
-        self._select_file(self._folder_idx + 1)
+    # ── 배치 ────────────────────────────────────────────────────────────
 
     def _batch(self):
         targets = [
             (i, fpath)
-            for i, fpath in enumerate(self._folder_files)
+            for i, fpath in enumerate(self._files.files)
             if self._thumb_panel.is_checked(i)
         ]
         if not targets:
