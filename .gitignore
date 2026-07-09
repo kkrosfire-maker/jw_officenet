@@ -1,2 +1,6 @@
 .claude/
 Officeboard/data.json
+
+build/
+dist/
+__pycache__/
