@@ -1,5 +1,8 @@
 .claude/
 Officeboard/data.json
+auto_picturedivider/config.json
+auto_picturedivider/*.xlsx
+auto_picturedivider/*.exe
 
 build/
 dist/
