@@ -7,3 +7,18 @@ auto_picturedivider/*.exe
 build/
 dist/
 __pycache__/
+
+# secrets
+정원 API key.txt
+
+# office temp lock files
+~$*
+
+# build artifacts / scraped output
+blog/*.exe
+cardnews/naver_output/
+cardnews/naver_output_2023/
+cardnews/naver_output_2023_test/
+cardnews/output/
+cardnews/output_bizaccount/
+cardnews/output_loan/
