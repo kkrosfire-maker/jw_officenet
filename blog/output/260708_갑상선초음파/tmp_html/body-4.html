@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .card-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+  }
+
+  .big-stat {
+    font-size: 190px;
+    font-weight: 900;
+    color: #2F6FED;
+    line-height: 1;
+    margin: 10px 0;
+  }
+  .big-label {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1A2340;
+    margin-bottom: 8px;
+  }
+
+  .sub-stat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #FFF6EE;
+    border-radius: 16px;
+    padding: 18px 36px;
+    margin-top: 10px;
+  }
+  .sub-stat .num {
+    font-size: 40px;
+    font-weight: 900;
+    color: #F4803A;
+  }
+  .sub-stat .txt {
+    font-size: 26px;
+    font-weight: 500;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">갑상선 결절, 발견돼도</div>
+    <div class="big-stat">85%</div>
+    <div class="big-label">이상은 양성입니다</div>
+
+    <div class="sub-stat">
+      <div class="num">5~15%</div>
+      <div class="txt">만이 치료가 필요한 악성 결절</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

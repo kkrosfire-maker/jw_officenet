@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: white; }
+.clipboard-frame {
+  width: 100%; height: 100%;
+  background: white;
+  padding: 40px 44px 32px;
+  font-family: 'Noto Sans KR', '맑은 고딕', sans-serif;
+}
+.clip-wrapper {}
+.inner-card { background: transparent; }
+
+.badge {
+  display: inline-block;
+  background: #3A8DDE; color: white;
+  font-size: 26px; font-weight: 700;
+  padding: 6px 18px; border-radius: 16px;
+  margin-bottom: 10px;
+}
+.title { font-size: 44px; font-weight: 700; color: #1A2340; margin-bottom: 4px; }
+.subtitle { font-size: 26px; color: #888; margin-bottom: 18px; }
+
+.steps { display: flex; flex-direction: column; }
+.step { display: flex; align-items: stretch; }
+.step-left {
+  display: flex; flex-direction: column; align-items: center;
+  width: 64px; min-width: 64px;
+}
+.step-num {
+  width: 48px; height: 48px;
+  background: #3A8DDE; color: white;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700;
+  flex-shrink: 0;
+}
+.step-line { width: 2px; background: #C8DFF7; flex: 1; margin: 4px 0; }
+.step:last-child .step-line { display: none; }
+.step-body { flex: 1; padding: 2px 0 16px 14px; }
+.step-title { font-size: 29px; font-weight: 700; color: #1A2340; margin-bottom: 4px; }
+.step-desc  { font-size: 24px; color: #555; line-height: 1.4; }
+.note {
+  margin-top: 12px;
+  background: #EBF5FF; border-radius: 8px;
+  padding: 13px 18px;
+  font-size: 24px; color: #2A6CB0; font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="badge">치료 가이드</div>
+    <div class="title">여름감기 올바른 치료법</div>
+    <div class="subtitle">항생제 없이도 회복되는 4단계</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-left"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <div class="step-title">💧 수분 보충</div>
+          <div class="step-desc">하루 1.5~2L 이상 — 미온수·생강차 권장<br>알코올·카페인은 삼가기</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <div class="step-title">😴 충분한 휴식</div>
+          <div class="step-desc">하루 7~8시간 수면<br>실내 25~27°C, 에어컨 직접 바람 금지</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <div class="step-title">💊 해열진통제 활용</div>
+          <div class="step-desc">아세트아미노펜(공복 가능) 또는 이부프로펜(식후)<br>소아·청소년 아스피린 절대 금지</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-left"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-body">
+          <div class="step-title">🌊 생리식염수 코세척</div>
+          <div class="step-desc">초기 3일 이내 시행 시 증상 약 2일 단축<br>하루 2~3회, 약국 코세척 키트 활용</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">⚠️ 항생제는 바이러스에 효과 없음 — 의사 처방 없이 복용 금지</div>
+  </div>
+</div>
+</body>
+</html>

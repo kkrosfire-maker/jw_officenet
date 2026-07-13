@@ -1,0 +1,1 @@
+주제는 '여름감기치료'. agents/researcher.md 를 읽고 리서치 후 output/여름감기치료/research.md 생성, 이어서 agents/writer.md 를 읽고 output/여름감기치료/draft.md 생성해줘. 웹 검색 권한이 없으면 학습 데이터로 바로 진행해. 중간에 사용자에게 선택지를 묻거나 확인을 요청하지 말고 최선의 판단으로 끝까지 진행해줘.

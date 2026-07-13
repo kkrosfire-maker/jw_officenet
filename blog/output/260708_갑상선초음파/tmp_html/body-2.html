@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .card-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: #FFF6EE;
+    border-radius: 16px;
+    padding: 20px 30px;
+  }
+
+  .item-badge {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background: #F4803A;
+    color: #fff;
+    font-size: 30px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-text .label {
+    font-size: 30px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">초음파로 <span class="accent">확인하는 것</span></div>
+
+    <div class="item-row">
+      <div class="item-badge">1</div>
+      <div class="item-text"><div class="label">갑상선 크기</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">2</div>
+      <div class="item-text"><div class="label">결절의 고형·낭성 구분</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">3</div>
+      <div class="item-text"><div class="label">미세석회화 여부</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">4</div>
+      <div class="item-text"><div class="label">결절의 혈류량</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">5</div>
+      <div class="item-text"><div class="label">경계·돌출 양상</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

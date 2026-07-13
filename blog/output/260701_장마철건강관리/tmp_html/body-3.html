@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: white; }
+.clipboard-frame {
+  width: 100%; height: 100%;
+  background: white;
+  padding: 44px 44px 32px;
+  font-family: 'Noto Sans KR', '맑은 고딕', sans-serif;
+}
+.clip-wrapper {}
+.inner-card { background: transparent; }
+
+.badge {
+  display: inline-block;
+  background: #E87D30; color: white;
+  font-size: 26px; font-weight: 700;
+  padding: 6px 18px; border-radius: 16px;
+  margin-bottom: 12px;
+}
+.title { font-size: 46px; font-weight: 900; color: #1A2340; margin-bottom: 6px; }
+.subtitle { font-size: 26px; color: #888; margin-bottom: 24px; }
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.col-header {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 28px; font-weight: 700; color: white;
+  border-radius: 8px 8px 0 0;
+}
+.cold { background: #2155A3; }
+.legio { background: #D94040; }
+.cell {
+  padding: 26px 22px; min-height: 132px;
+  font-size: 28px; color: #333; line-height: 1.35;
+  border-bottom: 1px solid #EEE;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.cell-l { border-right: 1px solid #EEE; }
+.label {
+  font-size: 19px; font-weight: 700; color: #888;
+  display: block; margin-bottom: 4px;
+}
+.row-bg { background: #F9F9F9; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="badge">비교 정보</div>
+    <div class="title">냉방병 vs 레지오넬라증</div>
+    <div class="subtitle">증상은 비슷해도 원인은 다릅니다</div>
+
+    <div class="compare-grid">
+      <div class="col-header cold">🌬️ 냉방병</div>
+      <div class="col-header legio">🦠 레지오넬라증</div>
+
+      <div class="cell cell-l">
+        <span class="label">원인</span>온도차·자율신경 부담
+      </div>
+      <div class="cell">
+        <span class="label">원인</span>세균 오염수 에어로졸 흡입
+      </div>
+
+      <div class="cell cell-l row-bg">
+        <span class="label">주요 증상</span>두통·무기력·소화불량
+      </div>
+      <div class="cell row-bg">
+        <span class="label">주요 증상</span>고열·기침·근육통
+      </div>
+
+      <div class="cell cell-l">
+        <span class="label">대처</span>휴식·온도 조절로 호전
+      </div>
+      <div class="cell">
+        <span class="label">대처</span>병원 진료 필요
+      </div>
+
+      <div class="cell cell-l row-bg" style="border-bottom:none;">
+        <span class="label">예방</span>필터 청소·환기
+      </div>
+      <div class="cell row-bg" style="border-bottom:none;">
+        <span class="label">예방</span>냉각탑·저수탱크 소독
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

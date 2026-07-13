@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  .inner-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  .title-bar {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .label {
+    background:#2155A3; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:44px; font-weight:900;
+    color:#1A2340; margin:0; line-height:1.2;
+    text-align:center;
+  }
+  .title-bar .sub {
+    font-size:24px; color:#888; font-weight:400;
+  }
+
+  .symptom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 24px;
+    min-height: 0;
+  }
+  .symptom {
+    position: relative;
+    border-radius:20px;
+    overflow:hidden;
+    background:#EEF3FF;
+    min-height: 0;
+  }
+  .symptom img {
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .symptom .txt {
+    position:absolute;
+    left:0; right:0; bottom:0;
+    padding: 16px 10px 14px;
+    background: linear-gradient(to top, rgba(15,25,50,0.82) 0%, rgba(15,25,50,0.55) 55%, rgba(15,25,50,0) 100%);
+    color:white;
+    font-size:30px; font-weight:700; line-height:1.25;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">원인과 증상</span>
+      <h2>냉방병, 왜 생길까요?</h2>
+      <span class="sub">실내외 온도차 → 자율신경 부담</span>
+    </div>
+
+    <div class="symptom-grid">
+      <div class="symptom">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/symptom-01-headache.png" alt="두통·근육통">
+        <div class="txt">두통·근육통</div>
+      </div>
+      <div class="symptom">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/symptom-02-fatigue.png" alt="무기력감">
+        <div class="txt">무기력감</div>
+      </div>
+      <div class="symptom">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/symptom-03-stomach.png" alt="소화불량">
+        <div class="txt">소화불량</div>
+      </div>
+      <div class="symptom">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/symptom-04-runnynose.png" alt="콧물·코막힘">
+        <div class="txt">콧물·코막힘</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

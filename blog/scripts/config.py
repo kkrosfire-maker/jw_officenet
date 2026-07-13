@@ -22,16 +22,19 @@ FRAME_TOP  = 88
 FRAME_W    = 907   # 992 - 85
 FRAME_H    = 903   # 991 - 88
 
-# ── 썸네일 제목 영역 (1.png 측정값) ───────────────────────────────
-THUMB_REF_IMAGE = os.path.join(REF_DIR, "1.png")
-THUMB_COVER     = (390, 375, 945, 585)   # (x1, y1, x2, y2) 흰색 덮개
-TEXT_COLOR      = (95, 107, 141, 255)    # 원본 제목 색상 (RGBA)
-RIGHT_EDGE      = 930                    # 우측 정렬 기준 x
-LINE_Y_START    = 385                    # 첫 줄 시작 y
-LINE_SPACING    = 100                    # 줄 간격 (px)
+# ── 썸네일 제목 영역 ──────────────────────────────────────────────
+# 배경: 1_clean.png (제목 텍스트 없는 클린 클립보드) 위에 텍스트만 그린다.
+THUMB_REF_IMAGE      = os.path.join(REF_DIR, "1_clean.png")
+TEXT_COLOR           = (95, 107, 141, 255)   # 제목 텍스트 색상 (RGBA)
+RIGHT_EDGE           = 955                   # 우측 정렬 기준 x
+THUMB_MAX_TEXT_WIDTH = 710                   # 최대 텍스트 너비 (px)
+LINE_Y_START         = 390                   # 첫 줄 시작 y
+LINE_SPACING         = 105                   # 줄 간격 (px)
 
 # ── 폰트 우선순위 (앞에서부터 존재 여부 확인) ──────────────────────
 FONT_PATHS = [
+    r"C:\Windows\Fonts\Hancom Gothic Bold.ttf",
+    r"C:\Windows\Fonts\HanSantteutDotum-Bold.ttf",
     r"C:\Windows\Fonts\malgunbd.ttf",
     r"C:\Windows\Fonts\malgun.ttf",
     r"C:\Windows\Fonts\gulim.ttc",

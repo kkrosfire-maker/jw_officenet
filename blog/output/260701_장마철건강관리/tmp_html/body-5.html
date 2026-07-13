@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  .inner-card {
+    display: grid;
+    grid-template-rows: 150px 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  .title-bar {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .label {
+    background:#2155A3; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:42px; font-weight:900;
+    color:#1A2340; margin:0; line-height:1.2;
+    text-align:center;
+  }
+
+  .points {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+  .point {
+    display:flex; align-items:center; gap:26px;
+    background:#EEF3FF; border-radius:20px;
+    padding: 0 36px;
+  }
+  .point .icon { font-size:56px; flex-shrink:0; }
+  .point .main { font-size:32px; font-weight:700; color:#1A2340; line-height:1.3; }
+  .point .sub { font-size:22px; color:#666; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">건물·시설 관리</span>
+      <h2>냉각탑·저수탱크 관리</h2>
+    </div>
+
+    <div class="points">
+      <div class="point">
+        <div class="icon">🧴</div>
+        <div>
+          <div class="main">정기 청소·소독</div>
+          <div class="sub">냉각탑·저수탱크·물받이</div>
+        </div>
+      </div>
+      <div class="point">
+        <div class="icon">💧</div>
+        <div>
+          <div class="main">실내 습도 40~60% 유지</div>
+          <div class="sub">과습은 세균·곰팡이 번식 조건</div>
+        </div>
+      </div>
+      <div class="point">
+        <div class="icon">🌦️</div>
+        <div>
+          <div class="main">비 그친 뒤 30분 뒤 환기</div>
+          <div class="sub">제습기·에어컨 제습 기능 활용</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

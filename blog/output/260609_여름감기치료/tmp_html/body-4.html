@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: white; }
+.clipboard-frame {
+  width: 100%; height: 100%;
+  background: white;
+  padding: 44px 44px 32px;
+  font-family: 'Noto Sans KR', '맑은 고딕', sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.clip-wrapper {}
+.inner-card { background: transparent; }
+
+.badge {
+  display: inline-block;
+  background: #E05A3A; color: white;
+  font-size: 26px; font-weight: 700;
+  padding: 6px 18px; border-radius: 16px;
+  margin-bottom: 10px;
+}
+.title { font-size: 44px; font-weight: 700; color: #1A2340; margin-bottom: 4px; }
+.subtitle { font-size: 26px; color: #888; margin-bottom: 14px; }
+
+.item {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 8px;
+  padding: 11px 18px;
+  background: #FFF5F3;
+  border-radius: 10px; border-left: 6px solid #E05A3A;
+}
+.item-icon { font-size: 30px; min-width: 34px; }
+.item-title { font-size: 29px; font-weight: 700; color: #1A2340; margin-bottom: 2px; }
+.item-desc  { font-size: 24px; color: #555; line-height: 1.35; }
+.footer {
+  margin-top: 10px;
+  background: #1A2340; color: white;
+  border-radius: 10px; padding: 14px 18px;
+  font-size: 28px; font-weight: 700; text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="badge">병원 방문 기준</div>
+    <div class="title">이럴 때는 꼭 병원을 가세요</div>
+    <div class="subtitle">"이러다 말겠지"가 합병증을 부릅니다</div>
+
+    <div class="item">
+      <div class="item-icon">🌡️</div>
+      <div><div class="item-title">39°C 이상 고열 3일 이상</div><div class="item-desc">세균 이차감염 가능성</div></div>
+    </div>
+    <div class="item">
+      <div class="item-icon">📅</div>
+      <div><div class="item-title">7~10일 후에도 악화</div><div class="item-desc">일반 감기는 7~14일 내 자연 호전</div></div>
+    </div>
+    <div class="item">
+      <div class="item-icon">😮‍💨</div>
+      <div><div class="item-title">호흡 곤란·흉통</div><div class="item-desc">기관지염·폐렴 진행 신호</div></div>
+    </div>
+    <div class="item">
+      <div class="item-icon">👃</div>
+      <div><div class="item-title">누런 콧물 + 얼굴 압통</div><div class="item-desc">부비동염(축농증) 의심</div></div>
+    </div>
+    <div class="item" style="margin-bottom:0;">
+      <div class="item-icon">🤐</div>
+      <div><div class="item-title">삼키기 어려운 심한 인후통</div><div class="item-desc">편도농양 — 즉시 내원</div></div>
+    </div>
+
+    <div class="footer">골든타임을 놓치지 마세요</div>
+  </div>
+</div>
+</body>
+</html>

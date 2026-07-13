@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  .inner-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  .title-bar {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .label {
+    background:#D94040; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:44px; font-weight:900;
+    color:#1A2340; margin:0; line-height:1.2;
+    text-align:center;
+  }
+  .title-bar .sub {
+    font-size:24px; color:#888; font-weight:400;
+  }
+
+  .env-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 24px;
+    min-height: 0;
+  }
+  .env {
+    position: relative;
+    border-radius:20px;
+    overflow:hidden;
+    background:#FFF0F0;
+    min-height: 0;
+  }
+  .env img {
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .env .main {
+    position:absolute;
+    left:0; right:0; bottom:0;
+    padding: 16px 10px 14px;
+    background: linear-gradient(to top, rgba(60,15,15,0.82) 0%, rgba(60,15,15,0.55) 55%, rgba(60,15,15,0) 100%);
+    color:white;
+    font-size:30px; font-weight:700; line-height:1.25;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">감염 경로</span>
+      <h2>레지오넬라균은 어디에?</h2>
+      <span class="sub">25~45℃ 따뜻한 물에서 번식</span>
+    </div>
+
+    <div class="env-grid">
+      <div class="env">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/source-01-waterheater.png" alt="온수기">
+        <div class="main">온수기</div>
+      </div>
+      <div class="env">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/source-02-coolingtower.png" alt="냉각탑">
+        <div class="main">냉각탑</div>
+      </div>
+      <div class="env">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/source-03-humidifier.png" alt="가습기">
+        <div class="main">가습기</div>
+      </div>
+      <div class="env">
+        <img src="file:///C:/Users/JW/Desktop/workspace/blog/output/260701_%EC%9E%A5%EB%A7%88%EC%B2%A0%EA%B1%B4%EA%B0%95%EA%B4%80%EB%A6%AC/user-images/source-04-fountain.png" alt="분수">
+        <div class="main">분수</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

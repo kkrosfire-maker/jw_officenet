@@ -144,12 +144,16 @@ def run(topic: str):
         browser.close()
 
     # 마지막 클리닉 정보 카드 (4.png 복사)
+    # body-{n}.png(번호)와 body-last.png(고정 별칭) 두 이름으로 모두 저장한다.
+    # writer.md 템플릿은 body-last.png를 참조하고, validate_inputs도 이를 찾는다.
     last_n = int(pattern.match(html_files[-1]).group(1)) + 1
     src = os.path.join(REF_DIR, "4.png")
-    dst = os.path.join(img_dir, f"body-{last_n}.png")
     if os.path.exists(src):
-        shutil.copy(src, dst)
-        print(f"  Copied 4.png -> body-{last_n}.png")
+        dst_n    = os.path.join(img_dir, f"body-{last_n}.png")
+        dst_last = os.path.join(img_dir, "body-last.png")
+        shutil.copy(src, dst_n)
+        shutil.copy(src, dst_last)
+        print(f"  Copied 4.png -> body-{last_n}.png + body-last.png")
 
     print(f"\nDone - {len(html_files)} images captured for '{topic}'")
 

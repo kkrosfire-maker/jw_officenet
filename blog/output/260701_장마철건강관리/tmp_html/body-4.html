@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; padding:0; background:white;
+         font-family:'Noto Sans KR','Malgun Gothic',sans-serif; }
+
+  .clipboard-frame { width:1080px; background:white; }
+  .clip-wrapper     { display:none; }
+
+  .inner-card {
+    display: grid;
+    grid-template-rows: 130px 1fr;
+    height: 808px;
+    overflow: hidden;
+  }
+
+  .title-bar {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .label {
+    background:#28A060; color:white;
+    font-size:28px; font-weight:700;
+    padding:8px 32px; border-radius:30px;
+  }
+  .title-bar h2 {
+    font-size:42px; font-weight:900;
+    color:#1A2340; margin:0; line-height:1.2;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-rows: 1fr 22px 1fr 22px 1fr 22px 1fr;
+    overflow: hidden;
+  }
+
+  .step {
+    display: flex; align-items: center;
+    gap: 24px; border-radius: 16px;
+    padding: 0 28px;
+    overflow: hidden;
+  }
+  .step-1 { background:#EEF3FF; }
+  .step-2 { background:#FFF3EA; }
+  .step-3 { background:#EDFFF5; }
+  .step-4 { background:#FFF0F0; }
+
+  .step-num {
+    width:60px; height:60px; border-radius:50%;
+    color:white; font-size:30px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .step-1 .step-num { background:#2155A3; }
+  .step-2 .step-num { background:#E87D30; }
+  .step-3 .step-num { background:#28A060; }
+  .step-4 .step-num { background:#D94040; }
+
+  .step-content { flex:1; min-width:0; }
+  .step-main {
+    font-size:30px; font-weight:700; color:#1A2340;
+    line-height:1.25;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .step-sub {
+    font-size:22px; color:#555; line-height:1.3; margin-top:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .arrow {
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:#aaa;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+
+    <div class="title-bar">
+      <span class="label">가정 예방수칙</span>
+      <h2>냉방병 예방, 이렇게!</h2>
+    </div>
+
+    <div class="steps">
+
+      <div class="step step-1">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-main">🧼 필터 청소</div>
+          <div class="step-sub">에어컨 필터 2주에 한 번씩</div>
+        </div>
+      </div>
+
+      <div class="arrow">▼</div>
+
+      <div class="step step-2">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-main">🌬️ 환기하기</div>
+          <div class="step-sub">하루 3~4시간마다 실내 공기 순환</div>
+        </div>
+      </div>
+
+      <div class="arrow">▼</div>
+
+      <div class="step step-3">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-main">🌡️ 온도차 줄이기</div>
+          <div class="step-sub">실내외 온도차 크지 않게 유지</div>
+        </div>
+      </div>
+
+      <div class="arrow">▼</div>
+
+      <div class="step step-4">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-main">🧥 겉옷 준비</div>
+          <div class="step-sub">장시간 냉방 공간에서 체온 유지</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

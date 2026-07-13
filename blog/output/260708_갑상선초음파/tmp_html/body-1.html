@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 26px;
+  }
+
+  .card-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .card-title .accent { color: #2F6FED; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    background: #F2F7FD;
+    border-left: 8px solid #2F6FED;
+    border-radius: 18px;
+    padding: 26px 32px;
+  }
+
+  .item-badge {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: #2F6FED;
+    color: #fff;
+    font-size: 32px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: -1px;
+  }
+
+  .item-text .label {
+    font-size: 34px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+  .item-text .desc {
+    font-size: 25px;
+    color: #555;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .footnote {
+    text-align: center;
+    font-size: 24px;
+    color: #888;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">혈액검사 <span class="accent">3대 수치</span></div>
+
+    <div class="item-row">
+      <div class="item-badge">TSH</div>
+      <div class="item-text">
+        <div class="label">갑상선자극호르몬</div>
+        <div class="desc">기능 이상을 가장 먼저 확인하는 선별검사</div>
+      </div>
+    </div>
+
+    <div class="item-row">
+      <div class="item-badge">T4</div>
+      <div class="item-text">
+        <div class="label">티록신</div>
+        <div class="desc">대사에 관여하는 주요 갑상선호르몬</div>
+      </div>
+    </div>
+
+    <div class="item-row">
+      <div class="item-badge">T3</div>
+      <div class="item-text">
+        <div class="label">활성 호르몬</div>
+        <div class="desc">체온·심박수 등 전신 대사에 작용</div>
+      </div>
+    </div>
+
+    <div class="footnote">※ 갑상선의 '구조'가 아닌 '기능'을 보는 검사입니다</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: white; }
+.clipboard-frame {
+  width: 100%; height: 100%;
+  background: white;
+  padding: 44px 44px 32px;
+  font-family: 'Noto Sans KR', '맑은 고딕', sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.clip-wrapper {}
+.inner-card { background: transparent; }
+
+.badge {
+  display: inline-block;
+  background: #27AE60; color: white;
+  font-size: 26px; font-weight: 700;
+  padding: 6px 18px; border-radius: 16px;
+  margin-bottom: 10px;
+}
+.title { font-size: 44px; font-weight: 700; color: #1A2340; margin-bottom: 4px; }
+.subtitle { font-size: 26px; color: #888; margin-bottom: 14px; }
+
+.item {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 8px;
+  padding: 11px 18px;
+  background: #F0FFF6;
+  border-radius: 10px; border-left: 6px solid #27AE60;
+}
+.item-num {
+  min-width: 40px; height: 40px;
+  background: #27AE60; color: white;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700;
+  flex-shrink: 0; margin-top: 2px;
+}
+.item-title { font-size: 29px; font-weight: 700; color: #1A2340; margin-bottom: 2px; }
+.item-desc  { font-size: 24px; color: #555; line-height: 1.35; }
+.footer {
+  margin-top: 10px;
+  background: #27AE60; color: white;
+  border-radius: 10px; padding: 13px 18px;
+  font-size: 26px; font-weight: 700; text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="badge">예방 수칙</div>
+    <div class="title">여름감기 예방 5가지</div>
+    <div class="subtitle">치료보다 예방이 훨씬 현명합니다</div>
+
+    <div class="item">
+      <div class="item-num">1</div>
+      <div><div class="item-title">🧼 손 씻기 30초 이상</div><div class="item-desc">외출 후·식전·코·입 접촉 전 비누로 꼭</div></div>
+    </div>
+    <div class="item">
+      <div class="item-num">2</div>
+      <div><div class="item-title">❄️ 에어컨 온도차 5°C 이내</div><div class="item-desc">과도한 냉방은 점막 방어력을 떨어뜨림</div></div>
+    </div>
+    <div class="item">
+      <div class="item-num">3</div>
+      <div><div class="item-title">🌬️ 1~2시간마다 환기</div><div class="item-desc">에어컨 필터 2주~1개월 주기 청소 필수</div></div>
+    </div>
+    <div class="item">
+      <div class="item-num">4</div>
+      <div><div class="item-title">🥝 비타민 C·아연 섭취</div><div class="item-desc">키위, 브로콜리, 굴로 면역력 관리</div></div>
+    </div>
+    <div class="item" style="margin-bottom:0;">
+      <div class="item-num">5</div>
+      <div><div class="item-title">😴 하루 7~8시간 수면</div><div class="item-desc">수면 6시간 미만 → 감기 위험 약 3배 증가</div></div>
+    </div>
+
+    <div class="footer">손 씻기 + 충분한 수면 — 예방의 두 기둥</div>
+  </div>
+</div>
+</body>
+</html>

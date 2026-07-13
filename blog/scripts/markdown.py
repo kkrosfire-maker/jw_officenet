@@ -39,6 +39,8 @@ def md_to_html(text, img_base=""):
     table_buf = []
     in_ul = False
     ul_buf = []
+    in_ol = False
+    ol_buf = []
 
     # 경로 구분자를 / 로 통일
     img_prefix = img_base.replace("\\", "/") if img_base else ""
@@ -66,6 +68,13 @@ def md_to_html(text, img_base=""):
         )
         return f"<ul>{items}</ul>"
 
+    def flush_ol(buf):
+        items = "".join(
+            f"<li>{inline(re.sub(r'^\s*\d+\.\s+', '', l))}</li>"
+            for l in buf
+        )
+        return f"<ol>{items}</ol>"
+
     for line in lines:
         # 이미지 — 버퍼 중단 후 <figure> 출력
         m = re.match(r"!\[([^\]]*)\]\(([^)]+)\)\s*$", line.strip())
@@ -83,20 +92,31 @@ def md_to_html(text, img_base=""):
         # 표 행
         if re.match(r"^\s*\|", line):
             if in_ul: html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
+            if in_ol: html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
             in_table = True
             table_buf.append(line)
             continue
         if in_table:
             html_lines.append(flush_table(table_buf)); table_buf = []; in_table = False
 
-        # 리스트 항목
+        # 순서 없는 리스트
         if re.match(r"^\s*[-*]\s+", line):
+            if in_ol: html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
             if not in_ul:
                 in_ul = True; ul_buf = []
             ul_buf.append(line)
             continue
         if in_ul:
             html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
+
+        # 순서 있는 리스트 (1. 2. 3. ...)
+        if re.match(r"^\s*\d+\.\s+", line):
+            if not in_ol:
+                in_ol = True; ol_buf = []
+            ol_buf.append(line)
+            continue
+        if in_ol:
+            html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
 
         # 수평선
         if re.match(r"^-{3,}$", line.strip()):
@@ -120,5 +140,6 @@ def md_to_html(text, img_base=""):
     # 파일 끝에 미처 닫히지 않은 버퍼 처리
     if in_table: html_lines.append(flush_table(table_buf))
     if in_ul:    html_lines.append(flush_ul(ul_buf))
+    if in_ol:    html_lines.append(flush_ol(ol_buf))
 
     return "\n".join(html_lines)

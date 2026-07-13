@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .card-title {
+    font-size: 44px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .card-title .accent { color: #2F6FED; }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: #F2F7FD;
+    border-radius: 18px;
+    padding: 26px 32px;
+  }
+
+  .check-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #2F6FED;
+    color: #fff;
+    font-size: 34px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .check-text {
+    font-size: 30px;
+    font-weight: 700;
+    color: #1A2340;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">이럴 땐 <span class="accent">초음파</span>가 필요해요</div>
+
+    <div class="check-row">
+      <div class="check-icon">✓</div>
+      <div class="check-text">목에 혹·붓기가 만져질 때</div>
+    </div>
+    <div class="check-row">
+      <div class="check-icon">✓</div>
+      <div class="check-text">혈액검사에서 TSH 이상 소견</div>
+    </div>
+    <div class="check-row">
+      <div class="check-icon">✓</div>
+      <div class="check-text">건강검진에서 결절이 발견됐을 때</div>
+    </div>
+    <div class="check-row">
+      <div class="check-icon">✓</div>
+      <div class="check-text">혈액검사는 정상인데 목이 불편할 때</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

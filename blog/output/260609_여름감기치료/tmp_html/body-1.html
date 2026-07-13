@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; padding: 0; background: white; }
+.clipboard-frame {
+  width: 100%; height: 100%;
+  background: white;
+  padding: 44px 44px 32px;
+  font-family: 'Noto Sans KR', '맑은 고딕', sans-serif;
+}
+.clip-wrapper {}
+.inner-card { background: transparent; }
+
+.badge {
+  display: inline-block;
+  background: #E86B5F; color: white;
+  font-size: 26px; font-weight: 700;
+  padding: 6px 18px; border-radius: 16px;
+  margin-bottom: 12px;
+}
+.title { font-size: 48px; font-weight: 700; color: #1A2340; margin-bottom: 6px; }
+.subtitle { font-size: 28px; color: #888; margin-bottom: 22px; }
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.col-header {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 30px; font-weight: 700; color: white;
+  border-radius: 8px 8px 0 0;
+}
+.winter { background: #4A7CC7; }
+.summer { background: #E86B5F; }
+.cell {
+  padding: 16px 20px;
+  font-size: 28px; color: #333; line-height: 1.4;
+  border-bottom: 1px solid #EEE;
+}
+.cell-l { border-right: 1px solid #EEE; }
+.label {
+  font-size: 20px; font-weight: 700; color: #888;
+  display: block; margin-bottom: 4px;
+}
+.row-bg { background: #F9F9F9; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="badge">비교 정보</div>
+    <div class="title">겨울 감기 vs 여름 감기</div>
+    <div class="subtitle">원인 바이러스와 증상 차이</div>
+
+    <div class="compare-grid">
+      <div class="col-header winter">❄️ 겨울 감기</div>
+      <div class="col-header summer">☀️ 여름 감기</div>
+
+      <div class="cell cell-l">
+        <span class="label">주요 원인</span>리노바이러스
+      </div>
+      <div class="cell">
+        <span class="label">주요 원인</span>엔테로·아데노바이러스
+      </div>
+
+      <div class="cell cell-l row-bg">
+        <span class="label">대표 증상</span>콧물·코막힘 중심
+      </div>
+      <div class="cell row-bg">
+        <span class="label">대표 증상</span>인후통·발열·소화기
+      </div>
+
+      <div class="cell cell-l">
+        <span class="label">지속 기간</span>7~10일
+      </div>
+      <div class="cell">
+        <span class="label">지속 기간</span>7~14일
+      </div>
+
+      <div class="cell cell-l row-bg" style="border-bottom:none;">
+        <span class="label">항생제</span>불필요 (바이러스성)
+      </div>
+      <div class="cell row-bg" style="border-bottom:none;">
+        <span class="label">항생제</span>불필요 (바이러스성)
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
