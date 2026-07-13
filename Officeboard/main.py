@@ -3,13 +3,13 @@ import io
 import json
 import threading
 import webbrowser
-from contextlib import contextmanager
 from datetime import datetime
 
 from flask import Flask, send_from_directory, request, send_file, session, redirect
 
 import openpyxl
 from excel_io import parse_workbook, build_workbook
+from storage import get_storage
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
@@ -26,64 +26,8 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # ── 스토리지 어댑터 ──────────────────────────────────────────────────────────
 
-@contextmanager
-def _pg_conn():
-    import psycopg2
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def load_data() -> dict:
-    if DATABASE_URL:
-        with _pg_conn() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT data FROM office_data WHERE id = 1")
-            row = cur.fetchone()
-            return row[0] if row else {}
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
-
-
-def store_data(payload: str) -> None:
-    if DATABASE_URL:
-        with _pg_conn() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO office_data (id, data) VALUES (1, %s)
-                ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data
-            """, (payload,))
-    else:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            f.write(payload)
-
-
-def init_db():
-    if not DATABASE_URL:
-        return
-    with _pg_conn() as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS office_data (
-                id INTEGER PRIMARY KEY,
-                data JSONB NOT NULL DEFAULT '{}'
-            )
-        """)
-        cur.execute("""
-            INSERT INTO office_data (id, data) VALUES (1, '{}')
-            ON CONFLICT (id) DO NOTHING
-        """)
-
-
-init_db()
+storage = get_storage(DATABASE_URL, DATA_FILE)
+storage.init()
 
 # ── 인증 ────────────────────────────────────────────────────────────────────
 
@@ -125,15 +69,11 @@ def logout():
 
 @app.route('/ping')
 def ping():
-    storage = 'postgres' if DATABASE_URL else 'file'
-    if DATABASE_URL:
-        try:
-            with _pg_conn() as conn:
-                conn.cursor().execute("SELECT 1")
-        except Exception as e:
-            return json.dumps({'ok': False, 'storage': storage, 'error': str(e)}), 500, \
-                   {'Content-Type': 'application/json'}
-    return json.dumps({'ok': True, 'storage': storage}), 200, {'Content-Type': 'application/json'}
+    ok, error = storage.ping()
+    if not ok:
+        return json.dumps({'ok': False, 'storage': storage.name, 'error': error}), 500, \
+               {'Content-Type': 'application/json'}
+    return json.dumps({'ok': True, 'storage': storage.name}), 200, {'Content-Type': 'application/json'}
 
 # ── 데이터 API ───────────────────────────────────────────────────────────────
 
@@ -146,7 +86,7 @@ _JSON_HEADERS = {
 @app.route('/data', methods=['GET'])
 def get_data():
     try:
-        body = json.dumps(load_data(), ensure_ascii=False)
+        body = json.dumps(storage.load(), ensure_ascii=False)
         return body, 200, _JSON_HEADERS
     except Exception as e:
         return str(e), 500
@@ -160,7 +100,7 @@ def save_data():
     except json.JSONDecodeError as e:
         return f'잘못된 JSON 형식: {e}', 400
     try:
-        store_data(raw)
+        storage.save(raw)
     except Exception as e:
         return str(e), 500
     return '', 204
