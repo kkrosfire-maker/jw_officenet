@@ -10,6 +10,7 @@ from flask import Flask, send_from_directory, request, send_file, session, redir
 import openpyxl
 from excel_io import parse_workbook, build_workbook
 from storage import get_storage
+from access_policy import decide_access
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
@@ -31,22 +32,17 @@ storage.init()
 
 # ── 인증 ────────────────────────────────────────────────────────────────────
 
-_API_PATHS = ('/data', '/export', '/import', '/ping')
-
-
-_PUBLIC_FILES = ('/office-domain.js',)
-
 @app.before_request
 def require_login():
-    if not APP_PASSWORD:
-        return
-    if request.endpoint == 'login':
-        return
-    if request.path in _PUBLIC_FILES:
-        return
-    if not session.get('authenticated'):
-        if any(request.path.startswith(p) for p in _API_PATHS):
-            return '', 401
+    decision = decide_access(
+        path=request.path,
+        endpoint=request.endpoint,
+        authenticated=bool(session.get('authenticated')),
+        password_configured=bool(APP_PASSWORD),
+    )
+    if decision == 'api_401':
+        return '', 401
+    if decision == 'redirect_login':
         return redirect('/login')
 
 
