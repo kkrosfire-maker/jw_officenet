@@ -5,6 +5,8 @@ from datetime import date, datetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
+from contract_calendar import reconstruct_prepaid
+
 
 def _to_date_str(val) -> str:
     if val is None:
@@ -107,21 +109,9 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
                 entry['invoice_' + inv_month] = (str(inv_val).strip() == '완료')
 
             # 계약기간 내 모든 월이 완납이면 prepaid 복원
-            if paid_months_all and entry.get('start') and entry.get('end'):
-                from datetime import date as _date
-                contract_months = []
-                s = entry['start'][:7]
-                e = entry['end'][:7]
-                cur_y, cur_m = int(s[:4]), int(s[5:7])
-                end_y, end_m = int(e[:4]), int(e[5:7])
-                while (cur_y, cur_m) <= (end_y, end_m):
-                    contract_months.append(f'{cur_y}-{cur_m:02d}')
-                    cur_m += 1
-                    if cur_m > 12:
-                        cur_m = 1
-                        cur_y += 1
-                if contract_months and all(entry.get('paid_' + m) for m in contract_months):
-                    entry['prepaid'] = True
+            paid_month_set = {m for m in paid_months_all if entry.get('paid_' + m)}
+            if reconstruct_prepaid(entry.get('start'), entry.get('end'), paid_month_set):
+                entry['prepaid'] = True
 
             data[room_id] = entry
 
