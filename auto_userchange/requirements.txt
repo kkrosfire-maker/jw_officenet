@@ -1,0 +1,4 @@
+pyinstaller
+openpyxl
+tkinterdnd2
+pywin32
