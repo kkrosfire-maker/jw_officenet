@@ -1,0 +1,58 @@
+==============================
+ Claude Code USB 복원 방법
+==============================
+
+이 USB에는 Claude Code 설정과 프로젝트 파일이 백업되어 있습니다.
+새 컴퓨터에서 아래 순서대로 진행하세요.
+
+
+[ 준비 ]
+- Windows 10 이상의 컴퓨터
+- 인터넷 연결
+- Anthropic 계정 (claude.ai 로그인 정보)
+
+
+[ 복원 순서 ]
+
+1. 이 USB를 새 컴퓨터에 꽂는다.
+
+2. USB 안의 restore_from_usb.ps1 파일을
+   마우스 오른쪽 클릭 → "PowerShell로 실행" 선택
+
+   * "이 앱이 디바이스를 변경하도록 허용하시겠어요?" 창이 뜨면 [예] 클릭
+   * 빨간 글씨로 오류가 뜨면 아래 방법으로 시도:
+     - 시작 메뉴에서 PowerShell 검색 → 우클릭 → 관리자 권한으로 실행
+     - 아래 명령어 입력 후 Enter:
+       Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+     - Y 입력 후 Enter
+     - 다시 restore_from_usb.ps1 을 우클릭 → PowerShell로 실행
+
+3. 스크립트가 자동으로 아래 작업을 진행한다:
+   - Claude Code 프로그램 설치
+   - 프로젝트 파일 복원 (Desktop\workspace)
+   - Claude 설정 복원
+   - 대화 기억(메모리) 복원
+
+4. 복원 완료 후, 터미널(PowerShell)을 열고 아래 명령어 입력:
+   claude
+
+5. Anthropic 계정으로 로그인한다.
+   (로그인은 보안상 자동화 불가 - 직접 진행 필요)
+
+6. 완료! 이전 컴퓨터와 동일하게 사용 가능.
+
+
+[ 백업 내용 ]
+
+  claude-backup\
+  ├── workspace\          ← 프로젝트 파일 전체
+  ├── claude-settings\    ← Claude 설정 및 대화 기억
+  ├── restore_from_usb.ps1  ← 복원 스크립트
+  └── 사용방법.txt         ← 이 파일
+
+
+[ 문의 ]
+문제가 생기면 claude.ai 에서 새 대화를 열고
+"USB 복원 중 오류가 났어요" 라고 말하면 도움을 받을 수 있습니다.
+
+==============================

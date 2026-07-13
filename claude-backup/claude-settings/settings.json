@@ -1,0 +1,5 @@
+{
+  "autoUpdatesChannel": "latest",
+  "theme": "dark",
+  "skipDangerousModePermissionPrompt": true
+}
