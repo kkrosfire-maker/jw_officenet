@@ -62,6 +62,19 @@ header h1 { font-size: 20px; font-weight: 700; }
 
 #today-display { font-size: 14px; color: rgba(255,255,255,0.5); }
 
+.btn-header-save {
+  background: #26a69a;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-header-save:hover { background: #2bbbad; }
+.btn-header-save:disabled { opacity: 0.6; cursor: default; }
+
 
 
 /* Stats */
@@ -669,6 +682,7 @@ label.vat-check-label input[type="checkbox"] {
 <header>
   <h1>&#127970; 공유오피스 운영 대시보드</h1>
   <div class="header-right">
+    <button id="global-save-btn" class="btn-header-save" onclick="globalSave()">&#128190; 지금 상태 저장</button>
     <div class="month-nav">
       <button onclick="changeMonth(-1)">&#8592;</button>
       <span id="month-display"></span>
@@ -687,8 +701,8 @@ label.vat-check-label input[type="checkbox"] {
     <div class="section-header">
       <h2>평면도 &mdash; 호실을 클릭하면 정보를 입력할 수 있습니다</h2>
       <div style="display:flex;gap:10px;flex-shrink:0;">
-        <button class="btn-excel btn-excel-sm" onclick="exportExcel()">&#128190; SAVE</button>
-        <button class="btn-excel btn-excel-sm" style="background:#1565c0;" onclick="document.getElementById('excel-upload').click()">&#128229; LOAD</button>
+        <button class="btn-excel btn-excel-sm" onclick="exportExcel()">&#128202; 엑셀 백업</button>
+        <button class="btn-excel btn-excel-sm" style="background:#1565c0;" onclick="document.getElementById('excel-upload').click()">&#128229; 불러오기</button>
         <input type="file" id="excel-upload" accept=".xlsx" style="display:none" onchange="importExcel(event)">
       </div>
       <div class="legend">

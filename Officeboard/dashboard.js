@@ -19,8 +19,25 @@ async function store(data, force) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('서버 저장 실패 (' + res.status + ')');
+  // 서버가 잠들어있다 깨어나는 중이면 200 OK로 안내 페이지(HTML)를 대신 돌려줄 수 있다.
+  // 실제 저장 성공은 204여야만 인정 — 그 외엔 전부 저장 실패로 취급한다.
+  if (res.status !== 204) throw new Error('서버 저장 실패 (' + res.status + ') — 서버가 깨어나는 중일 수 있습니다. 잠시 후 다시 시도해주세요.');
   _DATA = data;
+}
+
+async function globalSave() {
+  const btn = document.getElementById('global-save-btn');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+  try {
+    await store(getAllData());
+    toast('저장되었습니다.');
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#128190; 지금 상태 저장';
+  }
 }
 
 async function removeRoom(id) {
@@ -887,7 +904,7 @@ async function exportExcel() {
     a.download = `${String(today.getFullYear()).slice(2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')} 공유오피스 운영 대시보드 백업.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-    toast('엑셀 파일이 저장되었습니다.');
+    toast('엑셀 파일을 다운로드했습니다. (서버에는 저장되지 않는 백업 파일입니다)');
   } catch(e) {
     toast('엑셀 내보내기는 대시보드 프로그램에서만 사용 가능합니다.');
   }
@@ -935,6 +952,9 @@ async function init() {
     const res = await fetch('/data', { credentials: 'same-origin' });
     if (res.status === 401) { window.location.href = '/login'; return; }
     if (!res.ok) throw new Error('서버 오류 ' + res.status);
+    // 서버가 깨어나는 중이면 200 OK로 HTML 안내 페이지를 대신 줄 수 있으므로, JSON인지 확인한다.
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) throw new Error('서버가 깨어나는 중입니다 — 잠시 후 새로고침 해주세요.');
     _DATA       = await res.json();
     _dataLoaded = true;
   } catch(e) {
