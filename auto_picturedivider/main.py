@@ -209,8 +209,9 @@ class PictureDivider:
 
         cols = ("거래처명", "담당자")
         self.tree = ttk.Treeview(tbl_frame, columns=cols, show="headings", height=8)
+        self._sort_reverse = {col: False for col in cols}
         for col in cols:
-            self.tree.heading(col, text=col)
+            self.tree.heading(col, text=col, command=lambda c=col: self._sort_by_column(c))
         self.tree.column("거래처명", width=380, anchor="w")
         self.tree.column("담당자", width=180, anchor="w")
         self.tree.grid(row=0, column=0, sticky="nsew")
@@ -315,6 +316,19 @@ class PictureDivider:
         self.status_var.set(msg)
         if not silent:
             self._log(f"[엑셀] {msg}", "info")
+
+    def _sort_by_column(self, col: str) -> None:
+        reverse = self._sort_reverse[col]
+        rows = [(self.tree.set(iid, col), iid) for iid in self.tree.get_children("")]
+        rows.sort(key=lambda r: r[0], reverse=reverse)
+        for index, (_, iid) in enumerate(rows):
+            self.tree.move(iid, "", index)
+        self._sort_reverse[col] = not reverse
+
+        cols = ("거래처명", "담당자")
+        arrow = " ▼" if reverse else " ▲"
+        for c in cols:
+            self.tree.heading(c, text=(c + arrow) if c == col else c)
 
     # ── 제약사별 ZIP ──────────────────────────────────────────────────────────
 
