@@ -1,0 +1,62 @@
+※ 2026-07-15 최종본 (레퍼런스 기반 Template A/B 대개편 반영)
+   실제 게시된 연세예스내과 블로그 9장을 참고해 좌우분할 표/체크리스트 방식을 전면 폐기하고,
+   리스트형(Template A) / 본문형(Template B) 2종 템플릿 + 우상단 코너 라벨로 재구성했다.
+   1,2번 = Template B(본문형: 제목→인물 일러스트→문단), 3,4,5번 = Template A(리스트형: 제목→번호 리스트 + 우측 하단 인물 일러스트).
+   모든 자리에 인물을 포함한다 (레퍼런스 확인 결과 개념 설명 자리에도 인물이 거의 항상 등장했음).
+   제목 190px 정중앙 정렬 / 본문·리스트 60px, 우상단 코너 라벨("영양 수액 맞기 전에 알면 좋은 정보! ①~⑤")은 이미 프레임에 합성 완료.
+   아래 5개 프롬프트로 이미지를 생성해서 전달해 주시면 각 자리에 합성하겠습니다.
+
+[body-1] 영양수액이란 정확히 무엇인가요? — Template B, 정사각形 자리, 819x862px
+한글 설명: 청진기를 목에 건 의료진이 IV 수액백이 걸린 폴대 옆에 서서 부드럽게 웃고 있는 모습. 배경 없음.
+```
+A flat vector illustration of a friendly nurse or doctor wearing a stethoscope around their
+neck, standing next to a hanging IV drip stand with a fluid bag attached, gentle smile,
+upper-body to full-body figure, isolated on a plain white background with no background
+scenery, Freepik "flat illustration" / Storyset-style stock illustration, soft pastel
+color palette, no text, portrait orientation, near-square composition,
+aspect ratio 0.95:1, image size 819x862px.
+```
+
+[body-2] 영양수액, 정말 효과가 있을까요? — Template B, 정사각形 자리, 902x950px
+한글 설명: 양팔 저울을 든 인물이 한쪽엔 체크마크, 반대쪽엔 물음표를 올려놓고 고민하는 표정을 짓는 모습. 배경 없음.
+```
+A flat vector illustration of a person holding or standing next to a balance scale, with a
+checkmark icon on one side of the scale and a question mark icon on the other side,
+thoughtful or puzzled facial expression, upper-body to full-body figure, isolated on a
+plain white background with no background scenery, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, near-square composition, aspect ratio 0.95:1, image size 902x950px.
+```
+
+[body-3] 영양수액 부작용, 가볍게 보지 마세요 — Template A, 세로 자리, 1000x1336px
+한글 설명: 팔에 멍·통증 표시가 있는 인물이 걱정스러운 표정으로 자신의 팔을 짚고 있는 모습. 배경 없음.
+```
+A flat vector illustration of a person with a worried facial expression looking at their
+own arm, small bruise and pain marks (radiating lines) drawn near the inner elbow where an
+IV would go, one hand gently touching the arm, full-body or upper-body figure, isolated on
+a plain white background with no background scenery, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, vertical composition, aspect ratio 0.75:1, image size 1000x1336px.
+```
+
+[body-4] 이런 분들은 특히 주의하세요 — Template A, 세로 자리, 1000x1336px
+한글 설명: 의료진이 청진기로 고령 환자를 진료하며 살펴보는 모습. 배경 없음.
+```
+A flat vector illustration of a doctor or nurse examining an elderly patient with a
+stethoscope, the elderly patient seated calmly while the medical staff listens to their
+chest or back, caring expression, full-body figures, isolated on a plain white background
+with no background scenery, Freepik "flat illustration" / Storyset-style stock
+illustration, soft pastel color palette, no text, portrait orientation, vertical
+composition, aspect ratio 0.75:1, image size 1000x1336px.
+```
+
+[body-5] 수액 맞기 전후 확인하면 좋은 것들 — Template A, 세로 자리, 1000x1336px
+한글 설명: 인물이 클립보드에 적힌 체크리스트를 손가락으로 짚어가며 하나씩 확인하는 모습. 배경 없음.
+```
+A flat vector illustration of a person holding a clipboard with a checklist on it, one
+finger pointing at an item on the list as if reviewing it carefully, focused and attentive
+expression, upper-body to full-body figure, isolated on a plain white background with no
+background scenery, Freepik "flat illustration" / Storyset-style stock illustration, soft
+pastel color palette, no text, portrait orientation, vertical composition,
+aspect ratio 0.75:1, image size 1000x1336px.
+```

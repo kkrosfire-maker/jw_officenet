@@ -31,7 +31,11 @@ def md_to_html(text, img_base=""):
     """
     Markdown 텍스트를 HTML 조각(fragment)으로 변환한다.
 
-    img_base: ./images/ 경로를 치환할 절대 경로 (빈 문자열이면 치환 안 함)
+    img_base: 더 이상 사용하지 않음 (하위 호환을 위해 인자만 유지).
+    final.html은 항상 images/ 폴더와 같은 디렉터리에 저장되므로
+    이미지 경로는 절대경로로 바꾸지 않고 ./images/... 상대경로를 그대로 쓴다.
+    절대경로(C:/...)를 쓰면 file:// 프로토콜에서 "C:"가 URL 스킴으로
+    오인되어 이미지가 깨지는 문제가 있었다.
     """
     lines = text.split("\n")
     html_lines = []
@@ -41,9 +45,6 @@ def md_to_html(text, img_base=""):
     ul_buf = []
     in_ol = False
     ol_buf = []
-
-    # 경로 구분자를 / 로 통일
-    img_prefix = img_base.replace("\\", "/") if img_base else ""
 
     def flush_table(buf):
         rows = []
@@ -82,10 +83,8 @@ def md_to_html(text, img_base=""):
             if in_table: html_lines.append(flush_table(table_buf)); table_buf = []; in_table = False
             if in_ul:    html_lines.append(flush_ul(ul_buf));    ul_buf = [];    in_ul = False
             alt, src = m.group(1), m.group(2)
-            if img_prefix:
-                src = src.replace("./images/", img_prefix + "/")
             html_lines.append(
-                f'<figure><img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>'
+                f'<figure><img src="{src}" alt="{alt}"></figure>'
             )
             continue
 

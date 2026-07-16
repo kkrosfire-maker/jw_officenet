@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-박원종내과 블로그 파이프라인 GUI — Naver Blog Editor Style
+연세예스내과 블로그 파이프라인 GUI — Naver Blog Editor Style
 
 빌드:
   pip install pyinstaller
@@ -196,7 +196,7 @@ class NewTopicDialog(_BaseDialog):
 class BlogPipelineApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("블로그 파이프라인 — 박원종내과")
+        self.title("블로그 파이프라인 — 연세예스내과")
         self.geometry("980x700")
         self.minsize(820, 580)
         self.configure(bg=C_BG)
@@ -244,7 +244,7 @@ class BlogPipelineApp(tk.Tk):
         c.create_rectangle(0, 0, 32, 32, fill="white", outline="")
         c.create_text(16, 16, text="N", font=("맑은 고딕", 14, "bold"), fill=C_GREEN)
 
-        tk.Label(hdr, text=" 박원종내과 블로그",
+        tk.Label(hdr, text=" 연세예스내과 블로그",
                  font=("맑은 고딕", 12, "bold"),
                  bg=C_HDR, fg="white").pack(side="left", padx=(6, 0))
 

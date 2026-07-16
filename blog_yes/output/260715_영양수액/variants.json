@@ -1,0 +1,69 @@
+{
+  "corner_label_text": "영양 수액 맞기 전에 알면 좋은 정보!",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "영양수액이란<br>정확히 무엇인가요?",
+      "body_html": "흔히 \"링거\", \"영양주사\"로 불리는 영양수액은 비타민(B군, C 등), 마그네슘·칼슘 같은 미네랄, 전해질, 수분 등을 정맥을 통해 직접 체내에 주입하는 시술입니다. 가장 대표적인 조합은 <strong>마이어스 칵테일</strong>로, B비타민과 비타민 C, 마그네슘, 칼슘을 멸균수에 섞은 형태입니다.",
+      "illustration_desc": "청진기를 목에 건 의료진이 IV 수액백이 걸린 폴대 옆에 서 있는 인물 일러스트",
+      "illustration_file": "Gemini_Generated_Image_c5vnz8c5vnz8c5vn.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 2,
+      "title": "영양수액,<br>정말 효과가 있을까요?",
+      "body_html": "결론부터 말씀드리면 <strong>효과는 상황에 따라 다릅니다.</strong> 흡수 장애가 있는 환자의 영양 결핍 교정처럼 특정 의학적 필요가 있는 경우엔 긍정적 효과가 보고되지만, 건강한 사람의 피로회복·웰니스 목적 효과는 대규모 임상시험으로 뒷받침되지 않습니다.",
+      "illustration_desc": "저울 양쪽에 체크마크와 물음표를 들고 고민하는 인물 일러스트",
+      "illustration_file": "Gemini_Generated_Image_6zysbu6zysbu6zys.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "영양수액 부작용,<br>가볍게 보지 마세요",
+      "items": [
+        "국소 부작용: 통증·멍, 정맥염, 혈전 형성",
+        "전신 부작용: 구역·설사, 피부발진, 어지러움",
+        "지용성 비타민 축적: 장기·반복 투여 시 독성 위험",
+        "혼합 시 위험: 전해질 균형이 깨질 수 있음",
+        "속도 관련 위험: 과속 투여 시 심장 부담"
+      ],
+      "illustration_desc": "팔에 멍·통증 표시가 있는 인물이 걱정스러운 표정을 짓는 일러스트",
+      "illustration_file": "Gemini_Generated_Image_j2eehuj2eehuj2ee.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "이런 분들은<br>특히 주의하세요",
+      "items": [
+        "심장질환·심부전: 폐부종·심장 부담 위험",
+        "신장질환: 체액·전해질 이상 위험 커짐",
+        "간 기능 저하: 간성혼수 위험",
+        "고혈압: 혈압 상승·심장 부담 위험",
+        "당뇨병: 혈당 상승 위험",
+        "고령자: 수분·나트륨 제한 필요"
+      ],
+      "illustration_desc": "청진기로 진료받는 고령 환자를 살펴보는 의료진 일러스트",
+      "illustration_file": "Gemini_Generated_Image_cbkz8tcbkz8tcbkz.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "A",
+      "seq": 5,
+      "title": "수액 맞기 전후<br>확인하면 좋은 것들",
+      "items": [
+        "질환·복용약·알레르기·임신 여부 고지",
+        "공복(금식) 필요 여부, 담당의 개별 안내 확인",
+        "무균 시술 환경인지 확인",
+        "반복·습관적 사용 여부 스스로 점검",
+        "비급여 비용 안내 사전 확인"
+      ],
+      "illustration_desc": "클립보드 체크리스트를 손으로 짚어가며 확인하는 인물 일러스트",
+      "illustration_file": "Gemini_Generated_Image_r7gqglr7gqglr7gq.png"
+    }
+  ]
+}

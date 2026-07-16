@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 echo.
-echo  박원종내과 블로그 파이프라인 EXE 빌드
+echo  연세예스내과 블로그 파이프라인 EXE 빌드
 echo  =====================================
 echo.
 

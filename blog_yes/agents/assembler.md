@@ -128,8 +128,10 @@ def md_to_html(text):
         m = re.match(r"!\[([^\]]*)\]\(([^)]+)\)", line.strip())
         if m:
             alt, src = m.group(1), m.group(2)
-            abs_src = src.replace("./images/", f"{BASE}/images/").replace("/", "\\")
-            html_lines.append(f'<figure><img src="{abs_src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>')
+            # final.html은 항상 images/ 폴더와 같은 디렉터리에 저장되므로
+            # 상대경로(./images/...)를 그대로 쓴다. 절대경로(C:/...)로 바꾸면
+            # file:// 프로토콜에서 "C:"가 URL 스킴으로 오인되어 이미지가 깨진다.
+            html_lines.append(f'<figure><img src="{src}" alt="{alt}"></figure>')
             continue
 
         # 제목
@@ -167,7 +169,7 @@ html = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{TOPIC} — 박원종내과 블로그 미리보기</title>
+<title>{TOPIC} — 연세예스내과 블로그 미리보기</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after {{ box-sizing: border-box; }}
@@ -280,7 +282,7 @@ html = f"""<!DOCTYPE html>
 </head>
 <body>
 <div class="container">
-  <div class="preview-badge">미리보기 — 박원종내과 블로그</div>
+  <div class="preview-badge">미리보기 — 연세예스내과 블로그</div>
   {body_html}
 </div>
 </body>
@@ -294,7 +296,9 @@ print(f"final.html 저장 완료: {OUT}")
 
 #### 3-2. 이미지 경로 처리 원칙
 
-- draft.md의 `./images/body-N.png` 경로를 절대 경로로 변환해 `<img src="">` 에 삽입
+- draft.md의 `./images/body-N.png` 경로는 **절대 경로로 바꾸지 않고 그대로** `<img src="">` 에 삽입한다
+  - final.html이 항상 `images/`와 같은 폴더(`output/[yymmdd_주제]/`)에 저장되므로 상대경로만으로 충분하다
+  - 절대경로(`C:/...`)로 바꾸면 `file://` 프로토콜에서 `C:`가 URL 스킴으로 오인되어 이미지가 깨지는 버그가 있었다 (2026-07-15 수정)
 - HTML 파일이 `output/[yymmdd_주제]/`에 저장되므로 로컬 파일로 바로 열 수 있어야 함
 - 이미지가 없는 경우 `<img>` 태그는 남기되, alt 텍스트로 내용을 표시
 

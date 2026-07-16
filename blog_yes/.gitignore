@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+.env
+scripts/_tmp_*
+output/_test/

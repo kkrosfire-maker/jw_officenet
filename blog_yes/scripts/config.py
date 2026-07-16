@@ -8,7 +8,7 @@ import re
 import datetime
 
 # ── 기본 경로 ──────────────────────────────────────────────────────
-OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
+OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog_yes\output"
 REF_DIR     = r"C:\Users\JW\Downloads\제목을 입력해주세요"
 FRAME_PNG   = r"C:\Users\JW\Downloads\클로드코드 교육용.png"
 
@@ -39,6 +39,60 @@ FONT_PATHS = [
     r"C:\Windows\Fonts\malgun.ttf",
     r"C:\Windows\Fonts\gulim.ttc",
 ]
+
+# ══════════════════════════════════════════════════════════════════
+# 연세예스내과 신규 프레임 시스템 (Template A/B) — guide/image-guide-yonsei.md 참고
+# 2026-07-15 대개편. 위 구간(REF_DIR/FRAME_PNG/THUMB_* 등)은 구 클립보드 시스템 전용이며
+# 이 신규 시스템과 무관하다 — 절대 섞어 쓰지 않는다.
+# ══════════════════════════════════════════════════════════════════
+YONSEI_BASE = r"C:\Users\JW\Desktop\workspace\blog_yes"
+YONSEI_FRAMES = ["fraim1.png", "fraim2.png", "fraim3.png"]   # 순환 배정용
+YONSEI_TAB_COLOR = {"fraim1.png": "#EF804F", "fraim2.png": "#51A1EF", "fraim3.png": "#FF5FAB"}
+
+# 카드/캔버스 실측 좌표 (픽셀 스캔 결과, fraim1/2/3.png 공통)
+YONSEI_CARD_LEFT, YONSEI_CARD_TOP, YONSEI_CARD_RIGHT, YONSEI_CARD_BOTTOM = 140, 335, 2615, 2626
+YONSEI_TEXT_LEFT = 321          # 기존 헤더 라벨 x (참고용, 제목은 이제 중앙정렬이라 직접 쓰진 않음)
+YONSEI_CONTENT_TOP = 450
+YONSEI_CONTENT_BOTTOM = 2370
+YONSEI_RIGHT_MARGIN = YONSEI_TEXT_LEFT - YONSEI_CARD_LEFT          # 181
+YONSEI_TEXT_RIGHT = YONSEI_CARD_RIGHT - YONSEI_RIGHT_MARGIN         # 2434
+YONSEI_FULL_W = YONSEI_TEXT_RIGHT - YONSEI_TEXT_LEFT                # 2113
+
+# 타이포그래피 (2026-07-15 확정값)
+YONSEI_TITLE_FONT_STACK = "'Pretendard ExtraBold','Noto Sans KR','Malgun Gothic',sans-serif"
+YONSEI_BODY_FONT_STACK = "'Pretendard SemiBold','Noto Sans KR','Malgun Gothic',sans-serif"
+YONSEI_TITLE_PX = 190
+YONSEI_BODY_PX = 60
+YONSEI_TITLE_GAP = 70
+
+# Template A(리스트형) 전용 좌표
+YONSEI_LIST_LEFT = 260
+YONSEI_ILLUST_W = 1000
+YONSEI_GAP_COL = 113
+YONSEI_ILLUST_H_MAX = 1480
+
+# 우상단 코너 라벨
+YONSEI_LABEL_COLOR = (199, 203, 207, 255)
+YONSEI_LABEL_FONT_PX = 44
+YONSEI_LABEL_CIRCLE_FONT_PX = 40
+YONSEI_LABEL_CIRCLE_D = 66
+YONSEI_LABEL_GAP = 22
+YONSEI_LABEL_RIGHT_MARGIN = 40
+YONSEI_LABEL_CY = 220
+
+YONSEI_FONT_SEMIBOLD = r"C:\Users\JW\AppData\Local\Microsoft\Windows\Fonts\Pretendard-SemiBold.ttf"
+YONSEI_FONT_EXTRABOLD = r"C:\Users\JW\AppData\Local\Microsoft\Windows\Fonts\Pretendard-ExtraBold.ttf"
+
+# 썸네일 (thumb nail.png, 1024x1024) — guide/image-guide-yonsei.md §5 참고
+YONSEI_THUMB_FILE = "thumb nail.png"
+YONSEI_THUMB_CARD_CENTER_X = 525   # 2026-07-16 재재실측: 점선 줄무늬 자체의 좌우 끝(x≈170~879, 9줄 픽셀 스캔) 중앙.
+                                    # 카드 흰 배경 전체 폭(44~925) 기준의 485는 점선이 실제 차지하는 폭보다 넓게 잡혀
+                                    # 여전히 살짝 치우쳐 보인다는 피드백으로 점선 폭 기준으로 재조정 (과거 545도 폐기)
+YONSEI_THUMB_LINE_Y_START = 650
+YONSEI_THUMB_LINE_SPACING = 115
+YONSEI_THUMB_MAX_WIDTH = 660
+YONSEI_THUMB_TEXT_COLOR = (26, 35, 64, 255)   # #1A2340
+YONSEI_THUMB_IMAGE_BOX = (116, 110, 886, 600)  # 카드 백지 영역 실측 중심 x≈501 기준 (제목의 545와 다름, 혼동 금지)
 
 
 def topic_dir(topic: str) -> str:

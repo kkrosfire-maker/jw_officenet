@@ -1,4 +1,4 @@
-"""박원종내과 블로그 — 이미지 생성 + 최종 조립 GUI (API 미사용).
+"""연세예스내과 블로그 — 이미지 생성 + 최종 조립 GUI (API 미사용).
 
 리서치·글쓰기·이미지 HTML 디자인은 지금처럼 Claude Code 대화로 완성해서
 output/[yymmdd_주제]/draft.md 와 tmp_html/body-N.html 을 만들어둔 뒤,
@@ -26,7 +26,7 @@ import pipeline_runner  # noqa: E402
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("박원종내과 블로그 — 이미지·조립 자동화")
+        self.title("연세예스내과 블로그 — 이미지·조립 자동화")
         self.geometry("1000x760")
 
         self.msg_queue = queue.Queue()
