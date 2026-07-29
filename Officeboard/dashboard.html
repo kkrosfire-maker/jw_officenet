@@ -535,6 +535,21 @@ label.vat-check-label input[type="checkbox"] {
 .period-btn:hover { border-color: #999; background: #f0f0f0; }
 .period-btn.selected { background: #546e7a; border-color: #546e7a; color: white; }
 .period-btn.selected:hover { background: #607d8b; }
+.quick-date-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #666;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.quick-date-btn:hover { border-color: #999; background: #f0f0f0; }
 .status-btn {
   flex: 1;
   padding: 9px 8px;
@@ -764,11 +779,17 @@ label.vat-check-label input[type="checkbox"] {
       <div class="form-row">
         <div class="form-group">
           <label>계약 시작일</label>
-          <input type="date" id="f-start" onchange="onStartChange()">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="date" id="f-start" onchange="onStartChange()" style="flex:1;min-width:0;">
+            <button type="button" class="quick-date-btn" onclick="setFStartToday()">오늘</button>
+          </div>
         </div>
         <div class="form-group">
           <label>계약 만료일</label>
-          <input type="date" id="f-end" onchange="onEndChange()">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="date" id="f-end" onchange="onEndChange()" style="flex:1;min-width:0;">
+            <button type="button" class="quick-date-btn" onclick="setFEndPlus6Months()">6개월</button>
+          </div>
         </div>
       </div>
       <div class="base-rent-info" id="base-rent-row" style="display:none;">

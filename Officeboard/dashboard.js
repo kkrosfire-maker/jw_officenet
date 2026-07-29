@@ -6,6 +6,20 @@ let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여
 let _vaSort = { col: 'start', asc: true }; // 비상주 목록 정렬 상태
 let _vaCameFromList = false; // 등록/수정 모달을 비상주 목록에서 열었는지 (닫을 때 목록으로 복귀할지 결정)
 
+// ── 모달 내비게이션 seam ──────────────────────────────
+// 열려있는 모달을 스택으로 추적하는 단일 지점. 새 모달을 추가해도 이 스택에 push/pop만 하면
+// Escape 등 전역 동작이 자동으로 맞는 모달을 대상으로 동작함 (모달별로 따로 안 챙겨도 됨).
+const _modalStack = [];
+function _pushModal(closeFn) { _modalStack.push(closeFn); }
+function _popModal(closeFn) {
+  const i = _modalStack.lastIndexOf(closeFn);
+  if (i !== -1) _modalStack.splice(i, 1);
+}
+function closeTopModal() {
+  const closeFn = _modalStack[_modalStack.length - 1];
+  if (closeFn) closeFn();
+}
+
 // ── 데이터 레이어 ────────────────────────────────────
 let _DATA       = {};
 let _dataLoaded = false;
@@ -302,6 +316,7 @@ function openModal(id) {
   currentRoom = id;
   _roomToForm(id, getAllData()[id] || {});
   document.getElementById('modal-overlay').classList.add('active');
+  _pushModal(closeModal);
   setTimeout(() => document.getElementById('f-name').focus(), 60);
 }
 
@@ -309,6 +324,7 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
   resetOverlay();
   currentRoom = null;
+  _popModal(closeModal);
 }
 
 // 계약 시작일 변경 → 임대료 파생 + 납부그리드 + 보증금월 (3개 업데이트를 단일 핸들러로 집약)
@@ -322,6 +338,24 @@ function onStartChange() {
 
 // 계약 만료일 변경 → 그리드는 시작월 기준이므로 변화 없음 (호환성 유지)
 function onEndChange() {}
+
+// [오늘] 버튼 — 계약 시작일에 오늘 날짜 자동 입력, 계약 만료일은 리셋
+function setFStartToday() {
+  document.getElementById('f-start').value = todayLocal();
+  document.getElementById('f-end').value = '';
+  onStartChange();
+  onEndChange();
+}
+
+// [6개월] 버튼 — 누를 때마다 계약 만료일에 6개월씩 누적 추가 (비어있으면 계약 시작일 기준)
+function setFEndPlus6Months() {
+  var startVal = document.getElementById('f-start').value;
+  if (!startVal) return;
+  var endEl  = document.getElementById('f-end');
+  var baseVal = endEl.value || startVal;
+  endEl.value = addMonthsToDate(baseVal, 6);
+  onEndChange();
+}
 
 // VAT / 할인율 변경 → 임대료 자동 계산
 function updateRentCalc() {
@@ -457,10 +491,12 @@ function openVirtualAdd(id, fromList) {
   vaGrid.load(d, _gridMonths(d.start));
 
   document.getElementById('virtual-add-overlay').classList.add('active');
+  _pushModal(closeVirtualAdd);
 }
 
 function closeVirtualAdd() {
   document.getElementById('virtual-add-overlay').classList.remove('active');
+  _popModal(closeVirtualAdd);
   if (_vaCameFromList) setTimeout(showVirtualList, 80);
 }
 
@@ -479,9 +515,7 @@ function selectVaPeriod(btn) {
 
 function _updateVaEndFromPeriod(startVal) {
   var months = getVaPeriodMonths();
-  var d     = new Date(startVal + 'T00:00:00');
-  d.setMonth(d.getMonth() + months);
-  document.getElementById('va-end').value = d.toISOString().slice(0, 10);
+  document.getElementById('va-end').value = addMonthsToDate(startVal, months);
   var storedData = getAllData()[document.getElementById('va-id').value] || {};
   vaGrid.setMonths(_gridMonths(startVal), storedData);
 }
@@ -795,11 +829,8 @@ function renderVirtualList(showInactive) {
   } else {
     const rows = rooms.map(r => {
       const d   = data[r];
-      const pre = isBeforeStart(d, currentMonth);
-      const ok  = !pre && isPaid(d, currentMonth);
       const cs  = d.contractStatus || '계약중';
-      const payColor = ok ? '#26a69a' : pre ? '#9e9e9e' : '#e91e63';
-      const payLabel = ok ? '완납'    : pre ? '대기'    : '미납';
+      const pay = paymentStatusInfo(r, data, currentMonth);
       const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
       return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}', true)">
         <td><strong>${displayVaId(r)}</strong></td>
@@ -810,7 +841,7 @@ function renderVirtualList(showInactive) {
         <td>${d.start || '-'}</td>
         <td>${d.end || '-'}</td>
         <td>${fmtWon(d.rent) || '-'}</td>
-        <td><span style="color:${payColor};font-weight:700;">${payLabel}</span></td>
+        <td><span style="color:${pay.color};font-weight:700;">${pay.label}</span></td>
         <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
       </tr>`;
     }).join('');
@@ -832,10 +863,12 @@ function renderVirtualList(showInactive) {
 function showVirtualList() {
   renderVirtualList(_vaShowInactive);
   document.getElementById('virtual-modal-overlay').classList.add('active');
+  _pushModal(closeVirtualModal);
 }
 
 function closeVirtualModal() {
   document.getElementById('virtual-modal-overlay').classList.remove('active');
+  _popModal(closeVirtualModal);
 }
 
 // ── 유틸리티 ────────────────────────────────────────
@@ -935,7 +968,7 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', adjustOverlayForKeyboard);
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTopModal(); });
 document.getElementById('modal-overlay').addEventListener('focusin', e => {
   if (e.target.matches('input, select, textarea')) setTimeout(adjustOverlayForKeyboard, 300);
 });

@@ -15,7 +15,7 @@ const BASE_RENT = {
   A014:380000, A015:380000, A016:380000, A017:380000,
   B001:380000, B002:380000,
   B003:330000, B004:330000, B005:330000, B006:330000, B007:330000,
-  B008:550000, B009:550000,
+  B008:550000, B009:500000,
   B010:380000, B011:380000, B012:380000, B013:380000, B014:380000,
   C001:380000, C002:380000,
   C003:280000, C004:280000, C005:280000, C006:280000, C007:280000, C008:280000,
@@ -107,6 +107,19 @@ function statusClass(id, data, month) {
   return isPaid(d, month) ? 'paid' : 'unpaid';
 }
 
+const PAYMENT_STATUS_INFO = {
+  'pre-contract': { label: '대기', color: '#9e9e9e' },
+  'paid':         { label: '완납', color: '#26a69a' },
+  'unpaid':       { label: '미납', color: '#e91e63' },
+  'vacant':       { label: '-',   color: '#9e9e9e' },
+};
+
+// statusClass()의 vacant/pre-contract/paid/unpaid 판단을 재사용해 라벨/색상만 매핑.
+// (renderVirtualList가 같은 판단을 독립적으로 다시 계산하던 것을 여기로 일원화)
+function paymentStatusInfo(id, data, month) {
+  return PAYMENT_STATUS_INFO[statusClass(id, data, month)];
+}
+
 function computeStats(data, month) {
   const vKeys    = Object.keys(data).filter(r => isOccupied(data[r]) && isVirtual(r, data[r]) && !ALL_ROOMS.includes(r));
   const occ      = [...ALL_ROOMS.filter(r => isOccupied(data[r])), ...vKeys];
@@ -191,6 +204,14 @@ function inferContractMonths(d) {
 
 function depositAmount(roomId) {
   return (BASE_RENT[roomId] || 0) * 2;
+}
+
+// UTC 변환(toISOString) 대신 로컬 getter로 포맷 — KST(UTC+9)에서 toISOString을 쓰면
+// 자정이 하루 앞으로 밀려 날짜가 하루씩 당겨지는 버그가 생김 (todayLocal()과 동일한 이유)
+function addMonthsToDate(dateStr, n) {
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() + n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 function getMonthRange(start, end) {

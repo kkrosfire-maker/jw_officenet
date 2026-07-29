@@ -116,6 +116,34 @@ console.log('\n[후보4] computeExpiryAlerts 오늘 기준 분리');
   assert(!('vExpiring' in stats), 'computeStats에 vExpiring 없음');
 }
 
+// ── addMonthsToDate — 후보1: 상주/비상주 날짜계산 중복 제거로 추출한 순수함수 ──
+console.log('\n[후보1] addMonthsToDate 월/연 롤오버 및 말일 처리');
+{
+  assert(addMonthsToDate('2026-01-15', 6)  === '2026-07-15', '월 내 이동');
+  assert(addMonthsToDate('2026-08-01', 6)  === '2027-02-01', '연도 롤오버');
+  assert(addMonthsToDate('2026-01-31', 1)  === '2026-03-03', '말일 오버플로우 (JS Date 정규화, 기존 인라인 로직과 동일 동작)');
+}
+
+// ── paymentStatusInfo — 후보2: 비상주 목록 납부라벨이 statusClass()와 중복되던 것을 일원화 ──
+console.log('\n[후보2] paymentStatusInfo가 statusClass()와 일관되게 매핑되는지 확인');
+{
+  const data = {
+    'V001': { name: '완납고객', contractType: '비상주', rent: 24200, start: '2025-01-01', 'paid_2026-06': true },
+    'V002': { name: '미납고객', contractType: '비상주', rent: 24200, start: '2025-01-01' },
+    'V003': { name: '대기고객', contractType: '비상주', rent: 24200, start: '2027-01-01' },
+  };
+  assert(paymentStatusInfo('V001', data, '2026-06').label === '완납', 'paid → 완납');
+  assert(paymentStatusInfo('V002', data, '2026-06').label === '미납', 'unpaid → 미납');
+  assert(paymentStatusInfo('V003', data, '2026-06').label === '대기', 'pre-contract → 대기');
+  // statusClass()가 내리는 원래 판단과 항상 일치해야 함(라벨이 판단 로직을 다시 구현하지 않고 매핑만 함)
+  const expectedByClass = { 'paid': '완납', 'unpaid': '미납', 'pre-contract': '대기', 'vacant': '-' };
+  ['V001', 'V002', 'V003'].forEach(id => {
+    const cls = statusClass(id, data, '2026-06');
+    assert(expectedByClass[cls] === paymentStatusInfo(id, data, '2026-06').label,
+      `${id}: statusClass(${cls})와 paymentStatusInfo 라벨 일치`);
+  });
+}
+
 // ── 결과 ──
 console.log(`\n결과: PASS ${pass} / FAIL ${fail}`);
 process.exit(fail > 0 ? 1 : 0);
