@@ -22,8 +22,8 @@ from annotate import (rect_corners, hit_zone, point_in_rect,
                        resize_rect, rotate_angle, move_rect_center)
 
 HANDLE_R   = 5
-RESIZE_HIT = HANDLE_R * 2.5
-ROTATE_HIT = RESIZE_HIT + 16
+RESIZE_HIT = HANDLE_R * 4
+ROTATE_HIT = RESIZE_HIT + 20
 MIN_HALF   = 8
 
 
