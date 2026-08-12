@@ -5,6 +5,7 @@ let _editingVaId   = null; // VA 수정 시 원본 ID 추적 (ID 변경 감지�
 let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여부 유지
 let _vaSort = { col: 'start', asc: true }; // 비상주 목록 정렬 상태
 let _vaCameFromList = false; // 등록/수정 모달을 비상주 목록에서 열었는지 (닫을 때 목록으로 복귀할지 결정)
+let _customRentBase = 0; // 할인율 "직접입력" 모드에서 사용자가 입력한 부가세 제외 기준액
 
 // ── 모달 내비게이션 seam ──────────────────────────────
 // 열려있는 모달을 스택으로 추적하는 단일 지점. 새 모달을 추가해도 이 스택에 push/pop만 하면
@@ -243,11 +244,12 @@ function _roomToForm(roomId, d) {
   document.getElementById('f-invoice').checked = !!(d['invoice_' + currentMonth]);
   document.getElementById('f-vat').checked = !!(d.vat);
   var discSel = document.getElementById('f-discount-select');
-  if (discSel) discSel.value = String(d.discount || 0);
+  if (discSel) discSel.value = d.discount === 'custom' ? 'custom' : String(d.discount || 0);
+  _customRentBase = d.discount === 'custom' ? (d.customRentBase || 0) : 0;
 
   if (d.rent) {
     document.getElementById('f-rent').value = fmtWon(d.rent);
-  } else if (base) {
+  } else if (base && d.discount !== 'custom') {
     document.getElementById('f-rent').value = fmtWon(calcRent(base, d.discount || 0, !!(d.vat)));
   } else {
     document.getElementById('f-rent').value = '';
@@ -276,10 +278,11 @@ function _roomToForm(roomId, d) {
 
 // ── formToRoom — 모달 폼 읽기 → RoomData 객체 ────────
 function _formToRoom(prev) {
-  var vat      = document.getElementById('f-vat').checked;
-  var discSel  = document.getElementById('f-discount-select');
-  var discount = discSel ? parseFloat(discSel.value) : 0;
-  var rent     = parseInt(document.getElementById('f-rent').value.replace(/,/g, '').trim(), 10) || 0;
+  var vat        = document.getElementById('f-vat').checked;
+  var discSel    = document.getElementById('f-discount-select');
+  var discRaw    = discSel ? discSel.value : '0';
+  var discount   = discRaw === 'custom' ? 'custom' : parseFloat(discRaw);
+  var rent       = parseInt(document.getElementById('f-rent').value.replace(/,/g, '').trim(), 10) || 0;
 
   return Object.assign({}, prev, {
     name:       document.getElementById('f-name').value.trim(),
@@ -289,6 +292,7 @@ function _formToRoom(prev) {
     start:      document.getElementById('f-start').value,
     end:        document.getElementById('f-end').value,
     rent, vat, discount,
+    customRentBase: discount === 'custom' ? _customRentBase : null,
     depositPaid: document.getElementById('f-deposit-paid').checked,
     depositPaidMonth: document.getElementById('f-deposit-paid').checked
       ? document.getElementById('f-deposit-month').value
@@ -347,28 +351,61 @@ function setFStartToday() {
   onEndChange();
 }
 
-// [6개월] 버튼 — 누를 때마다 계약 만료일에 6개월씩 누적 추가 (비어있으면 계약 시작일 기준)
+// [6개월] 버튼 — 누를 때마다 계약기간을 6개월씩 누적 연장 (비어있으면 계약 시작일 기준)
+// 실제 사용일수 기준으로 계산 — 만료일은 다음 기간 시작일 + 6개월 - 1일 (예: 1/1 시작 두 번 누르면 12/31, 1/1이 아님)
 function setFEndPlus6Months() {
   var startVal = document.getElementById('f-start').value;
   if (!startVal) return;
-  var endEl  = document.getElementById('f-end');
-  var baseVal = endEl.value || startVal;
-  endEl.value = addMonthsToDate(baseVal, 6);
+  var endEl      = document.getElementById('f-end');
+  var nextStart  = endEl.value ? addDays(endEl.value, 1) : startVal;
+  endEl.value = contractEndDate(nextStart, 6);
   onEndChange();
+}
+
+// 할인율 드롭다운 변경 — "직접입력"으로 바뀌면 현재 필드값을 기준액으로만 저장하고 필드는 그대로 둔다
+// (표준 할인율로 바뀌면 기존처럼 기준임대료에서 재계산)
+function onDiscountChange() {
+  if (!currentRoom) return;
+  var discSel = document.getElementById('f-discount-select');
+  if (discSel && discSel.value === 'custom') {
+    var raw = parseInt(document.getElementById('f-rent').value.replace(/,/g, '').trim(), 10);
+    _customRentBase = raw || 0;
+    return;
+  }
+  updateRentCalc();
 }
 
 // VAT / 할인율 변경 → 임대료 자동 계산
 function updateRentCalc() {
-  if (!currentRoom || !BASE_RENT[currentRoom]) return;
-  var vat      = document.getElementById('f-vat').checked;
-  var discSel  = document.getElementById('f-discount-select');
+  if (!currentRoom) return;
+  var vat     = document.getElementById('f-vat').checked;
+  var discSel = document.getElementById('f-discount-select');
+
+  if (discSel && discSel.value === 'custom') {
+    // 직접입력 모드: 부가세 체크 시 [기준액 × 1.1]로 덮어쓰고, 해제 시 기준액으로 되돌린다
+    document.getElementById('f-rent').value = vat
+      ? fmtWon(calcRent(_customRentBase, 0, true))
+      : fmtWon(_customRentBase);
+    _updateDailyRent();
+    return;
+  }
+
+  if (!BASE_RENT[currentRoom]) return;
   var discount = discSel ? parseFloat(discSel.value) : 0;
   document.getElementById('f-rent').value = fmtWon(calcRent(BASE_RENT[currentRoom], discount, vat));
   _updateDailyRent();
 }
 
-// 임대료 직접 입력 → 일할계산 갱신
-function updateDailyRent() { _updateDailyRent(); }
+// 임대료 직접 입력 → 일할계산 갱신 (직접입력 모드 + 부가세 미체크 시엔 기준액도 함께 동기화)
+function updateDailyRent() {
+  var discSel = document.getElementById('f-discount-select');
+  var vat     = document.getElementById('f-vat').checked;
+  if (discSel && discSel.value === 'custom' && !vat) {
+    var raw = parseInt(document.getElementById('f-rent').value.replace(/,/g, '').trim(), 10);
+    _customRentBase = raw || 0;
+  }
+  _updateDailyRent();
+}
 
 // 보증금 납부완료 체크 → 계약 시작월로 리셋
 function onDepositPaidChange() {
@@ -515,7 +552,7 @@ function selectVaPeriod(btn) {
 
 function _updateVaEndFromPeriod(startVal) {
   var months = getVaPeriodMonths();
-  document.getElementById('va-end').value = addMonthsToDate(startVal, months);
+  document.getElementById('va-end').value = contractEndDate(startVal, months);
   var storedData = getAllData()[document.getElementById('va-id').value] || {};
   vaGrid.setMonths(_gridMonths(startVal), storedData);
 }

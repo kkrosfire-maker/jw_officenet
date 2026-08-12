@@ -124,6 +124,16 @@ console.log('\n[후보1] addMonthsToDate 월/연 롤오버 및 말일 처리');
   assert(addMonthsToDate('2026-01-31', 1)  === '2026-03-03', '말일 오버플로우 (JS Date 정규화, 기존 인라인 로직과 동일 동작)');
 }
 
+// ── contractEndDate — 실제 사용일수 기준 계약 만료일 (N개월 뒤 하루 전날) ──
+console.log('\n[후보3] contractEndDate 실제 사용일수 계산');
+{
+  assert(contractEndDate('2026-01-01', 12) === '2026-12-31', '1/1 시작 12개월 → 12/31 (다음해 1/1 아님)');
+  assert(contractEndDate('2026-02-01', 12) === '2027-01-31', '2/1 시작 12개월 → 익년 1/31');
+  assert(contractEndDate('2026-01-01', 6)  === '2026-06-30', '1/1 시작 6개월 → 6/30');
+  assert(addDays('2026-06-30', 1) === '2026-07-01', 'addDays 월 롤오버');
+  assert(addDays('2026-01-01', -1) === '2025-12-31', 'addDays 연 롤오버(음수)');
+}
+
 // ── paymentStatusInfo — 후보2: 비상주 목록 납부라벨이 statusClass()와 중복되던 것을 일원화 ──
 console.log('\n[후보2] paymentStatusInfo가 statusClass()와 일관되게 매핑되는지 확인');
 {

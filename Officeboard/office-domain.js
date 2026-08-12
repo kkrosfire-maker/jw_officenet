@@ -214,6 +214,18 @@ function addMonthsToDate(dateStr, n) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+function addDays(dateStr, n) {
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// 계약기간 종료일 — 실제 사용일수 기준(시작일 포함, N개월 뒤 하루 전날이 마지막 날).
+// 예: 1/1 시작 12개월 → 12/31 (다음해 1/1이 아님), 2/1 시작 12개월 → 익년 1/31.
+function contractEndDate(startDateStr, months) {
+  return addDays(addMonthsToDate(startDateStr, months), -1);
+}
+
 function getMonthRange(start, end) {
   if (!start) return [];
   var s = new Date(start.slice(0, 7) + '-01');
