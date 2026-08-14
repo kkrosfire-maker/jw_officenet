@@ -1037,6 +1037,24 @@ class RateSheetApp:
             y = self.tree.winfo_rooty()
             w = self.tree.winfo_width()
             h = self.tree.winfo_height()
+
+            # 위젯 크기가 아니라 실제 데이터가 차지하는 영역만 캡쳐한다.
+            # (트리 위젯은 창 크기에 맞춰 늘어나므로, 행이 적으면 아래쪽에
+            # 빈 여백이 그대로 캡쳐되는 문제가 있었다.)
+            columns = self.tree["columns"]
+            if columns:
+                content_w = sum(self.tree.column(c, "width") for c in columns)
+                if content_w > 0:
+                    w = min(content_w, w)
+
+            children = self.tree.get_children()
+            if children:
+                last_item = children[min(len(rows), len(children)) - 1]
+                last_bbox = self.tree.bbox(last_item)
+                if last_bbox:
+                    content_h = last_bbox[1] + last_bbox[3]
+                    h = min(content_h, h)
+
             img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
             self._image_to_clipboard(img)
             self.status_var.set("표를 이미지로 클립보드에 복사했습니다.")
