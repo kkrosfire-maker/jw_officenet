@@ -268,6 +268,7 @@ class Win32Backend(ExcelBackend):
                         changed += 1
                     elif key:
                         current_b = ws.Cells(row, 2).Value
+                        ws.Cells(row, 2).Value = "매칭없음"
                         unmatched.append({
                             "row": row,
                             "biz_raw": f"[윤병옥] {key}",
@@ -285,6 +286,7 @@ class Win32Backend(ExcelBackend):
                     changed += 1
                 else:
                     current_b = ws.Cells(row, 2).Value
+                    ws.Cells(row, 2).Value = "매칭없음"
                     unmatched.append({
                         "row": row,
                         "biz_raw": str(biz_raw),
@@ -348,6 +350,7 @@ class OpenpyxlBackend(ExcelBackend):
                     changed += 1
                 elif key:
                     current_b = ws.cell(row=row_idx, column=2).value
+                    ws.cell(row=row_idx, column=2).value = "매칭없음"
                     unmatched.append({
                         "row": row_idx,
                         "biz_raw": f"[윤병옥] {key}",
@@ -365,6 +368,7 @@ class OpenpyxlBackend(ExcelBackend):
                 changed += 1
             else:
                 current_b = ws.cell(row=row_idx, column=2).value
+                ws.cell(row=row_idx, column=2).value = "매칭없음"
                 unmatched.append({
                     "row": row_idx,
                     "biz_raw": str(biz_raw),
@@ -1218,6 +1222,10 @@ class NaverMailApp:
         tk.Button(
             btn_row, text="목록 지우기", width=10,
             command=self._clear_unmatched,
+        ).pack(side="left", padx=(0, 4))
+        tk.Button(
+            btn_row, text="품목명 복사", width=10,
+            command=self._copy_unmatched_names,
         ).pack(side="left")
         self.lbl_unmatched_count = tk.Label(btn_row, text="", fg="gray")
         self.lbl_unmatched_count.pack(side="right")
@@ -1393,6 +1401,22 @@ class NaverMailApp:
         self._unmatched_data.clear()
         self._unmatched_frame.pack_forget()
         self._fit_window()
+
+    def _copy_unmatched_names(self):
+        names = []
+        for iid in self.tree_unmatched.get_children():
+            raw = self.tree_unmatched.set(iid, "사업자번호 / 품목명")
+            if raw.startswith("[윤병옥] "):
+                raw = raw[len("[윤병옥] "):]
+            names.append(raw)
+        if not names:
+            messagebox.showinfo("복사할 항목 없음", "미매칭 목록이 비어 있습니다.")
+            return
+        text = "\n".join(names)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        self.root.update()
+        self._status(f"미매칭 품목명 {len(names)}건을 클립보드에 복사했습니다.")
 
     def _apply_corrections(self):
         corrections: dict = {}
