@@ -5,7 +5,7 @@ a = Analysis(
     ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[('초음파_판독지_원본유사.docx', '.')],
+    datas=[('초음파_판독지.docx', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

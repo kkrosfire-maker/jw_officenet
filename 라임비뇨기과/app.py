@@ -2,12 +2,33 @@ import calendar
 import datetime
 import json
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 import fill_report
 
 PRESENCE_OPTIONS = ["없음", "있음"]
+
+
+def _enable_windows_dpi_awareness():
+    """Run the process DPI-aware so Windows renders the window 1:1 instead of
+    bitmap-stretching it, which is a common cause of sluggish/blurry text and
+    laggy IME (한글) input on scaled displays."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    for attempt in (
+        lambda: ctypes.windll.shcore.SetProcessDpiAwareness(2),
+        lambda: ctypes.windll.shcore.SetProcessDpiAwareness(1),
+        lambda: ctypes.windll.user32.SetProcessDPIAware(),
+    ):
+        try:
+            attempt()
+            return
+        except Exception:
+            continue
 
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".ultrasound_report.json")
 
@@ -37,10 +58,23 @@ class ScrollableFrame(ttk.Frame):
         hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
         self.body = ttk.Frame(canvas)
 
-        self.body.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all")),
-        )
+        # Coalesce scrollregion recalculation: a raw <Configure> handler runs a
+        # full canvas.bbox("all") sweep on every child geometry/focus change,
+        # which stutters keyboard (esp. IME) input on a form this size.
+        self._sr_job = None
+
+        def apply_scrollregion():
+            self._sr_job = None
+            try:
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            except tk.TclError:
+                pass
+
+        def queue_scrollregion(_=None):
+            if self._sr_job is None:
+                self._sr_job = self.after(100, apply_scrollregion)
+
+        self.body.bind("<Configure>", queue_scrollregion)
         canvas_window = canvas.create_window((0, 0), window=self.body, anchor="nw")
 
         def on_canvas_configure(e):
@@ -60,6 +94,22 @@ class ScrollableFrame(ttk.Frame):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
         canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+
+class _InstitutionValue:
+    """Resolves 검사기관명 lazily (at save time) instead of running a
+    per-keystroke trace, so typing into the 직접입력 field stays responsive."""
+
+    def __init__(self, choice_var, custom_var, preset, custom_label):
+        self._choice = choice_var
+        self._custom = custom_var
+        self._preset = preset
+        self._custom_label = custom_label
+
+    def get(self):
+        if self._choice.get() == self._custom_label:
+            return self._custom.get().strip()
+        return self._choice.get()
 
 
 class DatePicker(tk.Toplevel):
@@ -138,8 +188,13 @@ class ReportApp(tk.Tk):
         super().__init__()
         self.title("경직장 전립선·정낭 초음파 판독지 작성기")
         self.geometry("1080x820")
+        try:
+            self.tk.call("tk", "useinputmethods", "1")
+        except tk.TclError:
+            pass
 
         self.vars = {}
+        self._reset_hooks = []  # called by "새로 작성" to clear every field
         self.last_dir = _load_last_dir()
 
         scroll = ScrollableFrame(self)
@@ -171,6 +226,7 @@ class ReportApp(tk.Tk):
         var = tk.StringVar()
         ttk.Entry(parent, textvariable=var, width=width).grid(row=r, column=1, sticky="w", pady=2)
         self.vars[key] = var
+        self._reset_hooks.append(lambda v=var: v.set(""))
         return r
 
     def _date_row(self, parent, label, key):
@@ -191,6 +247,7 @@ class ReportApp(tk.Tk):
 
         ttk.Button(parent, text="오늘", width=5, command=fill_today).grid(row=r, column=2, sticky="w", padx=4)
         self.vars[key] = var
+        self._reset_hooks.append(lambda v=var: v.set(""))
         return r
 
     def _radio_row(self, parent, label, key, options, detail_key=None):
@@ -202,10 +259,12 @@ class ReportApp(tk.Tk):
         for opt in options:
             ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
         self.vars[key] = var
+        self._reset_hooks.append(lambda v=var: v.set(""))
         if detail_key:
             dvar = tk.StringVar()
             ttk.Entry(parent, textvariable=dvar, width=28).grid(row=r, column=2, sticky="w", padx=6)
             self.vars[detail_key] = dvar
+            self._reset_hooks.append(lambda v=dvar: v.set(""))
         return r
 
     # ---------- sections ----------
@@ -229,6 +288,7 @@ class ReportApp(tk.Tk):
         for opt in fill_report.EXAM_TYPE_OPTIONS:
             ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
         self.vars["exam_type"] = var
+        self._reset_hooks.append(lambda v=var: v.set(fill_report.EXAM_TYPE_OPTIONS[0]))
 
         self._date_row(box, "검사일", "exam_date")
         self._entry_row(box, "검사자", "examiner_name", width=14)
@@ -247,32 +307,36 @@ class ReportApp(tk.Tk):
         r = self._next_row(parent)
         ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
 
-        result = tk.StringVar(value=PRESET)
-        self.vars[key] = result
-
         choice = tk.StringVar(value=PRESET)
         custom = tk.StringVar()
+        self.vars[key] = _InstitutionValue(choice, custom, PRESET, CUSTOM)
 
         frame = ttk.Frame(parent)
         frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=2)
-        ttk.Combobox(
+        combo = ttk.Combobox(
             frame, textvariable=choice, state="readonly",
             values=[PRESET, CUSTOM], width=18,
-        ).pack(side="left")
-        entry = ttk.Entry(frame, textvariable=custom, width=24)
+        )
+        combo.pack(side="left")
+        entry = ttk.Entry(frame, textvariable=custom, width=24, state="disabled")
         entry.pack(side="left", padx=6)
 
-        def sync(*_):
+        # Only react when the dropdown actually changes - no per-keystroke work.
+        def on_choice(_=None):
             if choice.get() == CUSTOM:
                 entry.configure(state="normal")
-                result.set(custom.get())
+                entry.focus_set()
             else:
                 entry.configure(state="disabled")
-                result.set(choice.get())
 
-        choice.trace_add("write", sync)
-        custom.trace_add("write", sync)
-        sync()
+        combo.bind("<<ComboboxSelected>>", on_choice)
+
+        def reset():
+            choice.set(PRESET)
+            custom.set("")
+            entry.configure(state="disabled")
+
+        self._reset_hooks.append(reset)
         return r
 
     def _build_required_findings_section(self, root):
@@ -296,6 +360,7 @@ class ReportApp(tk.Tk):
         for opt in ["삼각형", "타원형", "원형", "세로타원형"]:
             ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
         self.vars["shape"] = var
+        self._reset_hooks.append(lambda v=var: v.set(""))
 
         labels = {
             "border": "② 전립선의 경계",
@@ -318,6 +383,7 @@ class ReportApp(tk.Tk):
         text.grid(row=r, column=0, columnspan=3, sticky="ew", padx=4, pady=2)
         box.columnconfigure(2, weight=1)
         self.vars["other_findings"] = text
+        self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_conclusion_section(self, root):
         box = ttk.LabelFrame(root, text="4. 결론 (필수)")
@@ -325,14 +391,24 @@ class ReportApp(tk.Tk):
         text = tk.Text(box, height=5, wrap="word")
         text.pack(fill="x", padx=4, pady=2)
         self.vars["conclusion"] = text
+        self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_actions(self, root):
         row = ttk.Frame(root)
         row.pack(fill="x", padx=4, pady=12)
+        ttk.Button(row, text="새로 작성", command=self.on_new).pack(side="left", padx=(0, 16))
         ttk.Button(row, text="Word로 저장", command=self.on_save_word).pack(side="left")
         ttk.Button(row, text="한글로 저장", command=self.on_save_hwp).pack(side="left", padx=8)
         ttk.Button(row, text="JPG로 저장", command=self.on_save_jpg).pack(side="left")
-        ttk.Button(row, text="인쇄", command=self.on_print).pack(side="left", padx=8)
+
+    def on_new(self):
+        if not messagebox.askyesno("새로 작성", "입력한 내용을 모두 지우고 새로 작성하시겠습니까?"):
+            return
+        for hook in self._reset_hooks:
+            try:
+                hook()
+            except tk.TclError:
+                pass
 
     # ---------- data collection ----------
 
@@ -456,27 +532,7 @@ class ReportApp(tk.Tk):
         if messagebox.askyesno("저장 완료", f"JPG 파일이 저장되었습니다.\n{names}\n\n폴더를 여시겠습니까?"):
             os.startfile(os.path.dirname(jpg_path))
 
-    def on_print(self):
-        data = self._collect_data()
-        if not self._confirm_required(data):
-            return
-
-        self.config(cursor="watch")
-        self.update()
-        try:
-            # 인쇄 = JPG로 만들어 그림판으로 넘긴 뒤 바로 인쇄.
-            fill_report.generate_and_print(data)
-        except Exception as e:
-            messagebox.showerror(
-                "오류",
-                f"인쇄 중 오류가 발생했습니다:\n{e}\n(MS Word가 설치되어 있어야 합니다.)",
-            )
-            return
-        finally:
-            self.config(cursor="")
-
-        messagebox.showinfo("인쇄", "그림판으로 인쇄 작업을 보냈습니다.")
-
 
 if __name__ == "__main__":
+    _enable_windows_dpi_awareness()
     ReportApp().mainloop()
