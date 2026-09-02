@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import json
 import os
@@ -61,6 +62,77 @@ class ScrollableFrame(ttk.Frame):
         canvas.bind_all("<MouseWheel>", on_mousewheel)
 
 
+class DatePicker(tk.Toplevel):
+    """A small month calendar popup. Clicking a day writes YYYY-MM-DD into
+    the given StringVar and closes."""
+
+    def __init__(self, master, target_var):
+        super().__init__(master)
+        self.target_var = target_var
+        self.title("날짜 선택")
+        self.resizable(False, False)
+        self.transient(master)
+
+        try:
+            base = datetime.date.fromisoformat((target_var.get() or "").strip())
+        except ValueError:
+            base = datetime.date.today()
+        self.year, self.month = base.year, base.month
+
+        self._header = ttk.Frame(self)
+        self._header.pack(fill="x", padx=6, pady=(6, 2))
+        ttk.Button(self._header, text="◀", width=3,
+                   command=lambda: self._shift(-1)).pack(side="left")
+        self._title = ttk.Label(self._header, anchor="center")
+        self._title.pack(side="left", expand=True)
+        ttk.Button(self._header, text="▶", width=3,
+                   command=lambda: self._shift(1)).pack(side="left")
+
+        self._grid = ttk.Frame(self)
+        self._grid.pack(padx=6, pady=(0, 6))
+
+        ttk.Button(self, text="오늘", command=self._pick_today).pack(
+            fill="x", padx=6, pady=(0, 6))
+
+        self._draw()
+        self.bind("<Escape>", lambda _: self.destroy())
+        self.grab_set()
+        self.focus_set()
+
+    def _shift(self, months):
+        m = self.month - 1 + months
+        self.year += m // 12
+        self.month = m % 12 + 1
+        self._draw()
+
+    def _pick_today(self):
+        self._choose(datetime.date.today())
+
+    def _choose(self, date_obj):
+        self.target_var.set(date_obj.isoformat())
+        self.destroy()
+
+    def _draw(self):
+        for child in self._grid.winfo_children():
+            child.destroy()
+        self._title.config(text=f"{self.year}년 {self.month}월")
+
+        for i, name in enumerate(["월", "화", "수", "목", "금", "토", "일"]):
+            ttk.Label(self._grid, text=name, width=4, anchor="center").grid(
+                row=0, column=i, padx=1, pady=1)
+
+        for r, week in enumerate(calendar.Calendar().monthdayscalendar(
+                self.year, self.month), start=1):
+            for c, day in enumerate(week):
+                if day == 0:
+                    continue
+                ttk.Button(
+                    self._grid, text=str(day), width=4,
+                    command=lambda d=day: self._choose(
+                        datetime.date(self.year, self.month, d)),
+                ).grid(row=r, column=c, padx=1, pady=1)
+
+
 class ReportApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -105,7 +177,14 @@ class ReportApp(tk.Tk):
         r = self._next_row(parent)
         ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
         var = tk.StringVar()
-        ttk.Entry(parent, textvariable=var, width=14).grid(row=r, column=1, sticky="w", pady=2)
+        entry = ttk.Entry(parent, textvariable=var, width=14)
+        entry.grid(row=r, column=1, sticky="w", pady=2)
+
+        def open_calendar(_=None):
+            DatePicker(self, var)
+
+        # 검사일/판독일 칸을 클릭하면 달력 팝업으로 날짜를 고른다.
+        entry.bind("<Button-1>", open_calendar)
 
         def fill_today():
             var.set(datetime.date.today().isoformat())
