@@ -52,16 +52,21 @@ def set_paragraph_text(paragraph, text):
         run.text = ""
 
 
-def _trim_trailing_empty(cell, keep_min=1):
-    """Drops the template's spare blank paragraphs from the bottom of a cell so
-    the row is only as tall as its actual content (a cell must keep >= 1)."""
-    while len(cell.paragraphs) > keep_min and not cell.paragraphs[-1].text.strip():
-        p = cell.paragraphs[-1]._p
-        p.getparent().remove(p)
+def _ensure_min_lines(cell, min_lines, start_index=0):
+    """Guarantees the cell reserves at least `min_lines` writing rows below
+    `start_index` (a fixed label sits at index 0 in the 기타소견 box), padding
+    with blank paragraphs. Never trims - longer content keeps all its lines."""
+    while len(cell.paragraphs) - start_index < min_lines:
+        cell.add_paragraph()
 
 
 def _para_max_pt(p):
     sizes = [r.font.size.pt for r in p.runs if r.font.size is not None]
+    pPr = p._p.find(qn("w:pPr"))
+    if pPr is not None:
+        rPr = pPr.find(qn("w:rPr"))
+        if rPr is not None and rPr.find(qn("w:sz")) is not None:
+            sizes.append(int(rPr.find(qn("w:sz")).get(qn("w:val"))) / 2)
     return max(sizes) if sizes else 10.0
 
 
@@ -116,17 +121,23 @@ def _unbold_table(table):
 
 
 def _set_cell_font_size(cell, pt):
+    half = str(int(pt * 2))
     for p in cell.paragraphs:
         for r in p.runs:
             r.font.size = Pt(pt)
-        pPr = p._p.find(qn("w:pPr"))
-        if pPr is not None:
-            mark_rpr = pPr.find(qn("w:rPr"))
-            if mark_rpr is not None:
-                for tag in ("w:sz", "w:szCs"):
-                    e = mark_rpr.find(qn(tag))
-                    if e is not None:
-                        e.set(qn("w:val"), str(int(pt * 2)))
+        # Also stamp the paragraph-mark rPr (creating it if absent) so blank
+        # padding lines get the same size/height as the text lines.
+        pPr = p._p.get_or_add_pPr()
+        mark_rpr = pPr.find(qn("w:rPr"))
+        if mark_rpr is None:
+            mark_rpr = pPr.makeelement(qn("w:rPr"), {})
+            pPr.append(mark_rpr)
+        for tag in ("w:sz", "w:szCs"):
+            e = mark_rpr.find(qn(tag))
+            if e is None:
+                e = mark_rpr.makeelement(qn(tag), {})
+                mark_rpr.append(e)
+            e.set(qn("w:val"), half)
 
 
 def _shrink_paragraph(p_el, pt=6):
@@ -259,10 +270,11 @@ def generate_docx(data, output_path, template_path=None):
     t5 = doc.tables[5]
     set_cell_multiline(t5.rows[0].cells[0], data.get("conclusion", ""), start_index=0)
 
-    # Trim the template's spare blank lines and keep the free-text small so the
-    # report always stays on one page - in Word and after the .hwp conversion.
+    # 기타소견 박스: 안내문구(문단 0) 아래로 최소 4줄 확보. 결론 박스: 최소 5줄.
+    # 내용이 그보다 길면 그대로 다 남긴다. 두 칸 모두 8pt 고정.
+    _ensure_min_lines(t4.rows[0].cells[0], min_lines=4, start_index=1)
+    _ensure_min_lines(t5.rows[0].cells[0], min_lines=5, start_index=0)
     for cell in (t4.rows[0].cells[0], t5.rows[0].cells[0]):
-        _trim_trailing_empty(cell, keep_min=1)
         _set_cell_font_size(cell, 8)
         _set_box_border(cell)
 
