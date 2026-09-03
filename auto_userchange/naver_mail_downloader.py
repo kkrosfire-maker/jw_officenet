@@ -195,6 +195,21 @@ class ReferenceData:
         return cls(mapping=mapping, names=sorted(name_set), clinic=clinic)
 
 
+def _strip_product_suffix(value):
+    """제품명 셀에서 ' (' 이후(성분명·기타내용)를 제거.
+
+    "제품명 (성분명)" 또는 "제품명 (성분명) (기타내용)" → "제품명"
+    반환: (정리된 값, 변경 여부). ' (' 가 없으면 원본을 그대로 돌려준다.
+    """
+    if value is None:
+        return value, False
+    text = str(value)
+    idx = text.find(" (")
+    if idx == -1:
+        return value, False
+    return text[:idx].rstrip(), True
+
+
 def _make_output_path(input_path: str, output_dir: str) -> str:
     today = datetime.now().strftime("%y%m%d")
     new_name = f"{today}_변환_{os.path.basename(input_path)}"
@@ -292,6 +307,12 @@ class Win32Backend(ExcelBackend):
                         "biz_raw": str(biz_raw),
                         "current_b": str(current_b) if current_b is not None else "",
                     })
+            # I열(9열) 제품명에서 ' (' 이후(성분명·기타내용) 제거
+            for row in range(9, last_row + 1):
+                cell = ws.Cells(row, 9)
+                new_val, did = _strip_product_suffix(cell.Value)
+                if did:
+                    cell.Value = new_val
             fmt = 52 if abs_in.lower().endswith(".xlsm") else 51
             wb.SaveAs(abs_out, FileFormat=fmt)
         finally:
@@ -374,6 +395,12 @@ class OpenpyxlBackend(ExcelBackend):
                     "biz_raw": str(biz_raw),
                     "current_b": str(current_b) if current_b is not None else "",
                 })
+        # I열(9열) 제품명에서 ' (' 이후(성분명·기타내용) 제거
+        for row_idx in range(9, ws.max_row + 1):
+            cell = ws.cell(row=row_idx, column=9)
+            new_val, did = _strip_product_suffix(cell.value)
+            if did:
+                cell.value = new_val
         output_path = _make_output_path(input_path, output_dir)
         wb.save(output_path)
         return output_path, changed, unmatched
