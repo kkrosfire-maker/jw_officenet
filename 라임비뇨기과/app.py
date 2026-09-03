@@ -28,7 +28,7 @@ FS_SMALL = -12
 FS_BODY = -14
 FS_BADGE = -14
 FS_SECTION = -17
-FS_HEAD_TITLE = -28
+FS_HEAD_TITLE = -22   # 회사명 (기존 -28의 약 80%)
 FS_HEAD_TAG = -14
 FS_FOOT_TAG = -12
 FS_FOOT_PHONE = -19
@@ -368,59 +368,88 @@ class ReportApp(tk.Tk):
         return photo
 
     def _build_header(self):
-        hdr = tk.Frame(self, bg="white", height=74)
-        hdr.pack(fill="x", side="top")
-        hdr.pack_propagate(False)
-
-        # 우측 곡선 그래픽을 배경으로 깔고, 그 위에 시계가 올라온다 (겹침 허용).
-        swoosh = self._img("swoosh.png", max_h=74)
-        if swoosh is not None:
-            tk.Label(hdr, image=swoosh, bg="white", bd=0).place(
-                relx=1.0, rely=0.5, anchor="e")
-
-        # 회사명 + 슬로건
-        txt = tk.Frame(hdr, bg="white")
-        txt.pack(side="left", padx=(18, 0))
-        tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
-                 font=self.font_head_title).pack(anchor="w")
-        tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
-                 font=self.font_head_tag).pack(anchor="w")
-
-        # 전화번호 (회사명 오른편)
-        tk.Label(hdr, text="☎ 010-6498-0999", bg="white", fg=GREEN,
-                 font=self.font_foot_phone).pack(side="left", padx=(22, 0))
-
-        # 시계 (전화번호 오른편) - 곡선 그래픽과 겹칠 수 있음
-        clk = tk.Frame(hdr, bg="white")
-        clk.pack(side="left", padx=(22, 0))
-        self._clock_time = tk.Label(clk, bg="white", fg=INK, font=self.font_foot_phone)
-        self._clock_time.pack(anchor="w")
-        self._clock_date = tk.Label(clk, bg="white", fg=GREEN_TINT,
-                                    font=self.font_foot_tag)
-        self._clock_date.pack(anchor="w")
-        self._tick_clock()
-
+        # 상단에는 얇은 녹색 라인만 남긴다 (로고·회사명·전화·시계는 하단으로 이동).
         tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="top")
 
     def _build_footer(self):
-        tk.Frame(self, bg=CARD_BORDER, height=1).pack(fill="x", side="bottom")
-        bar = tk.Frame(self, bg="white")
+        tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="bottom")
+        MARGIN = 10  # 위/아래/우측 공통 여백
+        bar = tk.Frame(self, bg="white", height=74)
         bar.pack(fill="x", side="bottom")
+        bar.pack_propagate(False)
 
-        # 로고를 하단으로 이동
-        logo = self._img("logo.png", max_h=46)
+        # 우측 곡선 그래픽 + 시계를 한 장의 이미지로 합성 (시각·날짜 글자가
+        # 곡선 위에 직접 올라가서 배경이 가려지지 않는다). 10초마다 갱신.
+        self._footer_art_h = 74
+        self._footer_art = tk.Label(bar, bg="white", bd=0)
+        self._footer_art.place(relx=1.0, rely=0.5, anchor="e")
+
+        # 로고 (회사명 텍스트와 밑단 맞춤)
+        logo = self._img("logo.png", max_h=52)
         if logo is not None:
-            tk.Label(bar, image=logo, bg="white").pack(side="left", padx=18, pady=6)
-        else:
-            tk.Frame(bar, bg="white", height=22).pack(side="left")
+            tk.Label(bar, image=logo, bg="white").pack(
+                side="left", anchor="s", padx=(14, 5), pady=(0, MARGIN))
+
+        # 회사명 + 슬로건 (가운데 정렬, 로고와 밑단 맞춤)
+        txt = tk.Frame(bar, bg="white")
+        txt.pack(side="left", anchor="s", pady=(0, MARGIN))
+        tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
+                 font=self.font_head_title, pady=0).pack(anchor="center")
+        tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
+                 font=self.font_head_tag, pady=0).pack(anchor="center", pady=(4, 0))
+
+        # 전화번호 (회사명 오른편, 밑단 맞춤)
+        tk.Label(bar, text="☎ 010-6498-0999", bg="white", fg=GREEN,
+                 font=self.font_foot_phone).pack(side="left", anchor="s",
+                                                 padx=(18, 0), pady=(0, MARGIN))
+
+        self._tick_clock()
 
     def _tick_clock(self):
         now = datetime.datetime.now()
         ampm = "오전" if now.hour < 12 else "오후"
         h12 = now.hour % 12 or 12
-        self._clock_time.config(text=f"{ampm} {h12}:{now.minute:02d}")
-        self._clock_date.config(text=now.strftime("%Y-%m-%d"))
+        self._render_footer_art(f"{ampm} {h12}:{now.minute:02d}",
+                                now.strftime("%Y-%m-%d"))
         self.after(10000, self._tick_clock)
+
+    def _render_footer_art(self, time_str, date_str):
+        """곡선 그래픽 이미지 위에 시각·날짜를 직접 그려 넣어 배경이
+        글자 사이로 비치게 한다."""
+        try:
+            from PIL import Image, ImageDraw, ImageFont, ImageTk
+        except ImportError:
+            return
+        try:
+            base = Image.open(fill_report.resource_path(
+                os.path.join("assets", "swoosh.png"))).convert("RGB")
+        except Exception:
+            return
+
+        h = self._footer_art_h
+        if base.height != h:
+            base = base.resize((round(base.width * h / base.height), h),
+                               Image.LANCZOS)
+        img = base.copy()
+        draw = ImageDraw.Draw(img)
+
+        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
+        try:
+            f_time = ImageFont.truetype(os.path.join(fonts_dir, "malgunbd.ttf"), 20)
+            f_date = ImageFont.truetype(os.path.join(fonts_dir, "malgun.ttf"), 13)
+        except Exception:
+            f_time = f_date = ImageFont.load_default()
+
+        cx = img.width - 14           # 우측 여백
+        mid = h / 2
+        draw.text((cx, mid - 10), time_str, font=f_time, fill="white",
+                  anchor="rm", stroke_width=2, stroke_fill="#0A3A28")
+        draw.text((cx, mid + 12), date_str, font=f_date, fill="#DCEBE3",
+                  anchor="rm", stroke_width=1, stroke_fill="#0A3A28")
+
+        photo = ImageTk.PhotoImage(img)
+        self._imgs["_footer_art"] = photo  # 참조 유지
+        self._footer_art.configure(image=photo)
 
     def _section(self, root, num, title):
         """목업의 카드형 섹션: 녹색 번호 뱃지 + 녹색 제목 + 테두리 카드."""
