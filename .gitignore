@@ -8,6 +8,8 @@ rate_sheet/*.xlsx
 build/
 dist/
 __pycache__/
+.venv/
+venv/
 
 # secrets
 정원 API key.txt
