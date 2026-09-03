@@ -4,11 +4,35 @@ import json
 import os
 import sys
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, filedialog, messagebox
 
 import fill_report
 
 PRESENCE_OPTIONS = ["없음", "있음"]
+
+# ---- 정원유니어스 디자인 팔레트 (목업 색상 샘플링) ----
+GREEN = "#0D4A32"          # 기본 녹색: 번호 뱃지, 강조 버튼, 섹션 제목
+GREEN_DARK = "#0A3A28"     # 눌림 상태
+GREEN_TINT = "#5E8168"     # 보조 문구 (The Best Medical Partner)
+CARD_BORDER = "#C6D3CC"    # 섹션 카드 테두리
+FIELD_BORDER = "#B7C4BB"   # 입력칸 테두리
+PAGE_BG = "#FFFFFF"
+INK = "#1F2A24"
+UI_FONT = "맑은 고딕"
+
+# 글자 선명도: 폰트 크기를 '픽셀'(음수)로 지정하면 pt→px 반올림에서 오는
+# 흐릿함이 사라지고 정수 픽셀 격자에 딱 맞게 렌더링된다.
+FS_SMALL = -12
+FS_BODY = -14
+FS_BADGE = -14
+FS_SECTION = -17
+FS_HEAD_TITLE = -28
+FS_HEAD_TAG = -14
+FS_FOOT_TAG = -12
+FS_FOOT_PHONE = -19
+
+A4_RATIO = 297 / 210  # 세로 A4 비율 (1 : 1.414)
 
 
 def _enable_windows_dpi_awareness():
@@ -53,7 +77,7 @@ def _save_last_dir(directory):
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
-        canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0)
+        canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0, bg=PAGE_BG)
         vscrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
         hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
         self.body = ttk.Frame(canvas)
@@ -187,7 +211,10 @@ class ReportApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("경직장 전립선·정낭 초음파 판독지 작성기")
-        self.geometry("1080x820")
+        try:
+            self.iconbitmap(fill_report.resource_path("정원로고.ico"))
+        except tk.TclError:
+            pass
         try:
             self.tk.call("tk", "useinputmethods", "1")
         except tk.TclError:
@@ -195,7 +222,14 @@ class ReportApp(tk.Tk):
 
         self.vars = {}
         self._reset_hooks = []  # called by "새로 작성" to clear every field
+        self._imgs = {}         # PhotoImage 참조 유지 (GC 방지)
         self.last_dir = _load_last_dir()
+
+        self._setup_fonts()
+        self._apply_a4_geometry()
+        self._setup_style()
+        self._build_header()
+        self._build_footer()
 
         scroll = ScrollableFrame(self)
         scroll.pack(fill="both", expand=True, padx=8, pady=8)
@@ -207,6 +241,154 @@ class ReportApp(tk.Tk):
         self._build_optional_findings_section(root)
         self._build_conclusion_section(root)
         self._build_actions(root)
+
+    # ---------- 디자인 (정원유니어스 목업 리스킨) ----------
+
+    def _setup_fonts(self):
+        """Tk 기본 named 폰트를 맑은 고딕 + 픽셀 크기로 교체해 글자를 또렷하게."""
+        try:
+            self.tk.call("tk", "scaling", 1.0)  # pt 변환 배율 고정 (예측 가능)
+        except tk.TclError:
+            pass
+        self.font_body = tkfont.Font(family=UI_FONT, size=FS_BODY)
+        self.font_small = tkfont.Font(family=UI_FONT, size=FS_SMALL)
+        self.font_section = tkfont.Font(family=UI_FONT, size=FS_SECTION, weight="bold")
+        self.font_badge = tkfont.Font(family=UI_FONT, size=FS_BADGE, weight="bold")
+        self.font_head_title = tkfont.Font(family=UI_FONT, size=FS_HEAD_TITLE, weight="bold")
+        self.font_head_tag = tkfont.Font(family=UI_FONT, size=FS_HEAD_TAG)
+        self.font_foot_tag = tkfont.Font(family=UI_FONT, size=FS_FOOT_TAG)
+        self.font_foot_phone = tkfont.Font(family=UI_FONT, size=FS_FOOT_PHONE, weight="bold")
+        self.font_btn = tkfont.Font(family=UI_FONT, size=FS_BODY, weight="bold")
+
+        # 위젯이 상속하는 기본 폰트들도 동일하게 맞춘다.
+        for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont"):
+            try:
+                tkfont.nametofont(name).configure(family=UI_FONT, size=FS_BODY)
+            except tk.TclError:
+                pass
+
+    def _apply_a4_geometry(self):
+        """세로 A4 비율로, 화면 작업영역에 맞춰 창을 띄운다."""
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        # 작업표시줄·제목표시줄 여유를 두고 화면 높이의 88%까지만
+        h = min(1160, int(sh * 0.88))
+        w = int(h / A4_RATIO)
+        x = max(0, (sw - w) // 2)
+        y = max(0, (sh - h) // 2 - 24)
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        self.minsize(640, 820)
+
+    def _setup_style(self):
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")  # 색상 커스터마이즈가 먹는 테마
+        except tk.TclError:
+            pass
+        self.configure(bg=PAGE_BG)
+        base = self.font_body
+
+        style.configure(".", font=base, background=PAGE_BG, foreground=INK)
+        for name in ("TFrame", "TLabel", "TLabelframe", "TLabelframe.Label",
+                     "TRadiobutton", "TCheckbutton"):
+            style.configure(name, background=PAGE_BG, foreground=INK)
+        style.map("TLabel", foreground=[("disabled", "#8A968F")])
+        style.map("TRadiobutton",
+                  background=[("active", PAGE_BG)],
+                  foreground=[("disabled", "#8A968F")],
+                  indicatorcolor=[("selected", GREEN), ("pressed", GREEN)])
+
+        for name in ("TEntry", "TCombobox"):
+            style.configure(name, fieldbackground="white", background="white",
+                            foreground=INK, bordercolor=FIELD_BORDER,
+                            lightcolor=FIELD_BORDER, darkcolor=FIELD_BORDER,
+                            borderwidth=1, padding=3)
+        style.configure("TCombobox", arrowcolor=GREEN)
+        style.map("TCombobox",
+                  fieldbackground=[("readonly", "white")],
+                  foreground=[("readonly", INK)])
+        style.configure("TButton", foreground=INK, font=base, padding=(8, 4))
+
+        style.configure("SectionTitle.TLabel", foreground=GREEN, font=self.font_section)
+
+        style.configure("Accent.TButton", background=GREEN, foreground="white",
+                        bordercolor=GREEN, focuscolor=GREEN, borderwidth=0,
+                        padding=(18, 7), font=self.font_btn)
+        style.map("Accent.TButton",
+                  background=[("active", GREEN_DARK), ("pressed", GREEN_DARK)],
+                  foreground=[("disabled", "#D8E2DC")])
+        style.configure("Outline.TButton", background="white", foreground=GREEN,
+                        bordercolor=GREEN, lightcolor="white", darkcolor="white",
+                        borderwidth=1, padding=(15, 6), font=base)
+        style.map("Outline.TButton",
+                  background=[("active", "#EAF1ED"), ("pressed", "#DEE9E3")],
+                  bordercolor=[("active", GREEN), ("pressed", GREEN)])
+
+    def _img(self, name, max_h=None):
+        try:
+            from PIL import Image, ImageTk
+        except ImportError:
+            return None
+        path = fill_report.resource_path(os.path.join("assets", name))
+        try:
+            img = Image.open(path)
+        except Exception:
+            return None
+        if max_h and img.height > max_h:
+            img.thumbnail((10000, max_h), Image.LANCZOS)
+        photo = ImageTk.PhotoImage(img)
+        self._imgs[name] = photo  # 참조 유지
+        return photo
+
+    def _build_header(self):
+        hdr = tk.Frame(self, bg="white")
+        hdr.pack(fill="x", side="top")
+
+        logo = self._img("logo.png", max_h=58)
+        if logo is not None:
+            tk.Label(hdr, image=logo, bg="white").pack(side="left", padx=(18, 12), pady=12)
+
+        txt = tk.Frame(hdr, bg="white")
+        txt.pack(side="left", pady=12)
+        tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
+                 font=self.font_head_title).pack(anchor="w")
+        tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
+                 font=self.font_head_tag).pack(anchor="w")
+
+        swoosh = self._img("swoosh.png", max_h=80)
+        if swoosh is not None:
+            tk.Label(hdr, image=swoosh, bg="white").pack(side="right")
+
+        tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="top")
+
+    def _build_footer(self):
+        tk.Frame(self, bg=CARD_BORDER, height=1).pack(fill="x", side="bottom")
+        bar = tk.Frame(self, bg="white")
+        bar.pack(fill="x", side="bottom")
+        box = tk.Frame(bar, bg="white")
+        box.pack(side="right", padx=18, pady=6)
+        tk.Label(box, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
+                 font=self.font_foot_tag).pack(anchor="e")
+        tk.Label(box, text="☎ 010-6498-0999", bg="white", fg=GREEN,
+                 font=self.font_foot_phone).pack(anchor="e")
+
+    def _section(self, root, num, title):
+        """목업의 카드형 섹션: 녹색 번호 뱃지 + 녹색 제목 + 테두리 카드."""
+        border = tk.Frame(root, bg=CARD_BORDER)
+        border.pack(fill="x", padx=4, pady=7)
+        card = tk.Frame(border, bg=PAGE_BG)
+        card.pack(fill="both", expand=True, padx=1, pady=1)
+
+        head = tk.Frame(card, bg=PAGE_BG)
+        head.pack(fill="x", anchor="w", padx=12, pady=(9, 4))
+        tk.Label(head, text=f" {num} ", bg=GREEN, fg="white",
+                 font=self.font_badge).pack(side="left")
+        tk.Label(head, text=title, bg=PAGE_BG, fg=GREEN,
+                 font=self.font_section).pack(side="left", padx=(8, 0))
+
+        body = tk.Frame(card, bg=PAGE_BG)
+        body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        return body
 
     # ---------- helpers ----------
     #
@@ -270,23 +452,23 @@ class ReportApp(tk.Tk):
     # ---------- sections ----------
 
     def _build_patient_section(self, root):
-        box = ttk.LabelFrame(root, text="1. 환자정보")
-        box.pack(fill="x", padx=4, pady=6)
+        box = self._section(root, "1", "환자정보")
         self._entry_row(box, "등록번호", "reg_no")
         self._entry_row(box, "성명", "patient_name")
         self._entry_row(box, "생년월일 또는 나이", "birth_or_age")
         self._radio_row(box, "성별", "sex", ["남", "여"])
 
     def _build_exam_section(self, root):
-        box = ttk.LabelFrame(root, text="2. 검사정보")
-        box.pack(fill="x", padx=4, pady=6)
+        box = self._section(root, "2", "검사정보")
         r = self._next_row(box)
         ttk.Label(box, text="검사명").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
         options_frame = ttk.Frame(box)
         options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=2)
         var = tk.StringVar(value=fill_report.EXAM_TYPE_OPTIONS[0])
-        for opt in fill_report.EXAM_TYPE_OPTIONS:
-            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
+        # A4 세로 폭에 맞게 2열로 줄바꿈
+        for i, opt in enumerate(fill_report.EXAM_TYPE_OPTIONS):
+            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).grid(
+                row=i // 2, column=i % 2, sticky="w", padx=(0, 14), pady=1)
         self.vars["exam_type"] = var
         self._reset_hooks.append(lambda v=var: v.set(fill_report.EXAM_TYPE_OPTIONS[0]))
 
@@ -340,8 +522,7 @@ class ReportApp(tk.Tk):
         return r
 
     def _build_required_findings_section(self, root):
-        box = ttk.LabelFrame(root, text="3-(1). 검사 소견 (필수)")
-        box.pack(fill="x", padx=4, pady=6)
+        box = self._section(root, "3-(1)", "검사 소견 (필수)")
         self._entry_row(box, "① 전립선 전체 용적 (cc)", "vol_total", width=10)
         self._entry_row(box, "② 전립선 이행대 용적 (cc)", "vol_transition", width=10)
         self._radio_row(box, "③ 전립선내 국소 병변", "focal_lesion", PRESENCE_OPTIONS, "focal_lesion_detail")
@@ -349,8 +530,7 @@ class ReportApp(tk.Tk):
         self._radio_row(box, "⑤ 정낭 이상소견", "seminal_vesicle", PRESENCE_OPTIONS, "seminal_vesicle_detail")
 
     def _build_optional_findings_section(self, root):
-        box = ttk.LabelFrame(root, text="3-(2). 검사 소견 (선택적 기술)")
-        box.pack(fill="x", padx=4, pady=6)
+        box = self._section(root, "3-(2)", "검사 소견 (선택적 기술)")
 
         r = self._next_row(box)
         ttk.Label(box, text="① 전립선의 모양").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
@@ -379,27 +559,34 @@ class ReportApp(tk.Tk):
             row=r, column=0, columnspan=3, sticky="w", padx=4, pady=(6, 0)
         )
         r = self._next_row(box)
-        text = tk.Text(box, height=4, wrap="word")
+        text = tk.Text(box, height=4, wrap="word", bg="white", relief="solid",
+                       bd=1, highlightthickness=1, highlightbackground=FIELD_BORDER,
+                       highlightcolor=GREEN, font=self.font_body, padx=4, pady=3)
         text.grid(row=r, column=0, columnspan=3, sticky="ew", padx=4, pady=2)
         box.columnconfigure(2, weight=1)
         self.vars["other_findings"] = text
         self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_conclusion_section(self, root):
-        box = ttk.LabelFrame(root, text="4. 결론 (필수)")
-        box.pack(fill="x", padx=4, pady=6)
-        text = tk.Text(box, height=5, wrap="word")
+        box = self._section(root, "4", "결론 (필수)")
+        text = tk.Text(box, height=5, wrap="word", bg="white", relief="solid",
+                       bd=1, highlightthickness=1, highlightbackground=FIELD_BORDER,
+                       highlightcolor=GREEN, font=self.font_body, padx=4, pady=3)
         text.pack(fill="x", padx=4, pady=2)
         self.vars["conclusion"] = text
         self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_actions(self, root):
-        row = ttk.Frame(root)
-        row.pack(fill="x", padx=4, pady=12)
-        ttk.Button(row, text="새로 작성", command=self.on_new).pack(side="left", padx=(0, 16))
-        ttk.Button(row, text="Word로 저장", command=self.on_save_word).pack(side="left")
-        ttk.Button(row, text="한글로 저장", command=self.on_save_hwp).pack(side="left", padx=8)
-        ttk.Button(row, text="JPG로 저장", command=self.on_save_jpg).pack(side="left")
+        row = tk.Frame(root, bg=PAGE_BG)
+        row.pack(fill="x", padx=4, pady=(14, 6))
+        ttk.Button(row, text="새로 작성", style="Accent.TButton",
+                   command=self.on_new).pack(side="left", padx=(0, 16))
+        ttk.Button(row, text="Word로 저장", style="Outline.TButton",
+                   command=self.on_save_word).pack(side="left", padx=4)
+        ttk.Button(row, text="한글로 저장", style="Outline.TButton",
+                   command=self.on_save_hwp).pack(side="left", padx=4)
+        ttk.Button(row, text="JPG로 저장", style="Outline.TButton",
+                   command=self.on_save_jpg).pack(side="left", padx=4)
 
     def on_new(self):
         if not messagebox.askyesno("새로 작성", "입력한 내용을 모두 지우고 새로 작성하시겠습니까?"):
