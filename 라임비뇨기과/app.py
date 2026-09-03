@@ -16,7 +16,8 @@ GREEN = "#0D4A32"          # 기본 녹색: 번호 뱃지, 강조 버튼, 섹션
 GREEN_DARK = "#0A3A28"     # 눌림 상태
 GREEN_TINT = "#5E8168"     # 보조 문구 (The Best Medical Partner)
 CARD_BORDER = "#C6D3CC"    # 섹션 카드 테두리
-FIELD_BORDER = "#B7C4BB"   # 입력칸 테두리
+FIELD_BORDER = "#7A7A7A"   # 입력칸 테두리 (검정 계열)
+FIELD_FOCUS = "#222222"    # 입력칸 포커스 테두리
 PAGE_BG = "#FFFFFF"
 INK = "#1F2A24"
 UI_FONT = "맑은 고딕"
@@ -79,7 +80,6 @@ class ScrollableFrame(ttk.Frame):
         super().__init__(container, *args, **kwargs)
         canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0, bg=PAGE_BG)
         vscrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
         self.body = ttk.Frame(canvas)
 
         # Coalesce scrollregion recalculation: a raw <Configure> handler runs a
@@ -102,16 +102,13 @@ class ScrollableFrame(ttk.Frame):
         canvas_window = canvas.create_window((0, 0), window=self.body, anchor="nw")
 
         def on_canvas_configure(e):
-            # Never shrink the body below what its content actually needs -
-            # doing so makes the canvas clip (cut off) labels/entries instead of wrapping them.
-            width = max(e.width, self.body.winfo_reqwidth())
-            canvas.itemconfig(canvas_window, width=width)
+            # 본문 폭을 캔버스 폭에 딱 맞춰서 가로 스크롤이 아예 필요없게 한다.
+            canvas.itemconfig(canvas_window, width=e.width)
 
         canvas.bind("<Configure>", on_canvas_configure)
-        canvas.configure(yscrollcommand=vscrollbar.set, xscrollcommand=hscrollbar.set)
+        canvas.configure(yscrollcommand=vscrollbar.set)
 
         vscrollbar.pack(side="right", fill="y")
-        hscrollbar.pack(side="bottom", fill="x")
         canvas.pack(side="left", fill="both", expand=True)
 
         def on_mousewheel(event):
@@ -232,7 +229,7 @@ class ReportApp(tk.Tk):
         self._build_footer()
 
         scroll = ScrollableFrame(self)
-        scroll.pack(fill="both", expand=True, padx=8, pady=8)
+        scroll.pack(fill="both", expand=True, padx=6, pady=3)
         root = scroll.body
 
         self._build_patient_section(root)
@@ -293,21 +290,51 @@ class ReportApp(tk.Tk):
                      "TRadiobutton", "TCheckbutton"):
             style.configure(name, background=PAGE_BG, foreground=INK)
         style.map("TLabel", foreground=[("disabled", "#8A968F")])
+
+        # 라디오 표시를 동그라미 대신 네모(체크박스, 고전적인 V자 체크) 모양으로.
+        check_el = "Checkbutton.indicator"
+        try:
+            # Windows 네이티브 체크박스(V자 표시)를 라디오 표시로 빌려온다.
+            style.element_create("VCheck.indicator", "from", "xpnative",
+                                 "Checkbutton.indicator")
+            check_el = "VCheck.indicator"
+        except tk.TclError:
+            pass
+        try:
+            style.layout("TRadiobutton", [
+                ("Radiobutton.padding", {"sticky": "nswe", "children": [
+                    (check_el, {"side": "left", "sticky": ""}),
+                    ("Radiobutton.focus", {"side": "left", "sticky": "w",
+                                           "children": [
+                                               ("Radiobutton.label", {"sticky": "nswe"}),
+                                           ]}),
+                ]}),
+            ])
+        except tk.TclError:
+            pass
+        style.configure("TRadiobutton", indicatorbackground="white",
+                        indicatorforeground=GREEN, indicatormargin=(1, 1, 6, 1),
+                        padding=0)
         style.map("TRadiobutton",
                   background=[("active", PAGE_BG)],
                   foreground=[("disabled", "#8A968F")],
-                  indicatorcolor=[("selected", GREEN), ("pressed", GREEN)])
+                  indicatorbackground=[("active", "white"), ("selected", "white"),
+                                       ("disabled", "white")])
 
         for name in ("TEntry", "TCombobox"):
             style.configure(name, fieldbackground="white", background="white",
                             foreground=INK, bordercolor=FIELD_BORDER,
                             lightcolor=FIELD_BORDER, darkcolor=FIELD_BORDER,
-                            borderwidth=1, padding=3)
-        style.configure("TCombobox", arrowcolor=GREEN)
+                            borderwidth=1, padding=(4, 1))
+            style.map(name,
+                      bordercolor=[("focus", FIELD_FOCUS)],
+                      lightcolor=[("focus", FIELD_FOCUS)],
+                      darkcolor=[("focus", FIELD_FOCUS)])
+        style.configure("TCombobox", arrowcolor="#333333")
         style.map("TCombobox",
                   fieldbackground=[("readonly", "white")],
                   foreground=[("readonly", INK)])
-        style.configure("TButton", foreground=INK, font=base, padding=(8, 4))
+        style.configure("TButton", foreground=INK, font=base, padding=(8, 2))
 
         style.configure("SectionTitle.TLabel", foreground=GREEN, font=self.font_section)
 
@@ -341,23 +368,37 @@ class ReportApp(tk.Tk):
         return photo
 
     def _build_header(self):
-        hdr = tk.Frame(self, bg="white")
+        hdr = tk.Frame(self, bg="white", height=74)
         hdr.pack(fill="x", side="top")
+        hdr.pack_propagate(False)
 
-        logo = self._img("logo.png", max_h=58)
-        if logo is not None:
-            tk.Label(hdr, image=logo, bg="white").pack(side="left", padx=(18, 12), pady=12)
+        # 우측 곡선 그래픽을 배경으로 깔고, 그 위에 시계가 올라온다 (겹침 허용).
+        swoosh = self._img("swoosh.png", max_h=74)
+        if swoosh is not None:
+            tk.Label(hdr, image=swoosh, bg="white", bd=0).place(
+                relx=1.0, rely=0.5, anchor="e")
 
+        # 회사명 + 슬로건
         txt = tk.Frame(hdr, bg="white")
-        txt.pack(side="left", pady=12)
+        txt.pack(side="left", padx=(18, 0))
         tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
                  font=self.font_head_title).pack(anchor="w")
         tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
                  font=self.font_head_tag).pack(anchor="w")
 
-        swoosh = self._img("swoosh.png", max_h=80)
-        if swoosh is not None:
-            tk.Label(hdr, image=swoosh, bg="white").pack(side="right")
+        # 전화번호 (회사명 오른편)
+        tk.Label(hdr, text="☎ 010-6498-0999", bg="white", fg=GREEN,
+                 font=self.font_foot_phone).pack(side="left", padx=(22, 0))
+
+        # 시계 (전화번호 오른편) - 곡선 그래픽과 겹칠 수 있음
+        clk = tk.Frame(hdr, bg="white")
+        clk.pack(side="left", padx=(22, 0))
+        self._clock_time = tk.Label(clk, bg="white", fg=INK, font=self.font_foot_phone)
+        self._clock_time.pack(anchor="w")
+        self._clock_date = tk.Label(clk, bg="white", fg=GREEN_TINT,
+                                    font=self.font_foot_tag)
+        self._clock_date.pack(anchor="w")
+        self._tick_clock()
 
         tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="top")
 
@@ -365,29 +406,38 @@ class ReportApp(tk.Tk):
         tk.Frame(self, bg=CARD_BORDER, height=1).pack(fill="x", side="bottom")
         bar = tk.Frame(self, bg="white")
         bar.pack(fill="x", side="bottom")
-        box = tk.Frame(bar, bg="white")
-        box.pack(side="right", padx=18, pady=6)
-        tk.Label(box, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
-                 font=self.font_foot_tag).pack(anchor="e")
-        tk.Label(box, text="☎ 010-6498-0999", bg="white", fg=GREEN,
-                 font=self.font_foot_phone).pack(anchor="e")
+
+        # 로고를 하단으로 이동
+        logo = self._img("logo.png", max_h=46)
+        if logo is not None:
+            tk.Label(bar, image=logo, bg="white").pack(side="left", padx=18, pady=6)
+        else:
+            tk.Frame(bar, bg="white", height=22).pack(side="left")
+
+    def _tick_clock(self):
+        now = datetime.datetime.now()
+        ampm = "오전" if now.hour < 12 else "오후"
+        h12 = now.hour % 12 or 12
+        self._clock_time.config(text=f"{ampm} {h12}:{now.minute:02d}")
+        self._clock_date.config(text=now.strftime("%Y-%m-%d"))
+        self.after(10000, self._tick_clock)
 
     def _section(self, root, num, title):
         """목업의 카드형 섹션: 녹색 번호 뱃지 + 녹색 제목 + 테두리 카드."""
         border = tk.Frame(root, bg=CARD_BORDER)
-        border.pack(fill="x", padx=4, pady=7)
+        border.pack(fill="x", padx=4, pady=3)
         card = tk.Frame(border, bg=PAGE_BG)
         card.pack(fill="both", expand=True, padx=1, pady=1)
 
         head = tk.Frame(card, bg=PAGE_BG)
-        head.pack(fill="x", anchor="w", padx=12, pady=(9, 4))
+        head.pack(fill="x", anchor="w", padx=10, pady=(6, 2))
         tk.Label(head, text=f" {num} ", bg=GREEN, fg="white",
                  font=self.font_badge).pack(side="left")
         tk.Label(head, text=title, bg=PAGE_BG, fg=GREEN,
                  font=self.font_section).pack(side="left", padx=(8, 0))
 
         body = tk.Frame(card, bg=PAGE_BG)
-        body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        body.pack(fill="both", expand=True, padx=10, pady=(0, 6))
         return body
 
     # ---------- helpers ----------
@@ -404,19 +454,19 @@ class ReportApp(tk.Tk):
 
     def _entry_row(self, parent, label, key, width=20):
         r = self._next_row(parent)
-        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         var = tk.StringVar()
-        ttk.Entry(parent, textvariable=var, width=width).grid(row=r, column=1, sticky="w", pady=2)
+        ttk.Entry(parent, textvariable=var, width=width).grid(row=r, column=1, sticky="w", pady=1)
         self.vars[key] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
         return r
 
     def _date_row(self, parent, label, key):
         r = self._next_row(parent)
-        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         var = tk.StringVar()
         entry = ttk.Entry(parent, textvariable=var, width=14)
-        entry.grid(row=r, column=1, sticky="w", pady=2)
+        entry.grid(row=r, column=1, sticky="w", pady=1)
 
         def open_calendar(_=None):
             DatePicker(self, var)
@@ -434,9 +484,9 @@ class ReportApp(tk.Tk):
 
     def _radio_row(self, parent, label, key, options, detail_key=None):
         r = self._next_row(parent)
-        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         options_frame = ttk.Frame(parent)
-        options_frame.grid(row=r, column=1, sticky="w", pady=2)
+        options_frame.grid(row=r, column=1, sticky="w", pady=1)
         var = tk.StringVar(value="")
         for opt in options:
             ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
@@ -461,9 +511,9 @@ class ReportApp(tk.Tk):
     def _build_exam_section(self, root):
         box = self._section(root, "2", "검사정보")
         r = self._next_row(box)
-        ttk.Label(box, text="검사명").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(box, text="검사명").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         options_frame = ttk.Frame(box)
-        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=2)
+        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
         var = tk.StringVar(value=fill_report.EXAM_TYPE_OPTIONS[0])
         # A4 세로 폭에 맞게 2열로 줄바꿈
         for i, opt in enumerate(fill_report.EXAM_TYPE_OPTIONS):
@@ -487,14 +537,14 @@ class ReportApp(tk.Tk):
         CUSTOM = "직접입력"
 
         r = self._next_row(parent)
-        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
 
         choice = tk.StringVar(value=PRESET)
         custom = tk.StringVar()
         self.vars[key] = _InstitutionValue(choice, custom, PRESET, CUSTOM)
 
         frame = ttk.Frame(parent)
-        frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=2)
+        frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
         combo = ttk.Combobox(
             frame, textvariable=choice, state="readonly",
             values=[PRESET, CUSTOM], width=18,
@@ -533,9 +583,9 @@ class ReportApp(tk.Tk):
         box = self._section(root, "3-(2)", "검사 소견 (선택적 기술)")
 
         r = self._next_row(box)
-        ttk.Label(box, text="① 전립선의 모양").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=2)
+        ttk.Label(box, text="① 전립선의 모양").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         options_frame = ttk.Frame(box)
-        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=2)
+        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
         var = tk.StringVar(value="")
         for opt in ["삼각형", "타원형", "원형", "세로타원형"]:
             ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
@@ -556,29 +606,29 @@ class ReportApp(tk.Tk):
 
         r = self._next_row(box)
         ttk.Label(box, text="이상 소견 또는 기타소견에 대한 기술").grid(
-            row=r, column=0, columnspan=3, sticky="w", padx=4, pady=(6, 0)
+            row=r, column=0, columnspan=3, sticky="w", padx=4, pady=(4, 0)
         )
         r = self._next_row(box)
-        text = tk.Text(box, height=4, wrap="word", bg="white", relief="solid",
+        text = tk.Text(box, height=3, wrap="word", bg="white", relief="solid",
                        bd=1, highlightthickness=1, highlightbackground=FIELD_BORDER,
-                       highlightcolor=GREEN, font=self.font_body, padx=4, pady=3)
-        text.grid(row=r, column=0, columnspan=3, sticky="ew", padx=4, pady=2)
+                       highlightcolor=FIELD_FOCUS, font=self.font_body, padx=4, pady=2)
+        text.grid(row=r, column=0, columnspan=3, sticky="ew", padx=4, pady=1)
         box.columnconfigure(2, weight=1)
         self.vars["other_findings"] = text
         self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_conclusion_section(self, root):
         box = self._section(root, "4", "결론 (필수)")
-        text = tk.Text(box, height=5, wrap="word", bg="white", relief="solid",
+        text = tk.Text(box, height=4, wrap="word", bg="white", relief="solid",
                        bd=1, highlightthickness=1, highlightbackground=FIELD_BORDER,
-                       highlightcolor=GREEN, font=self.font_body, padx=4, pady=3)
-        text.pack(fill="x", padx=4, pady=2)
+                       highlightcolor=FIELD_FOCUS, font=self.font_body, padx=4, pady=2)
+        text.pack(fill="x", padx=4, pady=1)
         self.vars["conclusion"] = text
         self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
     def _build_actions(self, root):
         row = tk.Frame(root, bg=PAGE_BG)
-        row.pack(fill="x", padx=4, pady=(14, 6))
+        row.pack(fill="x", padx=4, pady=(8, 4))
         ttk.Button(row, text="새로 작성", style="Accent.TButton",
                    command=self.on_new).pack(side="left", padx=(0, 16))
         ttk.Button(row, text="Word로 저장", style="Outline.TButton",
@@ -622,9 +672,11 @@ class ReportApp(tk.Tk):
         )
 
     def _default_name(self, data):
+        # 저장 파일명: 등록번호_이름_생년월일 (빈 항목은 건너뜀)
         parts = [
             (data.get("reg_no") or "").strip(),
             (data.get("patient_name") or "").strip(),
+            (data.get("birth_or_age") or "").strip(),
         ]
         parts = [p for p in parts if p]
         return "_".join(parts) if parts else "판독지"
@@ -660,8 +712,7 @@ class ReportApp(tk.Tk):
             messagebox.showerror("오류", f"Word 문서 생성 중 오류가 발생했습니다:\n{e}")
             return
 
-        if messagebox.askyesno("저장 완료", "Word 파일이 저장되었습니다.\n폴더를 여시겠습니까?"):
-            os.startfile(os.path.dirname(docx_path))
+        messagebox.showinfo("저장 완료", f"Word 파일이 저장되었습니다.\n{docx_path}")
 
     def on_save_hwp(self):
         data = self._collect_data()
@@ -688,8 +739,7 @@ class ReportApp(tk.Tk):
         finally:
             self.config(cursor="")
 
-        if messagebox.askyesno("저장 완료", "한글 파일이 저장되었습니다.\n폴더를 여시겠습니까?"):
-            os.startfile(os.path.dirname(hwp_path))
+        messagebox.showinfo("저장 완료", f"한글 파일이 저장되었습니다.\n{hwp_path}")
 
     def on_save_jpg(self):
         data = self._collect_data()
@@ -715,9 +765,8 @@ class ReportApp(tk.Tk):
         finally:
             self.config(cursor="")
 
-        names = "\n".join(os.path.basename(p) for p in written)
-        if messagebox.askyesno("저장 완료", f"JPG 파일이 저장되었습니다.\n{names}\n\n폴더를 여시겠습니까?"):
-            os.startfile(os.path.dirname(jpg_path))
+        names = "\n".join(written)
+        messagebox.showinfo("저장 완료", f"JPG 파일이 저장되었습니다.\n{names}")
 
 
 if __name__ == "__main__":
