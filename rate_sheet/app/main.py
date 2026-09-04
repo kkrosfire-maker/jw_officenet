@@ -10,7 +10,7 @@ from tkinter import ttk, filedialog, messagebox
 from config import load_config, save_config
 from excel_utils import FIELDS, load_rate_sheet, search_rows, format_value
 
-SEARCH_TARGET_FIELDS = ["제품명", "성분"]
+SEARCH_TARGET_FIELDS = ["제품명", "성분", "대조의약품"]
 
 
 class _LOGFONTW(ctypes.Structure):
@@ -526,7 +526,7 @@ class RateSheetApp:
         self.tree.column(CHECK_COL, width=36, anchor="center", stretch=False)
         for col in columns:
             self.tree.heading(col, text=col)
-            width = 260 if col in ("제품명", "성분", "비고") else 110
+            width = 260 if col in ("제품명", "성분", "대조의약품", "비고") else 110
             anchor = "center" if col in ("보험코드", "약가", "요율") else "w"
             self.tree.column(col, width=width, anchor=anchor, stretch=False)
 
@@ -970,7 +970,7 @@ class RateSheetApp:
                         cell.font = Font(color=color.lstrip("#"))
 
             for c, col_name in enumerate(self.current_columns, start=1):
-                width = 34 if col_name in ("제품명", "성분", "비고") else 15
+                width = 34 if col_name in ("제품명", "성분", "대조의약품", "비고") else 15
                 ws.column_dimensions[get_column_letter(c)].width = width
 
             ws.freeze_panes = "A2"
