@@ -384,24 +384,24 @@ class ReportApp(tk.Tk):
         self._footer_art = tk.Label(bar, bg="white", bd=0)
         self._footer_art.place(relx=1.0, rely=0.5, anchor="e")
 
-        # 로고 (회사명 텍스트와 밑단 맞춤)
+        # 로고 (바 높이 기준 세로 가운데)
         logo = self._img("logo.png", max_h=52)
         if logo is not None:
             tk.Label(bar, image=logo, bg="white").pack(
-                side="left", anchor="s", padx=(14, 5), pady=(0, MARGIN))
+                side="left", anchor="center", padx=(14, 5), pady=MARGIN)
 
-        # 회사명 + 슬로건 (가운데 정렬, 로고와 밑단 맞춤)
+        # 회사명 + 슬로건 (세로 가운데)
         txt = tk.Frame(bar, bg="white")
-        txt.pack(side="left", anchor="s", pady=(0, MARGIN))
+        txt.pack(side="left", anchor="center", pady=MARGIN)
         tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
                  font=self.font_head_title, pady=0).pack(anchor="center")
         tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
                  font=self.font_head_tag, pady=0).pack(anchor="center", pady=(4, 0))
 
-        # 전화번호 (회사명 오른편, 밑단 맞춤)
+        # 전화번호 (회사명 오른편, 세로 가운데)
         tk.Label(bar, text="☎ 010-6498-0999", bg="white", fg=GREEN,
-                 font=self.font_foot_phone).pack(side="left", anchor="s",
-                                                 padx=(18, 0), pady=(0, MARGIN))
+                 font=self.font_foot_phone).pack(side="left", anchor="center",
+                                                 padx=(18, 0), pady=MARGIN)
 
         self._tick_clock()
 
