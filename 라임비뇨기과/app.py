@@ -28,10 +28,18 @@ FS_SMALL = -12
 FS_BODY = -14
 FS_BADGE = -14
 FS_SECTION = -17
-FS_HEAD_TITLE = -22   # 회사명 (기존 -28의 약 80%)
 FS_HEAD_TAG = -14
 FS_FOOT_TAG = -12
 FS_FOOT_PHONE = -19
+
+COMPANY_NAME = "Jungwon Unius"
+
+# 상단 배너: 기존 대비 약 50%로 축소. 위/아래 여백·곡선그래픽만 줄이고
+# 회사명 워드마크는 로고 높이에 맞춰 키운다(둘 다 위쪽 끝 정렬).
+HEADER_PAD_Y = 4
+HEADER_LOGO_H = 34
+HEADER_SWOOSH_H = 40
+FS_HEAD_TITLE = -HEADER_LOGO_H   # 회사명 워드마크 = 로고 높이
 
 A4_RATIO = 297 / 210  # 세로 A4 비율 (1 : 1.414)
 
@@ -368,88 +376,49 @@ class ReportApp(tk.Tk):
         return photo
 
     def _build_header(self):
-        # 상단에는 얇은 녹색 라인만 남긴다 (로고·회사명·전화·시계는 하단으로 이동).
+        # 상단 배너: 로고 + 회사명 워드마크 + 우측 곡선 그래픽.
+        # 기존 대비 약 50%로 축소 (여백·로고·곡선만 줄이고 글자 크기는 유지).
+        hdr = tk.Frame(self, bg="white")
+        hdr.pack(fill="x", side="top")
+
+        # 로고와 회사명을 아래쪽 끝에 맞춘다.
+        logo = self._img("logo.png", max_h=HEADER_LOGO_H)
+        if logo is not None:
+            tk.Label(hdr, image=logo, bg="white").pack(
+                side="left", anchor="s", padx=(18, 10), pady=HEADER_PAD_Y)
+
+        tk.Label(hdr, text=COMPANY_NAME, bg="white", fg=GREEN,
+                 font=self.font_head_title).pack(
+            side="left", anchor="s", pady=HEADER_PAD_Y)
+
+        swoosh = self._img("swoosh.png", max_h=HEADER_SWOOSH_H)
+        if swoosh is not None:
+            tk.Label(hdr, image=swoosh, bg="white").pack(side="right")
+
         tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="top")
 
     def _build_footer(self):
-        tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="bottom")
-        MARGIN = 10  # 위/아래/우측 공통 여백
-        bar = tk.Frame(self, bg="white", height=74)
+        tk.Frame(self, bg=CARD_BORDER, height=1).pack(fill="x", side="bottom")
+        bar = tk.Frame(self, bg="white")
         bar.pack(fill="x", side="bottom")
-        bar.pack_propagate(False)
 
-        # 우측 곡선 그래픽 + 시계를 한 장의 이미지로 합성 (시각·날짜 글자가
-        # 곡선 위에 직접 올라가서 배경이 가려지지 않는다). 10초마다 갱신.
-        self._footer_art_h = 74
-        self._footer_art = tk.Label(bar, bg="white", bd=0)
-        self._footer_art.place(relx=1.0, rely=0.5, anchor="e")
-
-        # 로고 (바 높이 기준 세로 가운데)
-        logo = self._img("logo.png", max_h=52)
-        if logo is not None:
-            tk.Label(bar, image=logo, bg="white").pack(
-                side="left", anchor="center", padx=(14, 5), pady=MARGIN)
-
-        # 회사명 + 슬로건 (세로 가운데)
-        txt = tk.Frame(bar, bg="white")
-        txt.pack(side="left", anchor="center", pady=MARGIN)
-        tk.Label(txt, text="정원유니어스(주)", bg="white", fg=GREEN,
-                 font=self.font_head_title, pady=0).pack(anchor="center")
-        tk.Label(txt, text="The Best Medical Partner", bg="white", fg=GREEN_TINT,
-                 font=self.font_head_tag, pady=0).pack(anchor="center", pady=(4, 0))
-
-        # 전화번호 (회사명 오른편, 세로 가운데)
+        # 좌측: 전화번호 / 우측: 날짜+시각 — 둘 다 같은 스타일로 세로 가운데 정렬
         tk.Label(bar, text="☎ 010-6498-0999", bg="white", fg=GREEN,
                  font=self.font_foot_phone).pack(side="left", anchor="center",
-                                                 padx=(18, 0), pady=MARGIN)
+                                                 padx=18, pady=6)
 
+        self._clock = tk.Label(bar, bg="white", fg=GREEN,
+                               font=self.font_foot_phone)
+        self._clock.pack(side="right", anchor="center", padx=18, pady=6)
         self._tick_clock()
 
     def _tick_clock(self):
         now = datetime.datetime.now()
         ampm = "오전" if now.hour < 12 else "오후"
         h12 = now.hour % 12 or 12
-        self._render_footer_art(f"{ampm} {h12}:{now.minute:02d}",
-                                now.strftime("%Y-%m-%d"))
+        self._clock.config(
+            text=f"{now.strftime('%Y-%m-%d')} {ampm} {h12}:{now.minute:02d}")
         self.after(10000, self._tick_clock)
-
-    def _render_footer_art(self, time_str, date_str):
-        """곡선 그래픽 이미지 위에 시각·날짜를 직접 그려 넣어 배경이
-        글자 사이로 비치게 한다."""
-        try:
-            from PIL import Image, ImageDraw, ImageFont, ImageTk
-        except ImportError:
-            return
-        try:
-            base = Image.open(fill_report.resource_path(
-                os.path.join("assets", "swoosh.png"))).convert("RGB")
-        except Exception:
-            return
-
-        h = self._footer_art_h
-        if base.height != h:
-            base = base.resize((round(base.width * h / base.height), h),
-                               Image.LANCZOS)
-        img = base.copy()
-        draw = ImageDraw.Draw(img)
-
-        fonts_dir = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
-        try:
-            f_time = ImageFont.truetype(os.path.join(fonts_dir, "malgunbd.ttf"), 20)
-            f_date = ImageFont.truetype(os.path.join(fonts_dir, "malgun.ttf"), 13)
-        except Exception:
-            f_time = f_date = ImageFont.load_default()
-
-        cx = img.width - 14           # 우측 여백
-        mid = h / 2
-        draw.text((cx, mid - 10), time_str, font=f_time, fill="white",
-                  anchor="rm", stroke_width=2, stroke_fill="#0A3A28")
-        draw.text((cx, mid + 12), date_str, font=f_date, fill="#DCEBE3",
-                  anchor="rm", stroke_width=1, stroke_fill="#0A3A28")
-
-        photo = ImageTk.PhotoImage(img)
-        self._imgs["_footer_art"] = photo  # 참조 유지
-        self._footer_art.configure(image=photo)
 
     def _section(self, root, num, title):
         """목업의 카드형 섹션: 녹색 번호 뱃지 + 녹색 제목 + 테두리 카드."""
@@ -480,6 +449,21 @@ class ReportApp(tk.Tk):
     @staticmethod
     def _next_row(parent):
         return parent.grid_size()[1]
+
+    @staticmethod
+    def _make_deselectable(rb, value, variable):
+        """이미 선택된 라디오버튼을 한 번 더 클릭하면 선택을 해제한다.
+
+        ttk 라디오버튼은 <ButtonRelease-1>에서 값이 확정되므로, 그보다 먼저
+        실행되는 인스턴스 바인딩에서 '클릭 직전 값'을 보고 같으면 비운 뒤
+        "break"로 기본 동작(재선택)을 막는다."""
+        def on_release(_e):
+            if variable.get() == value:
+                variable.set("")
+                rb.state(["!pressed"])
+                return "break"
+            return None
+        rb.bind("<ButtonRelease-1>", on_release)
 
     def _entry_row(self, parent, label, key, width=20):
         r = self._next_row(parent)
@@ -518,7 +502,9 @@ class ReportApp(tk.Tk):
         options_frame.grid(row=r, column=1, sticky="w", pady=1)
         var = tk.StringVar(value="")
         for opt in options:
-            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
+            rb = ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var)
+            rb.pack(side="left", padx=2)
+            self._make_deselectable(rb, opt, var)
         self.vars[key] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
         if detail_key:
@@ -617,7 +603,9 @@ class ReportApp(tk.Tk):
         options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
         var = tk.StringVar(value="")
         for opt in ["삼각형", "타원형", "원형", "세로타원형"]:
-            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).pack(side="left", padx=2)
+            rb = ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var)
+            rb.pack(side="left", padx=2)
+            self._make_deselectable(rb, opt, var)
         self.vars["shape"] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
 
