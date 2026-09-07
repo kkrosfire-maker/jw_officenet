@@ -103,7 +103,15 @@ class FileListController:
             self.remove(self.index)
 
     def remove_selected(self):
-        """썸네일 체크박스가 선택된(체크된) 항목들을 확인 후 한번에 삭제."""
+        """썸네일 체크박스가 선택된(체크된) 항목들을 확인 후 한번에 삭제.
+
+        remove()를 개수만큼 반복 호출하면, 지워지는 항목이 마침 현재 활성 파일이었을
+        때마다 미리보기가 매번 다음 파일로 다시 로드된다 — 로드는 자동 코너 감지·
+        원근 변환까지 동반해 장당 수백ms가 걸리므로(4000만 화소급 사진 기준 약 0.4초),
+        "전체선택 후 일괄삭제" 시 지워질 파일을 연달아 로드했다가 곧바로 버리는 낭비가
+        누적되어 창이 몇 초간 멈춘 것처럼 보인다. 그래서 목록은 한 번에 갱신하고,
+        미리보기 재로드는 활성 파일 자체가 삭제된 경우 최대 1회만 수행한다.
+        """
         idxs = self._panel.checked_indices()
         if not idxs:
             messagebox.showinfo("알림", "선택된 파일이 없습니다.\n썸네일 체크박스를 확인해 주세요.")
@@ -113,5 +121,31 @@ class FileListController:
                 f"체크된 {len(idxs)}개 파일을 목록에서 삭제할까요?\n"
                 f"(실제 파일은 삭제되지 않고, 목록에서만 제외됩니다)"):
             return
-        for i in sorted(idxs, reverse=True):
-            self.remove(i)
+
+        idx_set = set(idxs)
+        active_path = self.files[self.index] if self.files else None
+        for i in idxs:
+            self._panel.forget_cache(self.files[i])
+        self.files = [f for i, f in enumerate(self.files) if i not in idx_set]
+
+        if not self.files:
+            self.index = 0
+            if self._nav:
+                self._nav.pack_forget()
+            self._panel.rebuild(self.files, self.index)
+            self._on_empty()
+            return
+
+        if active_path in self.files:
+            self.index = self.files.index(active_path)
+        else:
+            self.index = min(self.index, len(self.files) - 1)
+            self._on_load(self.files[self.index])
+
+        if self._nav:
+            if len(self.files) > 1:
+                self._nav.pack(side="right", padx=8)
+            else:
+                self._nav.pack_forget()
+        self._update_nav()
+        self._panel.rebuild(self.files, self.index)
