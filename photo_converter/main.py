@@ -332,6 +332,8 @@ class App(TkinterDnD.Tk):
 
         self._setup_dnd()
         self.bind("<Delete>", self._on_key_delete)
+        self.bind_all("<Control-c>", self._on_key_copy)
+        self.bind_all("<Control-C>", self._on_key_copy)
         self.after(120, self._show_hint)
 
     # ── UI ──────────────────────────────────────────────────────────────
@@ -429,6 +431,14 @@ class App(TkinterDnD.Tk):
 
     def _on_key_delete(self, event):
         self._files.remove_current()
+
+    def _on_key_copy(self, event):
+        # 입력 위젯(Entry/Text 등)에 포커스가 있으면 기본 텍스트 복사 동작을 방해하지 않는다
+        w = event.widget
+        if isinstance(w, (tk.Entry, tk.Text)) or w.winfo_class() in ("Entry", "Text", "TEntry"):
+            return
+        self._copy_to_clipboard()
+        return "break"
 
     # ── DnD ─────────────────────────────────────────────────────────────
 
