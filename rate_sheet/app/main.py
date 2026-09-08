@@ -103,8 +103,8 @@ class RateSheetApp:
         self.field_map = {}
         self.current_results = []
         self.current_columns = []
-        self.sort_col = None
-        self.sort_ascending = True
+        self.sort_col = self.cfg.get("sort_col")
+        self.sort_ascending = self.cfg.get("sort_ascending", True)
         self._known_color_tags = set()
         self._sort_after_id = None
         self._grid_lines = []
@@ -112,6 +112,7 @@ class RateSheetApp:
         self._header_height = 28
         self._edit_entry = None
         self._edit_row_id = None
+        self._active_cell = None
 
         self.file_path_var = tk.StringVar(value=self.cfg.get("last_file", ""))
         self.keyword_var = tk.StringVar()
@@ -415,6 +416,10 @@ class RateSheetApp:
         self.tree.bind("<ButtonRelease-1>", self._on_heading_click)
         self.tree.bind("<Double-Button-1>", self._on_tree_double_click)
         self.tree.bind("<Configure>", self._schedule_grid_redraw)
+        self.tree.bind("<Button-1>", self._on_cell_click)
+        self.tree.bind("<Button-3>", self._on_right_click)
+        self.tree.bind("<Control-c>", self._on_ctrl_c)
+        self.tree.bind("<Control-C>", self._on_ctrl_c)
         vsb = ttk.Scrollbar(content, orient="vertical", command=self.tree.yview)
         hsb = ttk.Scrollbar(content, orient="horizontal", command=self.tree.xview)
         self._hsb = hsb
@@ -515,10 +520,11 @@ class RateSheetApp:
 
         self.current_results = results
         self.current_columns = columns
-        self.sort_col = None
-        self.sort_ascending = True
+        if self.sort_col not in columns:
+            self.sort_col = None
         self._setup_columns(columns)
-        self._refresh_rows(results, columns)
+        self._perform_sort()
+        self._refresh_rows(self.current_results, columns)
         self.status_var.set(f"검색 결과: {len(results)}건")
 
     def _setup_columns(self, columns):
@@ -577,6 +583,16 @@ class RateSheetApp:
             self.sort_col = col
             self.sort_ascending = True
 
+        self._perform_sort()
+        self._refresh_rows(self.current_results, self.current_columns)
+        self._save_sort_pref()
+
+    def _perform_sort(self):
+        """self.sort_col / self.sort_ascending 기준으로 현재 결과를 정렬만 한다(화면 갱신 없음)."""
+        col = self.sort_col
+        if not col or col not in self.current_columns:
+            return
+
         def sort_key(row):
             v = row.get(col)
             if col in ("약가", "요율"):
@@ -592,7 +608,11 @@ class RateSheetApp:
         # 값 기준으로 우선 정렬한 뒤, 값이 없는(N/A) 행은 방향과 무관하게 항상 맨 아래로 보낸다.
         self.current_results.sort(key=sort_key, reverse=not self.sort_ascending)
         self.current_results.sort(key=is_missing)
-        self._refresh_rows(self.current_results, self.current_columns)
+
+    def _save_sort_pref(self):
+        self.cfg["sort_col"] = self.sort_col
+        self.cfg["sort_ascending"] = self.sort_ascending
+        save_config(self.cfg)
 
     def _on_heading_click(self, event):
         """
@@ -678,6 +698,135 @@ class RateSheetApp:
         for iid in self.tree.get_children():
             self.tree.set(iid, CHECK_COL, mark)
         self._update_check_header()
+
+    # ---------- 셀/행/열 선택, 복사, 삭제 ----------
+    def _on_cell_click(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region != "cell":
+            return
+        row_id = self.tree.identify_row(event.y)
+        col = self._column_at(event.x)
+        if row_id and col and col != CHECK_COL:
+            self._active_cell = (row_id, col)
+
+    def _on_right_click(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region == "heading":
+            col = self._column_at(event.x)
+            if col and col != CHECK_COL:
+                self._show_heading_menu(event, col)
+            return
+
+        if region != "cell":
+            return
+        row_id = self.tree.identify_row(event.y)
+        col = self._column_at(event.x)
+        if not row_id or not col or col == CHECK_COL:
+            return
+
+        selected = self.tree.selection()
+        if row_id not in selected:
+            self.tree.selection_set(row_id)
+            selected = (row_id,)
+        self._active_cell = (row_id, col)
+        self._show_cell_menu(event, row_id, col, selected)
+
+    def _show_cell_menu(self, event, row_id, col, selected_rows):
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="복사", command=lambda: self._copy_cell(row_id, col))
+        menu.add_command(
+            label="행 복사", command=lambda: self._copy_rows(selected_rows)
+        )
+        menu.add_separator()
+        menu.add_command(
+            label="행 삭제", command=lambda: self._delete_rows(selected_rows)
+        )
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _show_heading_menu(self, event, col):
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="열 복사", command=lambda: self._copy_column(col))
+        menu.add_command(label="열 삭제", command=lambda: self._delete_column(col))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _on_ctrl_c(self, event):
+        self._copy_selection()
+        return "break"
+
+    def _copy_selection(self):
+        selected = self.tree.selection()
+        if len(selected) > 1:
+            self._copy_rows(selected)
+            return
+        if self._active_cell and self.tree.exists(self._active_cell[0]):
+            row_id, col = self._active_cell
+            if not selected or selected[0] == row_id:
+                self._copy_cell(row_id, col)
+                return
+        if selected:
+            self._copy_rows(selected)
+
+    def _copy_cell(self, row_id, col):
+        if not self.tree.exists(row_id):
+            return
+        value = self.tree.set(row_id, col)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(value)
+        self.status_var.set("셀 내용을 복사했습니다.")
+
+    def _copy_rows(self, row_ids):
+        row_ids = [r for r in row_ids if self.tree.exists(r)]
+        if not row_ids:
+            return
+        order = {iid: i for i, iid in enumerate(self.tree.get_children())}
+        row_ids = sorted(row_ids, key=lambda r: order.get(r, 0))
+        lines = [
+            "\t".join(self.tree.set(r, c) for c in self.current_columns)
+            for r in row_ids
+        ]
+        self.root.clipboard_clear()
+        self.root.clipboard_append("\n".join(lines))
+        self.status_var.set(f"{len(row_ids)}개 행을 복사했습니다.")
+
+    def _delete_rows(self, row_ids):
+        row_ids = [r for r in row_ids if self.tree.exists(r)]
+        if not row_ids:
+            return
+        indices = sorted(self.tree.index(r) for r in row_ids)
+        for idx in reversed(indices):
+            if 0 <= idx < len(self.current_results):
+                del self.current_results[idx]
+        self._active_cell = None
+        self._refresh_rows(self.current_results, self.current_columns)
+        self.status_var.set(f"{len(indices)}개 행을 삭제했습니다.")
+
+    def _copy_column(self, col):
+        lines = [col]
+        lines.extend(self.tree.set(iid, col) for iid in self.tree.get_children())
+        self.root.clipboard_clear()
+        self.root.clipboard_append("\n".join(lines))
+        self.status_var.set(f"'{col}' 열을 복사했습니다.")
+
+    def _delete_column(self, col):
+        if col not in self.current_columns:
+            return
+        remaining = [c for c in self.current_columns if c != col]
+        if not remaining:
+            messagebox.showwarning("알림", "최소 하나의 항목은 표시되어야 합니다.")
+            return
+        self.current_columns = remaining
+        if col in self.col_vars:
+            self.col_vars[col].set(False)
+        self._active_cell = None
+        self._setup_columns(self.current_columns)
+        self._refresh_rows(self.current_results, self.current_columns)
+        self.status_var.set(f"'{col}' 열을 삭제했습니다.")
 
     def _on_tree_double_click(self, event):
         if self._sort_after_id:
