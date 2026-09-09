@@ -223,7 +223,7 @@ class PictureDivider:
         # 버튼
         btn_frame = ttk.Frame(main)
         btn_frame.grid(row=3, column=0, pady=8)
-        btn_zip = ttk.Button(btn_frame, text="①  제약사별 ZIP 만들기", command=self._zip_pharma, width=22)
+        btn_zip = ttk.Button(btn_frame, text="①  제약사별 폴더 만들기", command=self._zip_pharma, width=22)
         btn_zip.grid(row=0, column=0, padx=6, pady=(0, 4))
         btn_sort = ttk.Button(btn_frame, text="②  병원별 사진 분류", command=self._sort_photos, width=20)
         btn_sort.grid(row=0, column=1, padx=6, pady=(0, 4))
@@ -330,7 +330,7 @@ class PictureDivider:
         for c in cols:
             self.tree.heading(c, text=(c + arrow) if c == col else c)
 
-    # ── 제약사별 ZIP ──────────────────────────────────────────────────────────
+    # ── 제약사별 폴더 ─────────────────────────────────────────────────────────
 
     def _zip_pharma(self):
         if not _PIL_AVAILABLE:
@@ -344,33 +344,32 @@ class PictureDivider:
 
         files = self._list_images(photo_dir)
         if not files:
-            self._log("[제약사ZIP] 이미지 파일이 없습니다.", "fail")
+            self._log("[제약사폴더] 이미지 파일이 없습니다.", "fail")
             return
 
-        out_dir = Path(photo_dir).parent / (Path(photo_dir).name + "_제약사ZIP")
+        out_dir = Path(photo_dir).parent / (Path(photo_dir).name + "_제약사폴더")
         self._run_in_thread(self._zip_pharma_worker, photo_dir, files, out_dir)
 
     def _zip_pharma_worker(self, photo_dir: str, files: list[str], out_dir: Path):
-        def on_event(e: pharma_zip.ZipEvent):
+        def on_event(e: pharma_zip.FolderEvent):
             if e.kind == "start":
                 self._log(f"\n{'─'*50}", "info")
-                self._log(f"[제약사ZIP 시작]  파일: {e.total_files}개  /  제약사: {e.total_pharma}개", "info")
+                self._log(f"[제약사폴더 시작]  파일: {e.total_files}개  /  제약사: {e.total_pharma}개", "info")
                 self._log(f"출력 폴더: {e.out_dir}", "info")
                 self._log(f"{'─'*50}", "info")
             elif e.kind == "convert_failed":
                 self._log(f"  ✗  변환 실패: {e.filename} ({e.error})", "fail")
-            elif e.kind == "zip_created":
-                tag = "fail" if e.over_limit else "ok"
+            elif e.kind == "folder_created":
                 self._log(
-                    f"  ✓  {e.folder_name}  ({e.file_count}개 JPG)  →  {e.folder_name}.zip  [{e.zip_mb:.1f} MB]",
-                    tag,
+                    f"  ✓  {e.folder_name}  ({e.file_count}개 JPG)  →  {e.folder_name}\\",
+                    "ok",
                 )
             elif e.kind == "summary":
                 self._log(f"{'─'*50}", "info")
-                self._log(f"[제약사ZIP 완료]  ZIP {e.total_zips}개 생성  →  {e.out_dir}", "info")
-                self.root.after(0, lambda: self.status_var.set(f"제약사ZIP 완료 — {e.total_zips}개 ZIP 생성"))
+                self._log(f"[제약사폴더 완료]  폴더 {e.total_folders}개 생성  →  {e.out_dir}", "info")
+                self.root.after(0, lambda: self.status_var.set(f"제약사폴더 완료 — {e.total_folders}개 폴더 생성"))
 
-        pharma_zip.build_pharma_zips(photo_dir, files, out_dir, on_event=on_event)
+        pharma_zip.build_pharma_folders(photo_dir, files, out_dir, on_event=on_event)
 
     # ── 분류 실행 ────────────────────────────────────────────────────────────
 
