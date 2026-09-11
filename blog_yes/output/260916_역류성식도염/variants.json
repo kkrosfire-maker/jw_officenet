@@ -1,0 +1,58 @@
+{
+  "corner_label_text": "역류성식도염, 환절기에 왜 심해질까?",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 1,
+      "title": "환절기에 역류가<br>심해지는 이유",
+      "items": [
+        "일교차로 자율신경 균형이 흔들려 위산 분비와 위장 운동이 영향을 받는다",
+        "식욕이 늘어 과식과 야식이 잦아진다",
+        "기름진 음식과 술자리가 많아진다",
+        "활동량이 줄어 위 배출이 느려진다"
+      ],
+      "illustration_desc": "쌀쌀한 날씨에 겉옷을 걸치고 명치를 손으로 짚으며 속이 불편해하는 사람 전신",
+      "illustration_file": "Gemini_Generated_Image_vpldc2vpldc2vpld.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 2,
+      "title": "위내시경을 꼭<br>받아야 하나요?",
+      "body_html": "경고 증상 없이 전형적인 가슴쓰림만 있다면 <strong>위산을 줄이는 약</strong>을 일정 기간 복용하며 반응을 봅니다. 다만 <strong>약에 반응이 부족하거나, 끊으면 바로 재발하거나, 삼킴 곤란 같은 경고 증상</strong>이 있으면 위내시경으로 식도의 미란, 궤양, 협착, 바렛식도를 직접 확인하고 손상 정도를 등급으로 나눕니다.",
+      "illustration_desc": "위내시경 검사 장면을 설명하며 내시경 장비 옆에 서 있는 의료진 상반신",
+      "illustration_file": "Gemini_Generated_Image_7cqso97cqso97cqs.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "환절기 생활관리<br>체크리스트",
+      "items": [
+        "과체중이라면 체중을 줄인다",
+        "금연하고 술을 줄인다",
+        "잠들기 전 2~3시간은 공복을 유지한다",
+        "탄수화물 비중을 줄이고 식이섬유를 챙긴다",
+        "커피·탄산·술·초콜릿 중 증상을 유발하는 것을 절제한다"
+      ],
+      "illustration_desc": "식후 바로 눕지 않고 가볍게 산책하며 생활습관을 지키는 사람 전신",
+      "illustration_file": "Gemini_Generated_Image_pyowqfpyowqfpyow.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "이런 신호는<br>병원에 가야 합니다",
+      "items": [
+        "음식을 삼키기 어렵거나 삼킬 때 통증이 있다",
+        "검은 변, 토혈, 빈혈 등 출혈이 의심되거나 체중이 저절로 줄었다",
+        "반복적인 구토가 있다",
+        "50세 이후 처음으로 상부위장관 증상이 시작됐다",
+        "가슴쓰림, 이물감, 만성기침이 수 주 이상 반복된다"
+      ],
+      "illustration_desc": "경고 증상 체크리스트를 들고 환자에게 진료를 권하는 의료진 상반신",
+      "illustration_file": "Gemini_Generated_Image_3g22ej3g22ej3g22.png"
+    }
+  ]
+}

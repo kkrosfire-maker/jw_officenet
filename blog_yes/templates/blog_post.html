@@ -47,8 +47,9 @@
     color: #333;
     margin: 28px 0 10px;
   }
-  p { margin: 0 0 14px; word-break: keep-all; }
+  p { margin: 0 0 14px; word-break: keep-all; text-align: left; }
   strong { color: #1a2340; }
+  .warn-text { color: #c0392b; font-weight: 700; }
   ul, ol { margin: 8px 0 16px 0; padding-left: 24px; }
   li { margin-bottom: 6px; }
   figure { margin: 28px 0; text-align: center; }
@@ -90,7 +91,35 @@
     border-radius: 0 8px 8px 0;
     font-size: 17px;
     color: #333;
+    text-align: left;
   }
+  .callout {
+    margin: 22px 0;
+    padding: 16px 18px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 15.5px;
+    line-height: 1.7;
+  }
+  .callout p { margin: 0 0 6px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout-title {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .callout-warn {
+    background: #fff7ed;
+    border-left: 4px solid #c0392b;
+    color: #333;
+  }
+  .callout-warn .callout-title { color: #c0392b; }
+  .callout-tip {
+    background: #f0f8f0;
+    border-left: 4px solid #2e7d32;
+    color: #333;
+  }
+  .callout-tip .callout-title { color: #2e7d32; }
   .preview-badge {
     display: inline-block;
     background: #F5A623;

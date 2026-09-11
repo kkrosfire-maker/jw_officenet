@@ -27,7 +27,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config as cfg
 
 
-def best_font_size(draw, lines, font_path, max_width, start=110):
+def best_font_size(draw, lines, font_path, max_width, start=110, scale=1.0):
+    # 2026-08-12: 제목이 2줄 이상이면 세로로 너무 커 보인다는 피드백에 따라 시작 크기를 70%로 낮춤
+    start = int(start * scale)
     for size in range(start, 40, -2):
         font = ImageFont.truetype(font_path, size)
         widths = [draw.textbbox((0, 0), l, font=font)[2] - draw.textbbox((0, 0), l, font=font)[0] for l in lines]
@@ -79,7 +81,8 @@ def render_thumbnail(topic):
         draw_placeholder(thumb, cfg.YONSEI_THUMB_IMAGE_BOX, illust_desc)
 
     draw = ImageDraw.Draw(thumb)
-    font = best_font_size(draw, title_lines, cfg.YONSEI_FONT_EXTRABOLD, cfg.YONSEI_THUMB_MAX_WIDTH)
+    title_scale = 0.7 if len(title_lines) >= 2 else 1.0
+    font = best_font_size(draw, title_lines, cfg.YONSEI_FONT_EXTRABOLD, cfg.YONSEI_THUMB_MAX_WIDTH, scale=title_scale)
     y = cfg.YONSEI_THUMB_LINE_Y_START
     for line in title_lines:
         bb = draw.textbbox((0, 0), line, font=font)

@@ -61,7 +61,7 @@ YONSEI_FULL_W = YONSEI_TEXT_RIGHT - YONSEI_TEXT_LEFT                # 2113
 # 타이포그래피 (2026-07-15 확정값)
 YONSEI_TITLE_FONT_STACK = "'Pretendard ExtraBold','Noto Sans KR','Malgun Gothic',sans-serif"
 YONSEI_BODY_FONT_STACK = "'Pretendard SemiBold','Noto Sans KR','Malgun Gothic',sans-serif"
-YONSEI_TITLE_PX = 190
+YONSEI_TITLE_PX = 152      # 2026-08-12: 190px의 80%로 축소 (본문 제목이 너무 커 보인다는 피드백)
 YONSEI_BODY_PX = 60
 YONSEI_TITLE_GAP = 70
 
@@ -92,7 +92,11 @@ YONSEI_THUMB_LINE_Y_START = 650
 YONSEI_THUMB_LINE_SPACING = 115
 YONSEI_THUMB_MAX_WIDTH = 660
 YONSEI_THUMB_TEXT_COLOR = (26, 35, 64, 255)   # #1A2340
-YONSEI_THUMB_IMAGE_BOX = (116, 110, 886, 600)  # 카드 백지 영역 실측 중심 x≈501 기준 (제목의 545와 다름, 혼동 금지)
+YONSEI_THUMB_IMAGE_BOX = (195, 110, 849, 600)  # 2026-08-18: 우측으로 30px 치우쳐 보인다는 피드백으로 좌측 20px 이동
+                                    # (기존 215,869 → 195,849). 카드 백지 영역 실측 중심 x≈501 기준 (제목의 545와 다름, 혼동 금지)
+                                    # 2026-08-12: 좌우 폭을 기존 770px의 85%(≈654px)로 축소 — 일러스트 좌측이
+                                    # 배경 스프링 링을 가리는 문제가 있어 중심(x=501)은 유지한 채 폭만 줄임
+                                    # 2026-08-12: 이후 그림을 캔버스(1024px) 기준 우측으로 4%(≈41px) 이동 (중심 x≈542)
 
 
 def topic_dir(topic: str) -> str:

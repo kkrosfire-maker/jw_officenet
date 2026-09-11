@@ -1,0 +1,54 @@
+{
+  "corner_label_text": "지방간, 간수치 정상이어도 안심 못하는 이유",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "지방간은<br>왜 생기나요?",
+      "body_html": "술과 상관없이 생기는 지방간의 핵심 원인은 <strong>인슐린 저항성</strong>입니다. 과잉 열량과 액상과당 섭취에 운동 부족이 겹치면 간세포 안에 중성지방이 쌓입니다. 그래서 병명도 비만·당뇨·고혈압과 함께 온다는 뜻의 <strong>대사이상지방간질환(MASLD)</strong>으로 바뀌었고, 우리나라 성인 4명 중 1명이 여기에 해당합니다.",
+      "illustration_desc": "간이 그려진 패널 옆에서 한 손으로 배(간 부위)를 가리키며 설명하는 의료진의 상반신",
+      "illustration_file": "images/ill_liver.jpeg"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 2,
+      "title": "건강검진에서<br>우연히 발견됩니다",
+      "body_html": "지방간은 대부분 증상이 없어 <strong>복부초음파</strong>나 혈액검사에서 우연히 발견됩니다. 복부초음파는 방사선 노출이 없어 1차 검사로 널리 쓰이지만, 지방이 5~20%만 낀 경도 지방간은 놓칠 수 있습니다. 게다가 <strong>간수치(AST·ALT)</strong>가 정상이어도 지방간이나 섬유화가 없다고 단정하기는 어렵습니다.",
+      "illustration_desc": "누워 있는 환자의 복부에 초음파 프로브를 대고 모니터를 확인하는 의료진의 상반신",
+      "illustration_file": "images/ill_ultrasound.jpeg"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "어떤 검사로<br>진행 정도를 볼까요",
+      "items": [
+        "FIB-4 지수 — 나이·간수치·혈소판 수치로 계산하는 1차 선별 검사",
+        "FIB-4 1.3 미만 — 진행성 섬유화 가능성이 낮아 경과 관찰",
+        "FIB-4 2.67 초과 — 전문의의 정밀 평가가 필요한 단계",
+        "간섬유화스캔(피브로스캔) — FIB-4가 애매할 때 간이 굳은 정도를 직접 측정",
+        "간섬유화스캔 8kPa 미만은 대체로 안심, 이상이면 소화기내과 추가 평가"
+      ],
+      "illustration_desc": "피브로스캔 결과지와 계산기를 들고 수치를 확인하는 의료진의 전신",
+      "illustration_file": "images/ill_sheet.jpeg"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "지방간 관리,<br>체중 감량이 먼저",
+      "items": [
+        "체중 3~5% 감량 — 간에 낀 지방이 줄어듭니다",
+        "체중 7% 감량 — 지방간염(간 염증)이 호전됩니다",
+        "체중 10% 감량 — 간섬유화까지 호전될 수 있습니다",
+        "식이 — 지중해식 식단, 가당음료·액상과당 중단, 하루 500~1,000kcal 감량",
+        "운동 — 중강도 유산소 주 150~300분, 근력운동 주 2~3회",
+        "감량 속도 — 주당 0.5~1kg로 천천히, 급하게 빼지 않기"
+      ],
+      "illustration_desc": "운동복 차림으로 체중계 위에 올라 목표를 적은 메모를 확인하는 사람의 전신",
+      "illustration_file": "images/ill_weightloss.jpeg"
+    }
+  ]
+}

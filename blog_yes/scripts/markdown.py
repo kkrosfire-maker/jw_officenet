@@ -3,9 +3,11 @@ Markdown → HTML 변환기
 
 지원 구문:
   # h1  ## h2  ### h3
-  **bold**  *italic*  `code`
+  **bold**  *italic*  `code`  ==red==(경고/중요 단어 레드 강조)
   - 또는 * 으로 시작하는 unordered list
-  > blockquote
+  > blockquote (연속된 '>' 줄은 하나의 블록으로 묶임)
+    > ⚠️ 제목 + 이어지는 '>' 줄  → 주의 콜아웃 박스(.callout-warn)
+    > 💡 제목 + 이어지는 '>' 줄  → 팁 콜아웃 박스(.callout-tip)
   | 표 | (GFM 스타일, 구분행 포함)
   --- (hr)
   ![alt](./images/filename.png)  → <figure> 태그로 변환
@@ -24,6 +26,7 @@ def inline(text):
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"\*(.+?)\*",     r"<em>\1</em>",         text)
     text = re.sub(r"`(.+?)`",       r"<code>\1</code>",      text)
+    text = re.sub(r"==(.+?)==",     r'<span class="warn-text">\1</span>', text)
     return text
 
 
@@ -45,6 +48,8 @@ def md_to_html(text, img_base=""):
     ul_buf = []
     in_ol = False
     ol_buf = []
+    in_quote = False
+    quote_buf = []
 
     def flush_table(buf):
         rows = []
@@ -76,12 +81,28 @@ def md_to_html(text, img_base=""):
         )
         return f"<ol>{items}</ol>"
 
+    def flush_quote(buf):
+        """연속된 '>' 줄을 하나의 블록으로 묶는다.
+        첫 줄이 ⚠️/💡 로 시작하면 콜아웃 박스(주의/팁)로, 아니면 기존 인용구로 렌더링한다."""
+        contents = [re.sub(r"^>\s?", "", l) for l in buf]
+        first = contents[0].strip()
+        for prefix, cls, label in (("⚠️", "callout-warn", "⚠️"), ("💡", "callout-tip", "💡")):
+            if first.startswith(prefix):
+                title = first[len(prefix):].strip()
+                body_lines = [c for c in contents[1:] if c.strip()]
+                title_html = f'<span class="callout-title">{label} {inline(title)}</span>' if title else ""
+                body_html = "".join(f"<p>{inline(l)}</p>" for l in body_lines)
+                return f'<div class="callout {cls}">{title_html}{body_html}</div>'
+        return "".join(f"<blockquote>{inline(c)}</blockquote>" for c in contents if c.strip())
+
     for line in lines:
         # 이미지 — 버퍼 중단 후 <figure> 출력
         m = re.match(r"!\[([^\]]*)\]\(([^)]+)\)\s*$", line.strip())
         if m:
             if in_table: html_lines.append(flush_table(table_buf)); table_buf = []; in_table = False
             if in_ul:    html_lines.append(flush_ul(ul_buf));    ul_buf = [];    in_ul = False
+            if in_ol:    html_lines.append(flush_ol(ol_buf));    ol_buf = [];    in_ol = False
+            if in_quote: html_lines.append(flush_quote(quote_buf)); quote_buf = []; in_quote = False
             alt, src = m.group(1), m.group(2)
             html_lines.append(
                 f'<figure><img src="{src}" alt="{alt}"></figure>'
@@ -90,8 +111,9 @@ def md_to_html(text, img_base=""):
 
         # 표 행
         if re.match(r"^\s*\|", line):
-            if in_ul: html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
-            if in_ol: html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
+            if in_ul:    html_lines.append(flush_ul(ul_buf)); ul_buf = []; in_ul = False
+            if in_ol:    html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
+            if in_quote: html_lines.append(flush_quote(quote_buf)); quote_buf = []; in_quote = False
             in_table = True
             table_buf.append(line)
             continue
@@ -100,7 +122,8 @@ def md_to_html(text, img_base=""):
 
         # 순서 없는 리스트
         if re.match(r"^\s*[-*]\s+", line):
-            if in_ol: html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
+            if in_ol:    html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
+            if in_quote: html_lines.append(flush_quote(quote_buf)); quote_buf = []; in_quote = False
             if not in_ul:
                 in_ul = True; ul_buf = []
             ul_buf.append(line)
@@ -110,6 +133,7 @@ def md_to_html(text, img_base=""):
 
         # 순서 있는 리스트 (1. 2. 3. ...)
         if re.match(r"^\s*\d+\.\s+", line):
+            if in_quote: html_lines.append(flush_quote(quote_buf)); quote_buf = []; in_quote = False
             if not in_ol:
                 in_ol = True; ol_buf = []
             ol_buf.append(line)
@@ -117,20 +141,27 @@ def md_to_html(text, img_base=""):
         if in_ol:
             html_lines.append(flush_ol(ol_buf)); ol_buf = []; in_ol = False
 
+        # 인용구 / 콜아웃 박스 (⚠️ 주의, 💡 팁)
+        if re.match(r"^>\s?", line):
+            if not in_quote:
+                in_quote = True; quote_buf = []
+            quote_buf.append(line)
+            continue
+        if in_quote:
+            html_lines.append(flush_quote(quote_buf)); quote_buf = []; in_quote = False
+
         # 수평선
         if re.match(r"^-{3,}$", line.strip()):
             html_lines.append("<hr>")
             continue
 
-        # 제목 · blockquote · 빈 줄 · 문단
+        # 제목 · 빈 줄 · 문단
         if line.startswith("# "):
             html_lines.append(f"<h1>{inline(line[2:].strip())}</h1>")
         elif line.startswith("## "):
             html_lines.append(f"<h2>{inline(line[3:].strip())}</h2>")
         elif line.startswith("### "):
             html_lines.append(f"<h3>{inline(line[4:].strip())}</h3>")
-        elif re.match(r"^>\s+", line):
-            html_lines.append(f"<blockquote>{inline(line[1:].strip())}</blockquote>")
         elif line.strip() == "":
             html_lines.append("")
         else:
@@ -140,5 +171,6 @@ def md_to_html(text, img_base=""):
     if in_table: html_lines.append(flush_table(table_buf))
     if in_ul:    html_lines.append(flush_ul(ul_buf))
     if in_ol:    html_lines.append(flush_ol(ol_buf))
+    if in_quote: html_lines.append(flush_quote(quote_buf))
 
     return "\n".join(html_lines)

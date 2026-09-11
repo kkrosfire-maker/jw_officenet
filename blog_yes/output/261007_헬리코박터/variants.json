@@ -1,0 +1,66 @@
+{
+  "corner_label_text": "헬리코박터, 꼭 치료해야 할까?",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "헬리코박터,<br>어떻게 감염될까요?",
+      "body_html": "헬리코박터 파일로리는 위 점막에 사는 <strong>나선형 세균</strong>으로, 입과 입·구토물·대변을 거쳐 사람 사이에 옮습니다. 대부분 <strong>만 5세 이전</strong>에 감염되고, 씹어 준 음식을 아이에게 주거나 한 그릇을 함께 떠먹는 가족 내 전파가 큰 비중을 차지합니다. 성인기 새 감염은 드물고, 국내 성인은 약 절반이 감염된 것으로 추정됩니다.",
+      "illustration_desc": "위 모양 도식 위의 나선형 헬리코박터균을 돋보기로 들여다보는 사람 상반신",
+      "illustration_file": "Gemini_Generated_Image_mc3immmc3immmc3i.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "A",
+      "seq": 2,
+      "title": "헬리코박터 진단,<br>검사 방법은?",
+      "items": [
+        "내시경 검사: CLO 검사·조직검사로 확인, 위축성 위염·장상피화생도 함께 관찰",
+        "요소호기검사(UBT): 요소를 마신 뒤 호흡 분석, 현재 감염과 제균 성공 확인에 사용",
+        "대변항원검사: 내시경 없이 가능, 제균 후 확인에도 활용",
+        "혈액 항체검사: 간편하지만 과거·현재 감염 구분 불가, 제균 확인에는 부적합"
+      ],
+      "illustration_desc": "내시경과 요소호기검사 튜브 등 검사 도구를 들고 설명하는 의료진 전신",
+      "illustration_file": "Gemini_Generated_Image_v25yorv25yorv25y.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "제균치료,<br>필요한 경우는?",
+      "items": [
+        "제균 권고: 소화성 궤양, 위 MALT 림프종, 조기위암 절제 후, ITP, 위암 가족력",
+        "2025년 추가: 위암 예방 목적의 위염, 10mm 이하 증식성 위용종",
+        "신중히 판단: 소견 없는 무증상 감염, 역류성 식도염 단독, 짧은 기대여명",
+        "보험: 4대 적응증은 급여, 그 외는 대부분 비급여"
+      ],
+      "illustration_desc": "한 손엔 체크 표시, 다른 손엔 물음표를 들고 제균 여부를 저울질하듯 고민하는 사람 전신",
+      "illustration_file": "Gemini_Generated_Image_c87ancc87ancc87a.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "표준 제균 요법과<br>복용 기간",
+      "items": [
+        "맞춤치료 우선: 감수성(PCR) 검사가 되면 결과에 맞춰 약을 고른다",
+        "감수성 확인 시: 삼제요법 7일",
+        "내성 확인 시: 비스무스 사제요법 10~14일",
+        "검사가 어려우면: 10일 동시치료 또는 비스무스 사제요법",
+        "약 조합·기간은 개인 상태에 따라 전문의와 상담해 결정"
+      ],
+      "illustration_desc": "여러 종류의 약봉지와 알약, 달력을 함께 들고 복용 기간을 설명하는 의료진 전신",
+      "illustration_file": "Gemini_Generated_Image_l9fn58l9fn58l9fn.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 5,
+      "title": "제균의 위암 예방<br>효과와 재감염",
+      "body_html": "헬리코박터는 만성 위염에서 <strong>위축성 위염·장상피화생</strong>을 거쳐 위선암으로 이어지는 경로의 출발점으로, 국제암연구소(IARC)는 1994년 이 균을 <strong>1군 발암물질</strong>로 분류했습니다. 위암 직계 가족력이 있는 감염자는 제균 시 위암 위험이 크게 낮아지고, 조기위암 절제 후 제균하면 이시성 위암이 약 절반으로 줄었습니다. 다만 제균에 성공해도 국내 <strong>재감염률은 연 2~4%</strong>입니다.",
+      "illustration_desc": "위 모양 도식을 방패로 감싸 보호하는 인물 상반신, 예방을 상징",
+      "illustration_file": "Gemini_Generated_Image_fevykrfevykrfevy.png"
+    }
+  ]
+}
