@@ -32,12 +32,13 @@ class CandidatePickerDialog(tk.Toplevel):
         ttk.Button(search_row, text="검색", style="Secondary.TButton",
                    command=self._do_search).pack(side="left")
 
-        columns = ("score", "category", "order_name", "manufacturer", "spec", "buy", "sell")
+        columns = ("score", "category", "order_name", "manufacturer", "spec", "buy", "sell", "base_date")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
         headings = {"score": "유사도", "category": "항목", "order_name": "제너리스주문명",
-                    "manufacturer": "제조사", "spec": "규격", "buy": "매입가", "sell": "매출가"}
+                    "manufacturer": "제조사", "spec": "규격", "buy": "매입가", "sell": "매출가",
+                    "base_date": "기준일자"}
         widths = {"score": 60, "category": 90, "order_name": 150, "manufacturer": 110,
-                  "spec": 120, "buy": 80, "sell": 80}
+                  "spec": 120, "buy": 80, "sell": 80, "base_date": 90}
         for col in columns:
             self.tree.heading(col, text=headings[col])
             self.tree.column(col, width=widths[col], anchor="w")
@@ -58,7 +59,7 @@ class CandidatePickerDialog(tk.Toplevel):
         ttk.Button(btn_row, text="선택", style="Accent.TButton",
                    command=self._confirm).pack(side="right", padx=8)
 
-        theme.autosize(self, min_w=780, min_h=380)
+        theme.autosize(self, min_w=870, min_h=380)
 
     def _populate_candidates(self, query_text):
         for iid in self.tree.get_children():
@@ -71,6 +72,7 @@ class CandidatePickerDialog(tk.Toplevel):
                 f'{c.score*100:.0f}%', c.item["category"], c.item["order_name"],
                 c.item["manufacturer"], c.item["spec"],
                 f'{c.item["buy_price"]:,.0f}', f'{c.item["sell_price"]:,.0f}',
+                c.item["base_date"] or "",
             ))
             self._rows[iid] = c.item
         if candidates:
@@ -90,6 +92,7 @@ class CandidatePickerDialog(tk.Toplevel):
             self.tree.insert("", "end", iid=iid, values=(
                 "-", item["category"], item["order_name"], item["manufacturer"],
                 item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}',
+                item["base_date"] or "",
             ))
             self._rows[iid] = item
 

@@ -172,7 +172,7 @@ class OrderTab(ttk.Frame):
         self._refresh_grid()
         new_idx = len(self.lines) - 1
         self.tree.selection_set(str(new_idx))
-        self._begin_cell_edit(str(new_idx), "remark")
+        self._begin_cell_edit(str(new_idx), "qty")
 
     def _rematch_line(self, idx: int, new_raw_text: str):
         resolved = self._resolve_item_for_text(new_raw_text)
@@ -191,7 +191,7 @@ class OrderTab(ttk.Frame):
         line.match_type = match_type
         self._refresh_grid()
         self.tree.selection_set(str(idx))
-        self._begin_cell_edit(str(idx), "remark")
+        self._begin_cell_edit(str(idx), "qty")
 
     # ---- 그리드 렌더링 ----
     def _refresh_grid(self):
@@ -274,8 +274,11 @@ class OrderTab(ttk.Frame):
             self._active_editor = None
             entry.destroy()
             self._commit_cell_edit(row_iid, col_name, new_value)
-            if is_return and col_name == "remark" and row_iid != self.NEW_ROW_IID:
-                self._begin_cell_edit(self.NEW_ROW_IID, "raw")
+            if is_return and row_iid != self.NEW_ROW_IID:
+                if col_name == "qty":
+                    self._begin_cell_edit(row_iid, "remark")
+                elif col_name == "remark":
+                    self._begin_cell_edit(self.NEW_ROW_IID, "raw")
 
         def cancel(_event=None):
             if self._active_editor is None or self._active_editor[0] is not entry:
