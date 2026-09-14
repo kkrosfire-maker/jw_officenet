@@ -552,29 +552,32 @@ class ReportApp(tk.Tk):
         r = self._next_row(parent)
         ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         var = tk.StringVar()
-        entry = ttk.Entry(parent, textvariable=var, width=14)
-        entry.grid(row=r, column=1, sticky="w", pady=1)
 
-        def open_calendar(_=None):
+        # 입력칸+달력 버튼을 자체 프레임에 담아, 다른 행의 열 너비와 무관하게
+        # 버튼이 입력칸 바로 옆에 딱 붙도록 한다.
+        wrap = ttk.Frame(parent)
+        wrap.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
+        entry = ttk.Entry(wrap, textvariable=var, width=14)
+        entry.pack(side="left")
+
+        def open_calendar():
             DatePicker(self, var)
 
-        # 검사일/판독일 칸을 클릭하면 달력 팝업으로 날짜를 고른다.
-        entry.bind("<Button-1>", open_calendar)
-
-        def fill_today():
-            var.set(datetime.date.today().isoformat())
+        # 달력 버튼으로만 날짜를 고른다 (칸 클릭으로는 안 뜸).
+        # takefocus=0: 엔터/탭 이동 시 이 버튼을 건너뛰고 바로 다음 입력칸으로 간다.
+        ttk.Button(wrap, text="달력", width=5, command=open_calendar,
+                   takefocus=0).pack(side="left", padx=(2, 0))
 
         def on_return(_e):
-            fill_today()
+            var.set(datetime.date.today().isoformat())
             nxt = entry.tk_focusNext()
             if nxt is not None:
                 nxt.focus()
             return "break"
 
-        # 검사일/판독일 칸에서 엔터를 치면 바로 오늘 날짜로 채워진다.
+        # 검사일/판독일 칸에서 엔터를 치면 오늘 날짜가 채워지고 다음 칸으로 이동한다.
         entry.bind("<Return>", on_return)
 
-        ttk.Button(parent, text="오늘", width=5, command=fill_today).grid(row=r, column=2, sticky="w", padx=4)
         self.vars[key] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
         return r
