@@ -202,16 +202,6 @@ def update_item_prices(item_id: int, new_buy: float, new_sell: float, memo: str 
         )
 
 
-def update_item_fields(item_id: int, **fields) -> None:
-    if not fields:
-        return
-    now = datetime.now().isoformat(timespec="seconds")
-    cols = ", ".join(f"{k}=?" for k in fields)
-    values = list(fields.values()) + [now, item_id]
-    with connect() as conn:
-        conn.execute(f"UPDATE items SET {cols}, updated_at=? WHERE id=?", values)
-
-
 def get_price_history(item_id: int):
     with connect() as conn:
         rows = conn.execute(
@@ -251,14 +241,3 @@ def add_order_line(order_id, raw_text, item_id, quantity, requirement_text,
             (order_id, raw_text, item_id, quantity, requirement_text, spec_text,
              applied_buy, applied_sell, match_type, remark),
         )
-
-
-def set_order_exported_path(order_id: int, path: str) -> None:
-    with connect() as conn:
-        conn.execute("UPDATE orders SET exported_path=? WHERE id=?", (path, order_id))
-
-
-def list_orders():
-    with connect() as conn:
-        rows = conn.execute("SELECT * FROM orders ORDER BY id DESC").fetchall()
-        return [dict(r) for r in rows]
