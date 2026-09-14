@@ -244,8 +244,15 @@ class ReportApp(tk.Tk):
 
         self.prostate_page = tk.Frame(self.content_area, bg=PAGE_BG)
         self.kidney_page = tk.Frame(self.content_area, bg=PAGE_BG)
+        self.scrotal_page = tk.Frame(self.content_area, bg=PAGE_BG)
+        self._pages = {
+            "전립선": self.prostate_page,
+            "신장": self.kidney_page,
+            "음낭": self.scrotal_page,
+        }
         self._build_prostate_page(self.prostate_page)
         self._build_kidney_page(self.kidney_page)
+        self._build_scrotal_page(self.scrotal_page)
 
         self._show_form("전립선")
 
@@ -262,10 +269,29 @@ class ReportApp(tk.Tk):
         self._build_actions(root)
 
     def _build_kidney_page(self, container):
-        # 신장 판독지 양식은 추후 추가 예정 (자리만 마련해둠).
-        tk.Label(container, text="신장 판독지 작성기는 준비 중입니다.",
-                 bg=PAGE_BG, fg=GREEN_TINT, font=self.font_section).pack(
-            expand=True, pady=60)
+        scroll = ScrollableFrame(container)
+        scroll.pack(fill="both", expand=True, padx=6, pady=3)
+        root = scroll.body
+
+        self._build_kidney_patient_section(root)
+        self._build_kidney_exam_section(root)
+        self._build_kidney_upper_section(root)
+        self._build_kidney_bladder_section(root)
+        self._build_kidney_conclusion_section(root)
+        self._build_actions(root)
+
+    def _build_scrotal_page(self, container):
+        scroll = ScrollableFrame(container)
+        scroll.pack(fill="both", expand=True, padx=6, pady=3)
+        root = scroll.body
+
+        self._build_scrotal_patient_section(root)
+        self._build_scrotal_exam_section(root)
+        self._build_scrotal_side_section(root, "3-(1)", "검사 소견 (필수) - 우측", "rt")
+        self._build_scrotal_side_section(root, "3-(2)", "검사 소견 (필수) - 좌측", "lt")
+        self._build_scrotal_other_section(root)
+        self._build_scrotal_conclusion_section(root)
+        self._build_actions(root)
 
     # ---------- 디자인 (정원유니어스 목업 리스킨) ----------
 
@@ -428,11 +454,11 @@ class ReportApp(tk.Tk):
         if swoosh is not None:
             tk.Label(hdr, image=swoosh, bg="white").pack(side="right")
 
-        # 우측: [전립선] / [신장] 양식 전환 버튼 (신장 폼은 추후 추가 예정)
+        # 우측: [전립선] / [신장] / [음낭] 양식 전환 버튼
         form_bar = tk.Frame(hdr, bg="white")
         form_bar.pack(side="right", anchor="s", padx=(0, 14), pady=HEADER_PAD_Y)
         self._form_buttons = {}
-        for name in ("전립선", "신장"):
+        for name in ("전립선", "신장", "음낭"):
             btn = ttk.Button(form_bar, text=name, style="FormTab.TButton",
                               command=lambda n=name: self._show_form(n))
             btn.pack(side="left", padx=3)
@@ -442,12 +468,11 @@ class ReportApp(tk.Tk):
 
     def _show_form(self, name):
         self.current_form = name
-        if name == "신장":
-            self.prostate_page.pack_forget()
-            self.kidney_page.pack(fill="both", expand=True)
-        else:
-            self.kidney_page.pack_forget()
-            self.prostate_page.pack(fill="both", expand=True)
+        for page_name, page in self._pages.items():
+            if page_name == name:
+                page.pack(fill="both", expand=True)
+            else:
+                page.pack_forget()
         for form_name, btn in self._form_buttons.items():
             btn.configure(style="FormTabActive.TButton" if form_name == name else "FormTab.TButton")
 
@@ -606,6 +631,52 @@ class ReportApp(tk.Tk):
             self._reset_hooks.append(lambda v=dvar: v.set(""))
         return r
 
+    def _finding_row(self, parent, label, key_prefix, presence_options=PRESENCE_OPTIONS,
+                      categories=None, detail=False, detail_width=14):
+        """신장/음낭 판독지의 반복되는 '없음/있음 (+ 세부 카테고리/상세)' 행.
+
+        - presence: key_prefix + "_presence"
+        - 카테고리 체크박스(다중선택): key_prefix + "_cat_" + 카테고리명
+        - 상세 텍스트(기타 등): key_prefix + "_detail"
+        """
+        r = self._next_row(parent)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
+
+        options_frame = ttk.Frame(parent)
+        options_frame.grid(row=r, column=1, sticky="w", pady=1)
+        default = "없음" if "없음" in presence_options else presence_options[0]
+        pvar = tk.StringVar(value=default)
+        for opt in presence_options:
+            rb = ttk.Radiobutton(options_frame, text=opt, value=opt, variable=pvar)
+            rb.pack(side="left", padx=2)
+            self._make_deselectable(rb, opt, pvar)
+        self.vars[f"{key_prefix}_presence"] = pvar
+        self._reset_hooks.append(lambda v=pvar, d=default: v.set(d))
+
+        # 카테고리 체크박스 + 상세 텍스트를 한 프레임에 묶어, 행마다 폭이
+        # 달라도 서로 붙어 보이게 한다 (그리드 컬럼을 공유하면 컬럼폭이
+        # 다른 행 중 가장 넓은 값으로 고정돼, 짧은 행은 오른쪽에 큰 공백이
+        # 뜬 채로 뚝 떨어져 보인다).
+        if categories or detail:
+            extra_frame = ttk.Frame(parent)
+            extra_frame.grid(row=r, column=2, sticky="w", padx=(6, 0))
+            if categories:
+                for cat in categories:
+                    cvar = tk.BooleanVar(value=False)
+                    cb = ttk.Checkbutton(extra_frame, text=cat, variable=cvar)
+                    cb.pack(side="left", padx=1)
+                    self.vars[f"{key_prefix}_cat_{cat}"] = cvar
+                    self._reset_hooks.append(lambda v=cvar: v.set(False))
+            if detail:
+                dvar = tk.StringVar()
+                dentry = ttk.Entry(extra_frame, textvariable=dvar, width=detail_width)
+                dentry.pack(side="left", padx=(6, 0))
+                self._bind_enter_advances(dentry)
+                self.vars[f"{key_prefix}_detail"] = dvar
+                self._reset_hooks.append(lambda v=dvar: v.set(""))
+
+        return r
+
     # ---------- sections ----------
 
     def _build_patient_section(self, root):
@@ -740,6 +811,154 @@ class ReportApp(tk.Tk):
         self.vars["conclusion"] = text
         self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
 
+    def _text_box(self, parent, key, height=3, label=None):
+        if label:
+            r = self._next_row(parent)
+            ttk.Label(parent, text=label).grid(
+                row=r, column=0, columnspan=3, sticky="w", padx=4, pady=(4, 0))
+        r = self._next_row(parent)
+        text = tk.Text(parent, height=height, wrap="word", bg="white", relief="solid",
+                       bd=1, highlightthickness=1, highlightbackground=FIELD_BORDER,
+                       highlightcolor=FIELD_FOCUS, font=self.font_body, padx=4, pady=2)
+        text.grid(row=r, column=0, columnspan=3, sticky="ew", padx=4, pady=1)
+        parent.columnconfigure(2, weight=1)
+        self.vars[key] = text
+        self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
+        return text
+
+    # ---------- 신장·부신·방광 판독지 ----------
+
+    def _build_kidney_patient_section(self, root):
+        box = self._section(root, "1", "환자정보")
+        self._entry_row(box, "등록번호", "kd_reg_no")
+        self._entry_row(box, "성명", "kd_patient_name")
+        self._entry_row(box, "생년월일 또는 나이", "kd_birth_or_age")
+        self._radio_row(box, "성별", "kd_sex", ["남", "여"])
+
+    def _build_kidney_exam_section(self, root):
+        box = self._section(root, "2", "검사정보")
+        r = self._next_row(box)
+        ttk.Label(box, text="검사명").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
+        options_frame = ttk.Frame(box)
+        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
+        var = tk.StringVar(value=fill_report.KIDNEY_EXAM_TYPE_OPTIONS[0])
+        for i, opt in enumerate(fill_report.KIDNEY_EXAM_TYPE_OPTIONS):
+            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).grid(
+                row=i // 2, column=i % 2, sticky="w", padx=(0, 14), pady=1)
+        self.vars["kd_exam_type"] = var
+        self._reset_hooks.append(lambda v=var: v.set(fill_report.KIDNEY_EXAM_TYPE_OPTIONS[0]))
+        detail_var = tk.StringVar()
+        ttk.Entry(options_frame, textvariable=detail_var, width=16).grid(
+            row=(len(fill_report.KIDNEY_EXAM_TYPE_OPTIONS) - 1) // 2,
+            column=(len(fill_report.KIDNEY_EXAM_TYPE_OPTIONS) - 1) % 2 + 1,
+            sticky="w", padx=(4, 0))
+        self.vars["kd_exam_type_detail"] = detail_var
+        self._reset_hooks.append(lambda v=detail_var: v.set(""))
+
+        self._date_row(box, "검사일", "kd_exam_date")
+        self._static_row(box, "검사자", "kd_examiner_name", FIXED_STAFF_NAME)
+        self._static_row(box, "검사자 면허번호", "kd_examiner_license", FIXED_STAFF_LICENSE)
+        self._date_row(box, "판독일", "kd_read_date")
+        self._static_row(box, "판독자", "kd_reader_name", FIXED_STAFF_NAME)
+        self._static_row(box, "판독자 면허번호", "kd_reader_license", FIXED_STAFF_LICENSE)
+        self._institution_row(box, "검사기관명", "kd_institution")
+
+    def _build_kidney_upper_section(self, root):
+        box = self._section(root, "3-(1)", "검사 소견 - 신장·부신")
+        self._finding_row(box, "신장 실질의 에코 이상", "kd_renal_echo", categories=["우신", "좌신"])
+        self._finding_row(box, "신장의 크기 이상", "kd_renal_size", categories=["우신", "좌신"])
+        self._finding_row(box, "신장의 국소병변", "kd_focal", categories=fill_report.KIDNEY_FOCAL_CATEGORIES)
+        self._finding_row(box, "수신증", "kd_hydro", categories=["우신", "좌신"])
+        self._finding_row(box, "신결석", "kd_renal_stone", categories=["우측", "좌측"], detail=True)
+        self._finding_row(box, "요관결석", "kd_ureter_stone", presence_options=fill_report.URETER_STONE_OPTIONS,
+                           categories=["우측", "좌측"], detail=True)
+        self._finding_row(box, "부신 이상", "kd_adrenal", categories=["우측", "좌측"])
+        self._finding_row(box, "기타 소견", "kd_upper_other", detail=True, detail_width=24)
+        self._text_box(box, "kd_upper_findings", height=3,
+                        label="이상 소견에 대한 기술 (신장·부신)")
+
+    def _build_kidney_bladder_section(self, root):
+        box = self._section(root, "3-(2)", "검사 소견 - 방광")
+        self._finding_row(box, "방광벽 비후", "kd_bladder_wall")
+        self._finding_row(box, "방광 종양", "kd_bladder_tumor")
+        self._finding_row(box, "방광 결석", "kd_bladder_stone")
+        self._finding_row(box, "기타 소견", "kd_lower_other", detail=True, detail_width=24)
+        self._text_box(box, "kd_lower_findings", height=3,
+                        label="이상 소견에 대한 기술 (방광)")
+
+    def _build_kidney_conclusion_section(self, root):
+        box = self._section(root, "4", "결론 (필수)")
+        self._text_box(box, "kd_conclusion", height=4)
+
+    # ---------- 음낭 초음파 판독지 ----------
+
+    def _build_scrotal_patient_section(self, root):
+        box = self._section(root, "1", "환자정보")
+        self._entry_row(box, "등록번호", "sc_reg_no")
+        self._entry_row(box, "성명", "sc_patient_name")
+        self._entry_row(box, "생년월일 또는 나이", "sc_birth_or_age")
+        self._radio_row(box, "성별", "sc_sex", ["남", "여"])
+
+    def _build_scrotal_exam_section(self, root):
+        box = self._section(root, "2", "검사정보")
+        r = self._next_row(box)
+        ttk.Label(box, text="검사명").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
+        options_frame = ttk.Frame(box)
+        options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
+        var = tk.StringVar(value=fill_report.SCROTAL_EXAM_TYPE_OPTIONS[0])
+        for i, opt in enumerate(fill_report.SCROTAL_EXAM_TYPE_OPTIONS):
+            ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var).grid(
+                row=i // 2, column=i % 2, sticky="w", padx=(0, 14), pady=1)
+        self.vars["sc_exam_type"] = var
+        self._reset_hooks.append(lambda v=var: v.set(fill_report.SCROTAL_EXAM_TYPE_OPTIONS[0]))
+
+        self._date_row(box, "검사일", "sc_exam_date")
+        self._static_row(box, "검사자", "sc_examiner_name", FIXED_STAFF_NAME)
+        self._static_row(box, "검사자 면허번호", "sc_examiner_license", FIXED_STAFF_LICENSE)
+        self._date_row(box, "판독일", "sc_read_date")
+        self._static_row(box, "판독자", "sc_reader_name", FIXED_STAFF_NAME)
+        self._static_row(box, "판독자 면허번호", "sc_reader_license", FIXED_STAFF_LICENSE)
+        self._institution_row(box, "검사기관명", "sc_institution")
+
+    def _build_scrotal_side_section(self, root, num, title, side):
+        box = self._section(root, num, title)
+        p = f"sc_{side}_"
+        self._finding_row(box, "음낭내 고환 존재 여부", f"{p}existence",
+                           presence_options=fill_report.SCROTAL_EXISTENCE_OPTIONS)
+
+        r = self._next_row(box)
+        ttk.Label(box, text="고환의 부피 (또는 장축의 길이)").grid(
+            row=r, column=0, sticky="w", padx=(4, 8), pady=1)
+        wrap = ttk.Frame(box)
+        wrap.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
+        vol_var = tk.StringVar()
+        ttk.Entry(wrap, textvariable=vol_var, width=8).pack(side="left")
+        ttk.Label(wrap, text="cc  또는 ").pack(side="left", padx=(4, 0))
+        len_var = tk.StringVar()
+        ttk.Entry(wrap, textvariable=len_var, width=8).pack(side="left")
+        ttk.Label(wrap, text="cm").pack(side="left", padx=(4, 0))
+        self.vars[f"{p}vol_cc"] = vol_var
+        self.vars[f"{p}length_cm"] = len_var
+        self._reset_hooks.append(lambda v=vol_var: v.set(""))
+        self._reset_hooks.append(lambda v=len_var: v.set(""))
+
+        self._finding_row(box, "고환의 이상 유무", f"{p}testis",
+                           categories=fill_report.SCROTAL_TESTIS_CATEGORIES, detail=True)
+        self._finding_row(box, "부고환 이상 유무", f"{p}epid",
+                           categories=fill_report.SCROTAL_EPID_CATEGORIES, detail=True)
+        self._finding_row(box, "기타 음낭 이상 소견", f"{p}other",
+                           categories=fill_report.SCROTAL_OTHER_CATEGORIES, detail=True)
+        self._finding_row(box, "고환 내 혈류 이상 (도플러 검사시)", f"{p}flow",
+                           categories=fill_report.SCROTAL_FLOW_CATEGORIES, detail=True)
+
+    def _build_scrotal_other_section(self, root):
+        box = self._section(root, "3-(3)", "이상 소견에 대한 기술")
+        self._text_box(box, "sc_other_findings", height=3)
+
+    def _build_scrotal_conclusion_section(self, root):
+        box = self._section(root, "4", "결론 (필수)")
+        self._text_box(box, "sc_conclusion", height=4)
+
     def _build_actions(self, root):
         row = tk.Frame(root, bg=PAGE_BG)
         row.pack(fill="x", padx=4, pady=(8, 4))
@@ -772,11 +991,24 @@ class ReportApp(tk.Tk):
                 data[key] = var.get()
         return data
 
-    def _confirm_required(self, data):
+    # 폼별로 사용하는 키 접두사와 문서 생성 함수를 여기서 매핑한다.
+    _FORM_CONFIG = {
+        "전립선": dict(reg_key="reg_no", name_key="patient_name", birth_key="birth_or_age",
+                     concl_key="conclusion", docx=fill_report.generate_docx,
+                     hwp=fill_report.generate_hwp, jpg=fill_report.generate_jpg),
+        "신장": dict(reg_key="kd_reg_no", name_key="kd_patient_name", birth_key="kd_birth_or_age",
+                    concl_key="kd_conclusion", docx=fill_report.generate_docx_kidney,
+                    hwp=fill_report.generate_hwp_kidney, jpg=fill_report.generate_jpg_kidney),
+        "음낭": dict(reg_key="sc_reg_no", name_key="sc_patient_name", birth_key="sc_birth_or_age",
+                    concl_key="sc_conclusion", docx=fill_report.generate_docx_scrotal,
+                    hwp=fill_report.generate_hwp_scrotal, jpg=fill_report.generate_jpg_scrotal),
+    }
+
+    def _confirm_required(self, data, cfg):
         missing = []
-        if not data.get("patient_name"):
+        if not data.get(cfg["name_key"]):
             missing.append("성명")
-        if not data.get("conclusion"):
+        if not data.get(cfg["concl_key"]):
             missing.append("결론")
         if not missing:
             return True
@@ -785,22 +1017,22 @@ class ReportApp(tk.Tk):
             "다음 필수 항목이 비어 있습니다: " + ", ".join(missing) + "\n계속 진행하시겠습니까?",
         )
 
-    def _default_name(self, data):
+    def _default_name(self, data, cfg):
         # 저장 파일명: 등록번호_이름_생년월일 (빈 항목은 건너뜀)
         parts = [
-            (data.get("reg_no") or "").strip(),
-            (data.get("patient_name") or "").strip(),
-            (data.get("birth_or_age") or "").strip(),
+            (data.get(cfg["reg_key"]) or "").strip(),
+            (data.get(cfg["name_key"]) or "").strip(),
+            (data.get(cfg["birth_key"]) or "").strip(),
         ]
         parts = [p for p in parts if p]
         return "_".join(parts) if parts else "판독지"
 
-    def _ask_save_path(self, title, ext, filetypes, data):
+    def _ask_save_path(self, title, ext, filetypes, data, cfg):
         path = filedialog.asksaveasfilename(
             title=title,
             defaultextension=ext,
             filetypes=filetypes,
-            initialfile=self._default_name(data),
+            initialfile=self._default_name(data, cfg),
             initialdir=self.last_dir or None,
         )
         if path:
@@ -810,18 +1042,19 @@ class ReportApp(tk.Tk):
         return path
 
     def on_save_word(self):
+        cfg = self._FORM_CONFIG[self.current_form]
         data = self._collect_data()
-        if not self._confirm_required(data):
+        if not self._confirm_required(data, cfg):
             return
 
         docx_path = self._ask_save_path(
-            "Word로 저장", ".docx", [("Word 문서", "*.docx")], data
+            "Word로 저장", ".docx", [("Word 문서", "*.docx")], data, cfg
         )
         if not docx_path:
             return
 
         try:
-            fill_report.generate_docx(data, docx_path)
+            cfg["docx"](data, docx_path)
         except Exception as e:
             messagebox.showerror("오류", f"Word 문서 생성 중 오류가 발생했습니다:\n{e}")
             return
@@ -829,12 +1062,13 @@ class ReportApp(tk.Tk):
         messagebox.showinfo("저장 완료", f"Word 파일이 저장되었습니다.\n{docx_path}")
 
     def on_save_hwp(self):
+        cfg = self._FORM_CONFIG[self.current_form]
         data = self._collect_data()
-        if not self._confirm_required(data):
+        if not self._confirm_required(data, cfg):
             return
 
         hwp_path = self._ask_save_path(
-            "한글로 저장", ".hwp", [("한글 문서", "*.hwp")], data
+            "한글로 저장", ".hwp", [("한글 문서", "*.hwp")], data, cfg
         )
         if not hwp_path:
             return
@@ -842,7 +1076,7 @@ class ReportApp(tk.Tk):
         self.config(cursor="watch")
         self.update()
         try:
-            fill_report.generate_hwp(data, hwp_path)
+            cfg["hwp"](data, hwp_path)
         except Exception as e:
             messagebox.showerror(
                 "오류",
@@ -856,12 +1090,13 @@ class ReportApp(tk.Tk):
         messagebox.showinfo("저장 완료", f"한글 파일이 저장되었습니다.\n{hwp_path}")
 
     def on_save_jpg(self):
+        cfg = self._FORM_CONFIG[self.current_form]
         data = self._collect_data()
-        if not self._confirm_required(data):
+        if not self._confirm_required(data, cfg):
             return
 
         jpg_path = self._ask_save_path(
-            "JPG로 저장", ".jpg", [("JPG 이미지", "*.jpg")], data
+            "JPG로 저장", ".jpg", [("JPG 이미지", "*.jpg")], data, cfg
         )
         if not jpg_path:
             return
@@ -869,7 +1104,7 @@ class ReportApp(tk.Tk):
         self.config(cursor="watch")
         self.update()
         try:
-            written = fill_report.generate_jpg(data, jpg_path)
+            written = cfg["jpg"](data, jpg_path)
         except Exception as e:
             messagebox.showerror(
                 "오류",
