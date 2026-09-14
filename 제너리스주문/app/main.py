@@ -8,54 +8,9 @@ from tkinter import filedialog, messagebox, ttk
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import db, excel_export, importer, matching, theme
-from app.config import AUTO_MATCH_THRESHOLD, EXPORT_DIR, STALE_PRICE_DAYS
+from app.config import AUTO_MATCH_THRESHOLD, EXPORT_DIR
 from app.dialogs import CandidatePickerDialog, NewItemDialog, PriceHistoryDialog
-
-TAG_DANGER = "danger"
-TAG_WARNING = "warning"
-TAG_NORMAL = "normal"
-
-
-def _is_stale(base_date: str | None) -> bool:
-    if not base_date:
-        return True
-    try:
-        d = dt.date.fromisoformat(base_date)
-    except ValueError:
-        return True
-    return (dt.date.today() - d).days > STALE_PRICE_DAYS
-
-
-class OrderLine:
-    def __init__(self, raw_text, item, quantity=1, requirement_text="", spec_text="",
-                 buy_price=0, sell_price=0, match_type="수동", remark=""):
-        self.raw_text = raw_text
-        self.origin_text = raw_text  # 병원이 실제로 표현한 원문(별칭 학습/이력용, 화면 표시는 raw_text 사용)
-        self.item = item  # dict 또는 None
-        self.quantity = quantity
-        self.requirement_text = requirement_text
-        self.spec_text = spec_text
-        self.buy_price = buy_price
-        self.sell_price = sell_price
-        self.match_type = match_type
-        self.remark = remark
-
-    def tag(self):
-        if self.buy_price and self.sell_price and self.buy_price > self.sell_price:
-            return TAG_DANGER
-        if not self.item or (self.item and _is_stale(self.item.get("base_date"))):
-            return TAG_WARNING
-        return TAG_NORMAL
-
-    def as_export_dict(self):
-        return {
-            "raw_text": self.raw_text,
-            "quantity": self.quantity,
-            "requirement_text": self.requirement_text,
-            "spec_text": self.spec_text,
-            "buy_price": self.buy_price,
-            "sell_price": self.sell_price,
-        }
+from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderLine, find_danger_lines, find_price_updates
 
 
 class OrderTab(ttk.Frame):
@@ -338,19 +293,13 @@ class OrderTab(ttk.Frame):
             messagebox.showinfo("안내", "저장할 항목이 없습니다.")
             return
 
-        danger_lines = [l for l in self.lines if l.buy_price and l.sell_price and l.buy_price > l.sell_price]
+        danger_lines = find_danger_lines(self.lines)
         if danger_lines:
             names = ", ".join(l.raw_text for l in danger_lines)
             if not messagebox.askyesno("역마진 경고", f"다음 항목은 매입가가 매출가보다 큽니다:\n{names}\n\n그대로 저장할까요?"):
                 return
 
-        price_updates = []
-        for line in self.lines:
-            if not line.item:
-                continue
-            if line.buy_price != line.item.get("buy_price") or line.sell_price != line.item.get("sell_price"):
-                price_updates.append(line)
-
+        price_updates = find_price_updates(self.lines)
         if price_updates:
             preview = "\n".join(
                 f'- {l.item["order_name"]}: '
