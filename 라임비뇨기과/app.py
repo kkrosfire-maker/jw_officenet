@@ -125,7 +125,18 @@ class ScrollableFrame(ttk.Frame):
         def on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        # bind_all은 탭(=ScrollableFrame 인스턴스)마다 전역으로 걸리기 때문에,
+        # 인스턴스가 여러 개면 마지막에 만들어진 것만 살아남아 다른 탭에서는
+        # 휠이 안 먹는다. 마우스가 이 캔버스 위에 있을 때만 bind_all을 걸었다
+        # 떼서, 현재 보이는 탭의 캔버스만 반응하도록 한다.
+        def bind_wheel(_=None):
+            canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+        def unbind_wheel(_=None):
+            canvas.unbind_all("<MouseWheel>")
+
+        canvas.bind("<Enter>", bind_wheel)
+        canvas.bind("<Leave>", unbind_wheel)
 
 
 class _InstitutionValue:
