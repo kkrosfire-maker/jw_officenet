@@ -8,7 +8,7 @@ from app import db, matching, theme
 class CandidatePickerDialog(tk.Toplevel):
     """유사 품목 후보 목록에서 하나를 선택하거나, 검색/신규등록으로 전환."""
 
-    def __init__(self, parent, query_text: str):
+    def __init__(self, parent, query_text: str, candidates: list[matching.Candidate]):
         super().__init__(parent)
         self.title("품목 매칭 선택")
         self.configure(bg=theme.APP_BG)
@@ -47,7 +47,7 @@ class CandidatePickerDialog(tk.Toplevel):
         self.tree.bind("<Return>", lambda e: self._confirm())
 
         self._rows: dict[str, dict] = {}
-        self._populate_candidates(query_text)
+        self._render_candidates(candidates)
         self.tree.focus_set()
 
         btn_row = ttk.Frame(self)
@@ -61,11 +61,10 @@ class CandidatePickerDialog(tk.Toplevel):
 
         theme.autosize(self, min_w=870, min_h=380)
 
-    def _populate_candidates(self, query_text):
+    def _render_candidates(self, candidates: list[matching.Candidate]):
         for iid in self.tree.get_children():
             self.tree.delete(iid)
         self._rows.clear()
-        candidates = matching.find_candidates(query_text)
         for c in candidates:
             iid = str(c.item["id"])
             self.tree.insert("", "end", iid=iid, values=(

@@ -131,7 +131,7 @@ class OrderTab(ttk.Frame):
         top_item_id = candidates[0].item["id"] if candidates else None
         top_score = candidates[0].score if candidates else 0.0
 
-        dialog = CandidatePickerDialog(self, raw_text)
+        dialog = CandidatePickerDialog(self, raw_text, candidates)
         self.wait_window(dialog)
         result = dialog.result
         if result is None:
