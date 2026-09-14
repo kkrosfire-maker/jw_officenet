@@ -326,6 +326,13 @@ def _finding_extra(data, key_prefix, categories=None):
     return ", ".join(parts)
 
 
+def _paren(text):
+    """내용이 있을 때만 괄호로 감싼다. 선택된 카테고리/상세텍스트가 없는데
+    "있음"만 체크된 경우, 괄호 안이 비어 문서에 "()"만 덩그러니 찍히는 것을
+    막는다."""
+    return f"({text})" if text else ""
+
+
 def _fill_trailing_freeform(doc, start_idx, text, min_lines=3):
     """표(table)가 아니라 본문 문단으로 남겨진 결론란을 채운다. 템플릿에
     남은 문단 수보다 줄이 많으면 문서 끝에 문단을 추가한다."""
@@ -356,7 +363,7 @@ def _scrotal_side_lines(data, side):
     def presence_line(label, key, categories):
         m0, m1 = _presence_marks(data, f"{p}{key}")
         extra = _finding_extra(data, f"{p}{key}", categories)
-        return f"{label} \t\t\t{m0} 없음\t{m1} 있음 ({extra})"
+        return f"{label} \t\t\t{m0} 없음\t{m1} 있음 {_paren(extra)}"
 
     line_testis = presence_line("고환의 이상 유무", "testis", SCROTAL_TESTIS_CATEGORIES)
     line_epid = presence_line("부고환 이상 유무", "epid", SCROTAL_EPID_CATEGORIES)
@@ -364,7 +371,7 @@ def _scrotal_side_lines(data, side):
 
     m0, m1 = _presence_marks(data, f"{p}flow")
     flow_extra = _finding_extra(data, f"{p}flow", SCROTAL_FLOW_CATEGORIES)
-    line_flow = f"고환 내 혈류 이상 (도플러 검사시)\t{m0} 없음\t{m1} 있음 ({flow_extra})"
+    line_flow = f"고환 내 혈류 이상 (도플러 검사시)\t{m0} 없음\t{m1} 있음 {_paren(flow_extra)}"
 
     return [line_existence, line_volume, line_testis, line_epid, line_other, line_flow]
 
@@ -508,7 +515,7 @@ def generate_docx_kidney(data, output_path, template_path=None):
 
     m0, m1 = _presence_marks(data, "kd_upper_other")
     detail = (data.get("kd_upper_other_detail") or "").strip()
-    line14 = f"기타 소견 \t\t\t{m0} 없음\t\t{m1} 있음 ({detail})"
+    line14 = f"기타 소견 \t\t\t{m0} 없음\t\t{m1} 있음 {_paren(detail)}"
 
     for idx, text in zip(
         [7, 8, 9, 10, 11, 12, 13, 14],
@@ -524,7 +531,7 @@ def generate_docx_kidney(data, output_path, template_path=None):
     line19 = f"방광 결석\t\t\t{m0} 없음\t\t{m1} 있음 "
     m0, m1 = _presence_marks(data, "kd_lower_other")
     detail = (data.get("kd_lower_other_detail") or "").strip()
-    line20 = f"기타 소견 \t\t\t{m0} 없음\t\t{m1} 있음 ({detail})"
+    line20 = f"기타 소견 \t\t\t{m0} 없음\t\t{m1} 있음 {_paren(detail)}"
 
     for idx, text in zip([17, 18, 19, 20], [line17, line18, line19, line20]):
         set_paragraph_text(doc.paragraphs[idx], text)
