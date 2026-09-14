@@ -11,6 +11,9 @@ import fill_report
 
 PRESENCE_OPTIONS = ["없음", "있음"]
 
+FIXED_STAFF_NAME = "임재균"
+FIXED_STAFF_LICENSE = "65710"
+
 # ---- 정원유니어스 디자인 팔레트 (목업 색상 샘플링) ----
 GREEN = "#0D4A32"          # 기본 녹색: 번호 뱃지, 강조 버튼, 섹션 제목
 GREEN_DARK = "#0A3A28"     # 눌림 상태
@@ -236,7 +239,18 @@ class ReportApp(tk.Tk):
         self._build_header()
         self._build_footer()
 
-        scroll = ScrollableFrame(self)
+        self.content_area = tk.Frame(self, bg=PAGE_BG)
+        self.content_area.pack(fill="both", expand=True)
+
+        self.prostate_page = tk.Frame(self.content_area, bg=PAGE_BG)
+        self.kidney_page = tk.Frame(self.content_area, bg=PAGE_BG)
+        self._build_prostate_page(self.prostate_page)
+        self._build_kidney_page(self.kidney_page)
+
+        self._show_form("전립선")
+
+    def _build_prostate_page(self, container):
+        scroll = ScrollableFrame(container)
         scroll.pack(fill="both", expand=True, padx=6, pady=3)
         root = scroll.body
 
@@ -246,6 +260,12 @@ class ReportApp(tk.Tk):
         self._build_optional_findings_section(root)
         self._build_conclusion_section(root)
         self._build_actions(root)
+
+    def _build_kidney_page(self, container):
+        # 신장 판독지 양식은 추후 추가 예정 (자리만 마련해둠).
+        tk.Label(container, text="신장 판독지 작성기는 준비 중입니다.",
+                 bg=PAGE_BG, fg=GREEN_TINT, font=self.font_section).pack(
+            expand=True, pady=60)
 
     # ---------- 디자인 (정원유니어스 목업 리스킨) ----------
 
@@ -278,11 +298,11 @@ class ReportApp(tk.Tk):
         sh = self.winfo_screenheight()
         # 작업표시줄·제목표시줄 여유를 두고 화면 높이의 88%까지만
         h = min(1160, int(sh * 0.88))
-        w = int(h / A4_RATIO)
+        w = int(h / A4_RATIO * 1.3)  # 기존 A4 폭 대비 30% 확장
         x = max(0, (sw - w) // 2)
         y = max(0, (sh - h) // 2 - 24)
         self.geometry(f"{w}x{h}+{x}+{y}")
-        self.minsize(640, 820)
+        self.minsize(int(640 * 1.3), 820)
 
     def _setup_style(self):
         style = ttk.Style(self)
@@ -359,6 +379,19 @@ class ReportApp(tk.Tk):
                   background=[("active", "#EAF1ED"), ("pressed", "#DEE9E3")],
                   bordercolor=[("active", GREEN), ("pressed", GREEN)])
 
+        # 상단 배너의 [전립선]/[신장] 양식 전환 탭 (작은 크기)
+        style.configure("FormTab.TButton", background="white", foreground=GREEN,
+                        bordercolor=GREEN, lightcolor="white", darkcolor="white",
+                        borderwidth=1, padding=(10, 2), font=self.font_small)
+        style.map("FormTab.TButton",
+                  background=[("active", "#EAF1ED"), ("pressed", "#DEE9E3")],
+                  bordercolor=[("active", GREEN), ("pressed", GREEN)])
+        style.configure("FormTabActive.TButton", background=GREEN, foreground="white",
+                        bordercolor=GREEN, focuscolor=GREEN, borderwidth=0,
+                        padding=(10, 2), font=self.font_small)
+        style.map("FormTabActive.TButton",
+                  background=[("active", GREEN_DARK), ("pressed", GREEN_DARK)])
+
     def _img(self, name, max_h=None):
         try:
             from PIL import Image, ImageTk
@@ -395,7 +428,28 @@ class ReportApp(tk.Tk):
         if swoosh is not None:
             tk.Label(hdr, image=swoosh, bg="white").pack(side="right")
 
+        # 우측: [전립선] / [신장] 양식 전환 버튼 (신장 폼은 추후 추가 예정)
+        form_bar = tk.Frame(hdr, bg="white")
+        form_bar.pack(side="right", anchor="s", padx=(0, 14), pady=HEADER_PAD_Y)
+        self._form_buttons = {}
+        for name in ("전립선", "신장"):
+            btn = ttk.Button(form_bar, text=name, style="FormTab.TButton",
+                              command=lambda n=name: self._show_form(n))
+            btn.pack(side="left", padx=3)
+            self._form_buttons[name] = btn
+
         tk.Frame(self, bg=GREEN, height=2).pack(fill="x", side="top")
+
+    def _show_form(self, name):
+        self.current_form = name
+        if name == "신장":
+            self.prostate_page.pack_forget()
+            self.kidney_page.pack(fill="both", expand=True)
+        else:
+            self.kidney_page.pack_forget()
+            self.prostate_page.pack(fill="both", expand=True)
+        for form_name, btn in self._form_buttons.items():
+            btn.configure(style="FormTabActive.TButton" if form_name == name else "FormTab.TButton")
 
     def _build_footer(self):
         tk.Frame(self, bg=CARD_BORDER, height=1).pack(fill="x", side="bottom")
@@ -465,13 +519,33 @@ class ReportApp(tk.Tk):
             return None
         rb.bind("<ButtonRelease-1>", on_release)
 
+    @staticmethod
+    def _bind_enter_advances(widget):
+        """엔터를 치면 다음 입력칸으로 포커스를 옮긴다 (탭 이동과 동일한 순서)."""
+        def on_return(e):
+            nxt = e.widget.tk_focusNext()
+            if nxt is not None:
+                nxt.focus()
+            return "break"
+        widget.bind("<Return>", on_return)
+
     def _entry_row(self, parent, label, key, width=20):
         r = self._next_row(parent)
         ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         var = tk.StringVar()
-        ttk.Entry(parent, textvariable=var, width=width).grid(row=r, column=1, sticky="w", pady=1)
+        entry = ttk.Entry(parent, textvariable=var, width=width)
+        entry.grid(row=r, column=1, sticky="w", pady=1)
+        self._bind_enter_advances(entry)
         self.vars[key] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
+        return r
+
+    def _static_row(self, parent, label, key, value):
+        # 검사자/판독자처럼 항상 고정값인 항목: 입력칸 없이 값만 표시한다.
+        r = self._next_row(parent)
+        ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
+        ttk.Label(parent, text=value).grid(row=r, column=1, sticky="w", pady=1)
+        self.vars[key] = tk.StringVar(value=value)
         return r
 
     def _date_row(self, parent, label, key):
@@ -490,26 +564,41 @@ class ReportApp(tk.Tk):
         def fill_today():
             var.set(datetime.date.today().isoformat())
 
+        def on_return(_e):
+            fill_today()
+            nxt = entry.tk_focusNext()
+            if nxt is not None:
+                nxt.focus()
+            return "break"
+
+        # 검사일/판독일 칸에서 엔터를 치면 바로 오늘 날짜로 채워진다.
+        entry.bind("<Return>", on_return)
+
         ttk.Button(parent, text="오늘", width=5, command=fill_today).grid(row=r, column=2, sticky="w", padx=4)
         self.vars[key] = var
         self._reset_hooks.append(lambda v=var: v.set(""))
         return r
 
-    def _radio_row(self, parent, label, key, options, detail_key=None):
+    def _radio_row(self, parent, label, key, options, detail_key=None, default=None):
         r = self._next_row(parent)
         ttk.Label(parent, text=label).grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         options_frame = ttk.Frame(parent)
         options_frame.grid(row=r, column=1, sticky="w", pady=1)
-        var = tk.StringVar(value="")
+        # "없음" 항목이 있는 체크박스(라디오)는 기본값을 "없음"으로 미리 체크해둔다.
+        if default is None:
+            default = "없음" if "없음" in options else ""
+        var = tk.StringVar(value=default)
         for opt in options:
             rb = ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var)
             rb.pack(side="left", padx=2)
             self._make_deselectable(rb, opt, var)
         self.vars[key] = var
-        self._reset_hooks.append(lambda v=var: v.set(""))
+        self._reset_hooks.append(lambda v=var, d=default: v.set(d))
         if detail_key:
             dvar = tk.StringVar()
-            ttk.Entry(parent, textvariable=dvar, width=28).grid(row=r, column=2, sticky="w", padx=6)
+            dentry = ttk.Entry(parent, textvariable=dvar, width=28)
+            dentry.grid(row=r, column=2, sticky="w", padx=6)
+            self._bind_enter_advances(dentry)
             self.vars[detail_key] = dvar
             self._reset_hooks.append(lambda v=dvar: v.set(""))
         return r
@@ -538,11 +627,11 @@ class ReportApp(tk.Tk):
         self._reset_hooks.append(lambda v=var: v.set(fill_report.EXAM_TYPE_OPTIONS[0]))
 
         self._date_row(box, "검사일", "exam_date")
-        self._entry_row(box, "검사자", "examiner_name", width=14)
-        self._entry_row(box, "검사자 면허번호", "examiner_license", width=14)
+        self._static_row(box, "검사자", "examiner_name", FIXED_STAFF_NAME)
+        self._static_row(box, "검사자 면허번호", "examiner_license", FIXED_STAFF_LICENSE)
         self._date_row(box, "판독일", "read_date")
-        self._entry_row(box, "판독자", "reader_name", width=14)
-        self._entry_row(box, "판독자 면허번호", "reader_license", width=14)
+        self._static_row(box, "판독자", "reader_name", FIXED_STAFF_NAME)
+        self._static_row(box, "판독자 면허번호", "reader_license", FIXED_STAFF_LICENSE)
         self._institution_row(box, "검사기관명", "institution")
 
     def _institution_row(self, parent, label, key):
@@ -567,6 +656,7 @@ class ReportApp(tk.Tk):
         combo.pack(side="left")
         entry = ttk.Entry(frame, textvariable=custom, width=24, state="disabled")
         entry.pack(side="left", padx=6)
+        self._bind_enter_advances(entry)
 
         # Only react when the dropdown actually changes - no per-keystroke work.
         def on_choice(_=None):
@@ -601,13 +691,14 @@ class ReportApp(tk.Tk):
         ttk.Label(box, text="① 전립선의 모양").grid(row=r, column=0, sticky="w", padx=(4, 8), pady=1)
         options_frame = ttk.Frame(box)
         options_frame.grid(row=r, column=1, columnspan=2, sticky="w", pady=1)
-        var = tk.StringVar(value="")
+        shape_default = "삼각형"
+        var = tk.StringVar(value=shape_default)
         for opt in ["삼각형", "타원형", "원형", "세로타원형"]:
             rb = ttk.Radiobutton(options_frame, text=opt, value=opt, variable=var)
             rb.pack(side="left", padx=2)
             self._make_deselectable(rb, opt, var)
         self.vars["shape"] = var
-        self._reset_hooks.append(lambda v=var: v.set(""))
+        self._reset_hooks.append(lambda v=var, d=shape_default: v.set(d))
 
         labels = {
             "border": "② 전립선의 경계",
@@ -618,8 +709,11 @@ class ReportApp(tk.Tk):
             "bladder_protrusion": "⑦ 방광내 돌출",
             "bladder_stone_tumor": "⑧ 방광내 결석 또는 종양",
         }
+        # 경계=명확함, 대칭=대칭을 기본값으로 미리 체크해둔다.
+        defaults = {"border": "명확함", "symmetry": "대칭"}
         for _, field, options in fill_report.TABLE3_FIELDS:
-            self._radio_row(box, labels[field], field, options, f"{field}_detail")
+            self._radio_row(box, labels[field], field, options, f"{field}_detail",
+                             default=defaults.get(field))
 
         r = self._next_row(box)
         ttk.Label(box, text="이상 소견 또는 기타소견에 대한 기술").grid(
