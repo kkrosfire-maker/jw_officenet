@@ -1,0 +1,25 @@
+[새 PC에 Claude Code 환경 설치하기]
+
+1. 이 폴더(claude_env_bootstrap) 전체를 USB나 클라우드로 새 PC에 복사한다.
+   (install.bat, install.ps1, claude-code-env.zip이 같은 폴더 안에 있어야 함)
+
+2. 새 PC에서 install.bat 파일을 더블클릭한다.
+   - 별도로 PowerShell을 열거나 명령어를 칠 필요 없음
+   - Node.js, Claude Code CLI가 없으면 자동으로 설치됨
+   - 실행 정책(execution policy)도 계정 단위로 자동으로 풀어줘서,
+     이후 새 PowerShell 창에서 claude 명령을 쳐도 보안 오류 안 남
+   - 끝나면 검은 창에 "설치 완료" 메시지가 뜸 (아무 키나 누르면 창 닫힘)
+   - Node.js를 방금 새로 설치한 경우, 드물게 PATH가 안 잡혀서
+     "Node.js는 설치됐지만 인식이 안 됨" 경고가 뜰 수 있음
+     → 그럴 땐 탐색기에서 폴더를 새로 열어 install.bat을 한 번 더 실행
+
+3. 설치 완료 메시지에 나온 워크스페이스 폴더로 이동해서 claude 실행 후 브라우저로 로그인한다.
+   (로그인만 자동화가 안 돼서 수동으로 해야 함)
+
+문제가 생기면 검은 창에 뜬 에러 메시지를 그대로 캡처해서 보여주면 된다.
+
+---
+
+[이 PC에서 zip 다시 만들기 (설정이 바뀌었을 때)]
+
+export.bat을 더블클릭하면 같은 폴더에 claude-code-env.zip이 새로 만들어진다.
