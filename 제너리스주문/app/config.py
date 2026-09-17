@@ -1,7 +1,15 @@
 """경로/설정 관리."""
+import sys
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    # PyInstaller onefile로 빌드된 경우 __file__은 매 실행마다 새로 만들어지는
+    # 임시 압축해제 폴더를 가리켜서, 그 안에 DB를 두면 재실행할 때마다
+    # 마스터 DB가 초기화되고 별칭/가격수정 이력이 사라진다.
+    # exe 파일이 실제로 위치한 폴더를 기준으로 삼아야 데이터가 영구 보존된다.
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "genelis.db"
 EXPORT_DIR = DATA_DIR / "exports"
