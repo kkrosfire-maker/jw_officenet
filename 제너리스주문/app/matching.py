@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 
 from app import db
-from app.config import CANDIDATE_THRESHOLD, MAX_CANDIDATES
+from app.config import AUTO_MATCH_THRESHOLD, CANDIDATE_THRESHOLD, MAX_CANDIDATES
 
 _STRIP_RE = re.compile(r"[\s\-_/()\.]")
 
@@ -58,3 +58,10 @@ def find_candidates(query_text: str, items_with_aliases=None) -> list[Candidate]
 
     ranked = sorted(best_per_item.values(), key=lambda c: c.score, reverse=True)
     return ranked[:MAX_CANDIDATES]
+
+
+def classify_match_type(candidates: list[Candidate], chosen_item_id: int) -> str:
+    """사용자가 고른 품목이 1위 후보이고 점수가 임계값 이상이면 자동확인, 아니면 수동선택."""
+    if candidates and candidates[0].item["id"] == chosen_item_id and candidates[0].score >= AUTO_MATCH_THRESHOLD:
+        return "자동확인"
+    return "수동선택"

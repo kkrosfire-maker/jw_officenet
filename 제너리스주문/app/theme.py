@@ -88,6 +88,28 @@ def card(parent, **kwargs) -> ttk.Frame:
     return frame
 
 
+def setup_grid_columns(tree, columns, headings, widths, centered=frozenset(), on_sort=None) -> list:
+    """헤더 텍스트/폭/정렬앵커 설정과 구분선 생성을 한 번에 처리한다.
+    on_sort가 주어지면 헤더 클릭 시 on_sort(col)을 호출하도록 연결한다."""
+    for col in columns:
+        anchor = "center" if col in centered else "w"
+        kwargs = {"text": headings[col], "anchor": anchor}
+        if on_sort:
+            kwargs["command"] = lambda c=col: on_sort(c)
+        tree.heading(col, **kwargs)
+        tree.column(col, width=widths[col], minwidth=widths[col], anchor=anchor, stretch=False)
+    return add_column_dividers(tree, columns, widths)
+
+
+def update_sort_headings(tree, columns, headings, sort_col, sort_reverse) -> None:
+    """현재 정렬 컬럼에 ▲/▼ 표시를 붙여 헤더 텍스트를 갱신한다."""
+    for col in columns:
+        text = headings[col]
+        if col == sort_col:
+            text += " ▼" if sort_reverse else " ▲"
+        tree.heading(col, text=text)
+
+
 def add_column_dividers(tree, columns, widths) -> list:
     """컬럼 사이에 세로 구분선을 그린다. 컬럼 너비가 고정(resize 차단)이어야 정렬이 유지된다."""
     lines = []

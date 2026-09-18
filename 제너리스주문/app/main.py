@@ -8,9 +8,9 @@ from tkinter import filedialog, messagebox, ttk
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import db, excel_export, importer, matching, theme
-from app.config import AUTO_MATCH_THRESHOLD, EXPORT_DIR
+from app.config import EXPORT_DIR
 from app.dialogs import CandidatePickerDialog, NewItemDialog, PriceHistoryDialog
-from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderLine, find_danger_lines, find_price_updates
+from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates
 
 
 class OrderTab(ttk.Frame):
@@ -21,23 +21,11 @@ class OrderTab(ttk.Frame):
     CENTERED = {"raw", "qty", "spec", "buy", "sell"}
     EDITABLE = {"raw", "qty", "buy", "sell", "remark"}
     NEW_ROW_IID = "new"
-    SORT_KEYS = {
-        "raw": lambda line: line.raw_text,
-        "qty": lambda line: line.quantity,
-        "req": lambda line: line.requirement_text,
-        "spec": lambda line: line.spec_text,
-        "buy": lambda line: line.buy_price,
-        "sell": lambda line: line.sell_price,
-        "remark": lambda line: line.remark,
-    }
 
     def __init__(self, parent):
         super().__init__(parent, style="TFrame", padding=16)
-        self.lines: list[OrderLine] = []
-        self._pending_qty = "1"
+        self.session = OrderEditSession()
         self._active_editor: tuple | None = None
-        self._sort_col: str | None = None
-        self._sort_reverse = False
         self._build()
 
     def _build(self):
@@ -57,11 +45,8 @@ class OrderTab(ttk.Frame):
         grid_card.pack(fill="both", expand=True, pady=(0, 12))
 
         self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=16)
-        for col in self.COLUMNS:
-            anchor = "center" if col in self.CENTERED else "w"
-            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor,
-                               command=lambda c=col: self._sort_by(c))
-            self.tree.column(col, width=self.WIDTHS[col], minwidth=self.WIDTHS[col], anchor=anchor, stretch=False)
+        theme.setup_grid_columns(self.tree, self.COLUMNS, self.HEADINGS, self.WIDTHS,
+                                  self.CENTERED, on_sort=self._sort_by)
         self.tree.pack(fill="both", expand=True)
         self.tree.tag_configure(TAG_DANGER, background=theme.DANGER_SOFT)
         self.tree.tag_configure(TAG_WARNING, background=theme.WARNING_SOFT)
@@ -70,7 +55,6 @@ class OrderTab(ttk.Frame):
         self.tree.tag_configure("new_row", background="#FAFBFD", foreground=theme.TEXT_SECONDARY)
         self.tree.bind("<Button-1>", self._on_tree_click)
         self.tree.bind("<Delete>", lambda e: self._delete_selected())
-        theme.add_column_dividers(self.tree, self.COLUMNS, self.WIDTHS)
 
         hint = ttk.Label(
             grid_card, text="빈 줄의 품목 칸에 입력 후 Enter로 추가 · 셀 클릭으로 수정 · Delete로 행 삭제",
@@ -95,8 +79,6 @@ class OrderTab(ttk.Frame):
         """raw_text에 대한 매칭 품목을 결정. 완전 일치라도 항상 확인 창을 띄운다.
         취소 시 None, 아니면 (item, match_type)."""
         candidates = matching.find_candidates(raw_text)
-        top_item_id = candidates[0].item["id"] if candidates else None
-        top_score = candidates[0].score if candidates else 0.0
 
         dialog = CandidatePickerDialog(self, raw_text, candidates)
         self.wait_window(dialog)
@@ -110,10 +92,7 @@ class OrderTab(ttk.Frame):
                 return None
             return new_dialog.result, "신규등록"
 
-        if result["id"] == top_item_id and top_score >= AUTO_MATCH_THRESHOLD:
-            match_type = "자동확인"
-        else:
-            match_type = "수동선택"
+        match_type = matching.classify_match_type(candidates, result["id"])
         return result, match_type
 
     def _parse_qty(self, text: str) -> float:
@@ -127,17 +106,10 @@ class OrderTab(ttk.Frame):
         if resolved is None:
             return
         item, match_type = resolved
-        line = OrderLine(
-            raw_text=item.get("order_name", raw_text), item=item, quantity=qty,
-            requirement_text=item.get("product_name", ""), spec_text=item.get("spec", ""),
-            buy_price=item.get("buy_price", 0), sell_price=item.get("sell_price", 0),
-            match_type=match_type,
-        )
-        line.origin_text = raw_text  # 병원 원문 표현(별칭 학습용) 보존
-        self.lines.append(line)
-        self._pending_qty = "1"
+        self.session.add_line(raw_text, qty, item, match_type)
+        self.session.pending_qty = "1"
         self._refresh_grid()
-        new_idx = len(self.lines) - 1
+        new_idx = len(self.session.lines) - 1
         self.tree.selection_set(str(new_idx))
         self._begin_cell_edit(str(new_idx), "qty")
 
@@ -147,15 +119,7 @@ class OrderTab(ttk.Frame):
             self._refresh_grid()  # 취소 시 원래 표시로 되돌림
             return
         item, match_type = resolved
-        line = self.lines[idx]
-        line.origin_text = new_raw_text
-        line.raw_text = item.get("order_name", new_raw_text)
-        line.item = item
-        line.requirement_text = item.get("product_name", "")
-        line.spec_text = item.get("spec", "")
-        line.buy_price = item.get("buy_price", 0)
-        line.sell_price = item.get("sell_price", 0)
-        line.match_type = match_type
+        self.session.rematch_line(idx, new_raw_text, item, match_type)
         self._refresh_grid()
         self.tree.selection_set(str(idx))
         self._begin_cell_edit(str(idx), "qty")
@@ -163,7 +127,7 @@ class OrderTab(ttk.Frame):
     # ---- 그리드 렌더링 ----
     def _refresh_grid(self):
         self.tree.delete(*self.tree.get_children())
-        for idx, line in enumerate(self.lines):
+        for idx, line in enumerate(self.session.lines):
             tag = line.tag()
             if tag == TAG_NORMAL:
                 tag = "normal_even" if idx % 2 == 0 else "normal_odd"
@@ -172,21 +136,13 @@ class OrderTab(ttk.Frame):
                 f"{line.buy_price:,.0f}", f"{line.sell_price:,.0f}", line.remark,
             ))
         self.tree.insert("", "end", iid=self.NEW_ROW_IID, tags=("new_row",), values=(
-            "", self._pending_qty, "", "", "", "", "",
+            "", self.session.pending_qty, "", "", "", "", "",
         ))
 
     def _sort_by(self, col: str):
-        if self._sort_col == col:
-            self._sort_reverse = not self._sort_reverse
-        else:
-            self._sort_col = col
-            self._sort_reverse = False
-        self.lines.sort(key=self.SORT_KEYS[col], reverse=self._sort_reverse)
-        for c in self.COLUMNS:
-            text = self.HEADINGS[c]
-            if c == self._sort_col:
-                text += " ▼" if self._sort_reverse else " ▲"
-            self.tree.heading(c, text=text)
+        self.session.sort(col)
+        theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS,
+                                    self.session.sort_col, self.session.sort_reverse)
         self._refresh_grid()
 
     def _selected_index(self):
@@ -199,7 +155,7 @@ class OrderTab(ttk.Frame):
         idx = self._selected_index()
         if idx is None:
             return
-        del self.lines[idx]
+        self.session.delete_line(idx)
         self._refresh_grid()
 
     # ---- 셀 인라인 편집 ----
@@ -238,7 +194,7 @@ class OrderTab(ttk.Frame):
         x, y, width, height = bbox
         current_value = self.tree.set(row_iid, col_name)
         if col_name == "raw" and row_iid != self.NEW_ROW_IID:
-            current_value = self.lines[int(row_iid)].origin_text
+            current_value = self.session.lines[int(row_iid)].origin_text
 
         left_aligned = col_name in ("raw", "remark")
         entry = tk.Entry(self.tree, font=theme.FONT_BASE, justify="left" if left_aligned else "center")
@@ -278,54 +234,50 @@ class OrderTab(ttk.Frame):
 
         if row_iid == self.NEW_ROW_IID:
             if col_name == "qty":
-                self._pending_qty = new_value or "1"
+                self.session.pending_qty = new_value or "1"
                 self._refresh_grid()
             elif col_name == "raw" and new_value:
-                qty = self._parse_qty(self._pending_qty)
+                qty = self._parse_qty(self.session.pending_qty)
                 self._create_line_from_input(new_value, qty)
             return
 
         idx = int(row_iid)
-        line = self.lines[idx]
+        line = self.session.lines[idx]
 
         if col_name == "raw":
             if new_value and new_value != line.origin_text:
                 self._rematch_line(idx, new_value)
             return
+
+        error = None
         if col_name == "qty":
-            try:
-                line.quantity = float(new_value)
-            except ValueError:
-                messagebox.showwarning("입력 오류", "수량은 숫자여야 합니다.")
+            error = self.session.set_quantity(idx, new_value)
         elif col_name == "buy":
-            try:
-                line.buy_price = float(new_value)
-            except ValueError:
-                messagebox.showwarning("입력 오류", "매입가는 숫자여야 합니다.")
+            error = self.session.set_price(idx, "buy", new_value)
         elif col_name == "sell":
-            try:
-                line.sell_price = float(new_value)
-            except ValueError:
-                messagebox.showwarning("입력 오류", "매출가는 숫자여야 합니다.")
+            error = self.session.set_price(idx, "sell", new_value)
         elif col_name == "remark":
-            line.remark = new_value
+            self.session.set_remark(idx, new_value)
+
+        if error:
+            messagebox.showwarning("입력 오류", error)
 
         self._refresh_grid()
         self.tree.selection_set(row_iid)
 
     # ---- 저장/내보내기 ----
     def _save_order(self):
-        if not self.lines:
+        if not self.session.lines:
             messagebox.showinfo("안내", "저장할 항목이 없습니다.")
             return
 
-        danger_lines = find_danger_lines(self.lines)
+        danger_lines = find_danger_lines(self.session.lines)
         if danger_lines:
             names = ", ".join(l.raw_text for l in danger_lines)
             if not messagebox.askyesno("역마진 경고", f"다음 항목은 매입가가 매출가보다 큽니다:\n{names}\n\n그대로 저장할까요?"):
                 return
 
-        price_updates = find_price_updates(self.lines)
+        price_updates = find_price_updates(self.session.lines)
         if price_updates:
             preview = "\n".join(
                 f'- {l.item["order_name"]}: '
@@ -337,7 +289,7 @@ class OrderTab(ttk.Frame):
                 return
 
         order_id = db.create_order(self.date_var.get().strip())
-        for line in self.lines:
+        for line in self.session.lines:
             item_id = None
             if line.item:
                 item_id = line.item["id"]
@@ -356,7 +308,7 @@ class OrderTab(ttk.Frame):
         messagebox.showinfo("저장 완료", "마스터 DB에 학습 반영이 완료되었습니다.")
 
     def _export_excel(self):
-        if not self.lines:
+        if not self.session.lines:
             messagebox.showinfo("안내", "내보낼 항목이 없습니다.")
             return
         default_name = f"{self.date_var.get().strip()} 제너리스 주문.xlsx"
@@ -368,7 +320,7 @@ class OrderTab(ttk.Frame):
             return
         excel_export.export_order(
             self.date_var.get().strip(),
-            [l.as_export_dict() for l in self.lines],
+            [l.as_export_dict() for l in self.session.lines],
             Path(path),
         )
         messagebox.showinfo("내보내기 완료", f"저장되었습니다:\n{path}")
@@ -417,16 +369,12 @@ class MasterTab(ttk.Frame):
         grid_card = theme.card(self)
         grid_card.pack(fill="both", expand=True, pady=(0, 12))
         self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=14)
-        for col in self.COLUMNS:
-            anchor = "center" if col in self.CENTERED else "w"
-            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor,
-                               command=lambda c=col: self._sort_by(c))
-            self.tree.column(col, width=self.WIDTHS[col], minwidth=self.WIDTHS[col], anchor=anchor, stretch=False)
+        dividers = theme.setup_grid_columns(self.tree, self.COLUMNS, self.HEADINGS, self.WIDTHS,
+                                             self.CENTERED, on_sort=self._sort_by)
         self.tree.pack(fill="both", expand=True)
         self.tree.tag_configure("normal_even", background="#FFFFFF")
         self.tree.tag_configure("normal_odd", background="#F5F7FB")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
-        dividers = theme.add_column_dividers(self.tree, self.COLUMNS, self.WIDTHS)
         theme.track_column_resize(self.tree, self.COLUMNS, dividers)
 
         detail_card = theme.card(self)
@@ -470,11 +418,7 @@ class MasterTab(ttk.Frame):
             self._sort_col = col
             self._sort_reverse = False
         self._items.sort(key=self.SORT_KEYS[col], reverse=self._sort_reverse)
-        for c in self.COLUMNS:
-            text = self.HEADINGS[c]
-            if c == self._sort_col:
-                text += " ▼" if self._sort_reverse else " ▲"
-            self.tree.heading(c, text=text)
+        theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, self._sort_col, self._sort_reverse)
         self._render()
 
     def _render(self):
