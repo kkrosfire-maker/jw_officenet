@@ -21,12 +21,23 @@ class OrderTab(ttk.Frame):
     CENTERED = {"raw", "qty", "spec", "buy", "sell"}
     EDITABLE = {"raw", "qty", "buy", "sell", "remark"}
     NEW_ROW_IID = "new"
+    SORT_KEYS = {
+        "raw": lambda line: line.raw_text,
+        "qty": lambda line: line.quantity,
+        "req": lambda line: line.requirement_text,
+        "spec": lambda line: line.spec_text,
+        "buy": lambda line: line.buy_price,
+        "sell": lambda line: line.sell_price,
+        "remark": lambda line: line.remark,
+    }
 
     def __init__(self, parent):
         super().__init__(parent, style="TFrame", padding=16)
         self.lines: list[OrderLine] = []
         self._pending_qty = "1"
         self._active_editor: tuple | None = None
+        self._sort_col: str | None = None
+        self._sort_reverse = False
         self._build()
 
     def _build(self):
@@ -48,7 +59,8 @@ class OrderTab(ttk.Frame):
         self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=16)
         for col in self.COLUMNS:
             anchor = "center" if col in self.CENTERED else "w"
-            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor)
+            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor,
+                               command=lambda c=col: self._sort_by(c))
             self.tree.column(col, width=self.WIDTHS[col], minwidth=self.WIDTHS[col], anchor=anchor, stretch=False)
         self.tree.pack(fill="both", expand=True)
         self.tree.tag_configure(TAG_DANGER, background=theme.DANGER_SOFT)
@@ -162,6 +174,20 @@ class OrderTab(ttk.Frame):
         self.tree.insert("", "end", iid=self.NEW_ROW_IID, tags=("new_row",), values=(
             "", self._pending_qty, "", "", "", "", "",
         ))
+
+    def _sort_by(self, col: str):
+        if self._sort_col == col:
+            self._sort_reverse = not self._sort_reverse
+        else:
+            self._sort_col = col
+            self._sort_reverse = False
+        self.lines.sort(key=self.SORT_KEYS[col], reverse=self._sort_reverse)
+        for c in self.COLUMNS:
+            text = self.HEADINGS[c]
+            if c == self._sort_col:
+                text += " ▼" if self._sort_reverse else " ▲"
+            self.tree.heading(c, text=text)
+        self._refresh_grid()
 
     def _selected_index(self):
         sel = self.tree.selection()
@@ -349,15 +375,28 @@ class OrderTab(ttk.Frame):
 
 
 class MasterTab(ttk.Frame):
-    COLUMNS = ("category", "order_name", "manufacturer", "spec", "buy", "sell", "base_date")
+    COLUMNS = ("category", "order_name", "manufacturer", "product_name", "spec", "buy", "sell", "base_date")
     HEADINGS = {"category": "항목", "order_name": "제너리스주문명", "manufacturer": "제조사",
-                "spec": "규격", "buy": "매입가", "sell": "매출가", "base_date": "기준일자"}
+                "product_name": "제품명", "spec": "규격", "buy": "매입가", "sell": "매출가", "base_date": "기준일자"}
     WIDTHS = {"category": 100, "order_name": 150, "manufacturer": 110,
-              "spec": 110, "buy": 90, "sell": 90, "base_date": 90}
+              "product_name": 150, "spec": 110, "buy": 90, "sell": 90, "base_date": 90}
     CENTERED = {"category", "spec", "buy", "sell", "base_date"}
+    SORT_KEYS = {
+        "category": lambda item: item["category"] or "",
+        "order_name": lambda item: item["order_name"] or "",
+        "manufacturer": lambda item: item["manufacturer"] or "",
+        "product_name": lambda item: item["product_name"] or "",
+        "spec": lambda item: item["spec"] or "",
+        "buy": lambda item: item["buy_price"],
+        "sell": lambda item: item["sell_price"],
+        "base_date": lambda item: item["base_date"] or "",
+    }
 
     def __init__(self, parent):
         super().__init__(parent, style="TFrame", padding=16)
+        self._items: list = []
+        self._sort_col: str | None = None
+        self._sort_reverse = False
         self._build()
         self._load(db.all_items())
 
@@ -380,14 +419,15 @@ class MasterTab(ttk.Frame):
         self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=14)
         for col in self.COLUMNS:
             anchor = "center" if col in self.CENTERED else "w"
-            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor)
+            self.tree.heading(col, text=self.HEADINGS[col], anchor=anchor,
+                               command=lambda c=col: self._sort_by(c))
             self.tree.column(col, width=self.WIDTHS[col], minwidth=self.WIDTHS[col], anchor=anchor, stretch=False)
         self.tree.pack(fill="both", expand=True)
         self.tree.tag_configure("normal_even", background="#FFFFFF")
         self.tree.tag_configure("normal_odd", background="#F5F7FB")
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
-        self.tree.bind("<Button-1>", lambda e: theme.block_column_resize(self.tree, e))
-        theme.add_column_dividers(self.tree, self.COLUMNS, self.WIDTHS)
+        dividers = theme.add_column_dividers(self.tree, self.COLUMNS, self.WIDTHS)
+        theme.track_column_resize(self.tree, self.COLUMNS, dividers)
 
         detail_card = theme.card(self)
         detail_card.pack(fill="x")
@@ -418,12 +458,32 @@ class MasterTab(ttk.Frame):
         self._selected_item = None
 
     def _load(self, items):
+        self._items = list(items)
+        if self._sort_col:
+            self._items.sort(key=self.SORT_KEYS[self._sort_col], reverse=self._sort_reverse)
+        self._render()
+
+    def _sort_by(self, col: str):
+        if self._sort_col == col:
+            self._sort_reverse = not self._sort_reverse
+        else:
+            self._sort_col = col
+            self._sort_reverse = False
+        self._items.sort(key=self.SORT_KEYS[col], reverse=self._sort_reverse)
+        for c in self.COLUMNS:
+            text = self.HEADINGS[c]
+            if c == self._sort_col:
+                text += " ▼" if self._sort_reverse else " ▲"
+            self.tree.heading(c, text=text)
+        self._render()
+
+    def _render(self):
         self.tree.delete(*self.tree.get_children())
-        for idx, item in enumerate(items):
+        for idx, item in enumerate(self._items):
             tag = "normal_even" if idx % 2 == 0 else "normal_odd"
             self.tree.insert("", "end", iid=str(item["id"]), tags=(tag,), values=(
-                item["category"], item["order_name"], item["manufacturer"], item["spec"],
-                f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}', item["base_date"] or "",
+                item["category"], item["order_name"], item["manufacturer"], item["product_name"] or "",
+                item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}', item["base_date"] or "",
             ))
 
     def _search(self):

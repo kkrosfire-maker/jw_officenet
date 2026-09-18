@@ -107,6 +107,16 @@ def block_column_resize(tree, event) -> str | None:
     return None
 
 
+def track_column_resize(tree, columns, dividers) -> None:
+    """헤더 드래그로 컬럼 폭을 바꾼 뒤, 구분선을 실제 폭에 맞춰 다시 그린다."""
+    def reposition(_event=None):
+        offset = 0
+        for divider, col in zip(dividers, columns[:-1]):
+            offset += tree.column(col, "width")
+            divider.place(x=offset, y=0, relheight=1.0)
+    tree.bind("<ButtonRelease-1>", reposition, add="+")
+
+
 def autosize(win, min_w=0, min_h=0, pad=24) -> None:
     """실제 렌더링된 위젯 크기에 맞춰 창 크기를 정한다 (DPI/폰트 차이로 인한 잘림 방지)."""
     win.update_idletasks()
