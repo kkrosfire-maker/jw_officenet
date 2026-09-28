@@ -88,6 +88,9 @@ def card(parent, **kwargs) -> ttk.Frame:
     return frame
 
 
+MIN_COLUMN_WIDTH = 30
+
+
 def setup_grid_columns(tree, columns, headings, widths, centered=frozenset(), on_sort=None) -> list:
     """헤더 텍스트/폭/정렬앵커 설정과 구분선 생성을 한 번에 처리한다.
     on_sort가 주어지면 헤더 클릭 시 on_sort(col)을 호출하도록 연결한다."""
@@ -97,7 +100,8 @@ def setup_grid_columns(tree, columns, headings, widths, centered=frozenset(), on
         if on_sort:
             kwargs["command"] = lambda c=col: on_sort(c)
         tree.heading(col, **kwargs)
-        tree.column(col, width=widths[col], minwidth=widths[col], anchor=anchor, stretch=False)
+        tree.column(col, width=widths[col], minwidth=min(MIN_COLUMN_WIDTH, widths[col]),
+                    anchor=anchor, stretch=False)
     return add_column_dividers(tree, columns, widths)
 
 
@@ -122,21 +126,41 @@ def add_column_dividers(tree, columns, widths) -> list:
     return lines
 
 
-def block_column_resize(tree, event) -> str | None:
-    """구분선이 어긋나지 않도록 헤더 드래그로 컬럼 폭을 바꾸는 것을 막는다."""
-    if tree.identify_region(event.x, event.y) == "separator":
-        return "break"
-    return None
-
-
 def track_column_resize(tree, columns, dividers) -> None:
-    """헤더 드래그로 컬럼 폭을 바꾼 뒤, 구분선을 실제 폭에 맞춰 다시 그린다."""
+    """컬럼 폭 조절을 활성화한다.
+
+    헤더 경계 드래그(ttk 기본 동작) 후 구분선을 실제 폭에 맞춰 다시 그리고,
+    구분선 자체도 드래그 핸들로 동작시킨다. 구분선은 tree 위에 얹힌 별도 위젯이라
+    선 위를 정확히 눌렀을 때는 ttk 헤더가 이벤트를 받지 못하기 때문이다.
+    """
     def reposition(_event=None):
         offset = 0
         for divider, col in zip(dividers, columns[:-1]):
             offset += tree.column(col, "width")
             divider.place(x=offset, y=0, relheight=1.0)
+
+    tree.bind("<B1-Motion>", reposition, add="+")
     tree.bind("<ButtonRelease-1>", reposition, add="+")
+
+    for divider, col in zip(dividers, columns[:-1]):
+        _bind_divider_drag(tree, divider, col, reposition)
+
+
+def _bind_divider_drag(tree, divider, col, reposition) -> None:
+    state = {"x": 0, "width": 0}
+
+    def start(event):
+        state["x"] = event.x_root
+        state["width"] = tree.column(col, "width")
+
+    def drag(event):
+        width = max(MIN_COLUMN_WIDTH, state["width"] + event.x_root - state["x"])
+        tree.column(col, width=width)
+        reposition()
+
+    divider.configure(cursor="sb_h_double_arrow")
+    divider.bind("<Button-1>", start)
+    divider.bind("<B1-Motion>", drag)
 
 
 def autosize(win, min_w=0, min_h=0, pad=24) -> None:

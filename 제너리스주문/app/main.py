@@ -45,8 +45,9 @@ class OrderTab(ttk.Frame):
         grid_card.pack(fill="both", expand=True, pady=(0, 12))
 
         self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=16)
-        theme.setup_grid_columns(self.tree, self.COLUMNS, self.HEADINGS, self.WIDTHS,
-                                  self.CENTERED, on_sort=self._sort_by)
+        dividers = theme.setup_grid_columns(self.tree, self.COLUMNS, self.HEADINGS, self.WIDTHS,
+                                            self.CENTERED, on_sort=self._sort_by)
+        theme.track_column_resize(self.tree, self.COLUMNS, dividers)
         self.tree.pack(fill="both", expand=True)
         self.tree.tag_configure(TAG_DANGER, background=theme.DANGER_SOFT)
         self.tree.tag_configure(TAG_WARNING, background=theme.WARNING_SOFT)
@@ -57,7 +58,9 @@ class OrderTab(ttk.Frame):
         self.tree.bind("<Delete>", lambda e: self._delete_selected())
 
         hint = ttk.Label(
-            grid_card, text="빈 줄의 품목 칸에 입력 후 Enter로 추가 · 셀 클릭으로 수정 · Delete로 행 삭제",
+            grid_card,
+            text="빈 줄의 품목 칸에 입력 후 Enter로 추가 · 셀 클릭으로 수정 · Delete로 행 삭제 · "
+                 "헤더 경계선 드래그로 칸 너비 조절",
             style="CardSecondary.TLabel",
         )
         hint.pack(anchor="w", pady=(8, 0))
@@ -71,6 +74,8 @@ class OrderTab(ttk.Frame):
                    command=self._export_excel).pack(side="left", padx=8)
         ttk.Button(action_row, text="선택 행 삭제", style="Secondary.TButton",
                    command=self._delete_selected).pack(side="left", padx=8)
+        ttk.Button(action_row, text="새로 작성하기", style="Secondary.TButton",
+                   command=self._reset_order).pack(side="left", padx=8)
 
         self._refresh_grid()
 
@@ -158,10 +163,29 @@ class OrderTab(ttk.Frame):
         self.session.delete_line(idx)
         self._refresh_grid()
 
+    def _reset_order(self):
+        """입력한 내용을 모두 비우고 새 주문 작성 상태로 되돌린다."""
+        if self.session.lines and not messagebox.askyesno(
+            "새로 작성하기", "입력한 내용을 모두 지우고 새로 작성할까요?"
+        ):
+            return
+        self._cancel_active_editor()
+        self.session = OrderEditSession()
+        theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, None, False)
+        self.date_var.set(dt.date.today().strftime("%y%m%d"))
+        self._refresh_grid()
+        self.tree.selection_remove(*self.tree.selection())
+
+    def _cancel_active_editor(self):
+        """열려 있는 셀 편집기를 커밋하지 않고 닫는다."""
+        if self._active_editor is None:
+            return
+        entry = self._active_editor[0]
+        self._active_editor = None
+        entry.destroy()
+
     # ---- 셀 인라인 편집 ----
     def _on_tree_click(self, event):
-        if theme.block_column_resize(self.tree, event) == "break":
-            return "break"
         region = self.tree.identify("region", event.x, event.y)
         if region != "cell":
             return
