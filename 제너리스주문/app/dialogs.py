@@ -218,3 +218,59 @@ class PriceHistoryDialog(tk.Toplevel):
             ))
 
         theme.autosize(self, min_w=560, min_h=280)
+
+
+class MasterReplaceDialog(tk.Toplevel):
+    """마스터 엑셀을 새로 불러올 때, 기존 품목에 병합할지 통째로 교체할지 고른다."""
+
+    def __init__(self, parent, xlsx_path):
+        super().__init__(parent)
+        self.title("마스터 엑셀 불러오기")
+        self.configure(bg=theme.APP_BG)
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        self.bind("<Escape>", lambda e: self._cancel())
+
+        self.result = None  # "merge" | "replace" | None(취소)
+        self.mode = tk.StringVar(value="merge")
+
+        ttk.Label(self, text="이 파일로 품목 마스터를 갱신합니다.", style="Heading.TLabel").pack(
+            anchor="w", padx=16, pady=(16, 4))
+        ttk.Label(self, text=str(xlsx_path), style="Secondary.TLabel", wraplength=520).pack(
+            anchor="w", padx=16, pady=(0, 12))
+
+        ttk.Radiobutton(self, text="기존 품목에 병합 (권장)", value="merge",
+                        variable=self.mode).pack(anchor="w", padx=16)
+        ttk.Label(self, text="같은 제너리스주문명은 내용·단가만 갱신하고, 없던 품목은 새로 등록합니다. "
+                             "학습된 별칭과 가격 이력이 그대로 남습니다.",
+                  style="Secondary.TLabel", wraplength=520).pack(anchor="w", padx=36, pady=(0, 10))
+
+        ttk.Radiobutton(self, text="전체 교체", value="replace",
+                        variable=self.mode).pack(anchor="w", padx=16)
+        ttk.Label(self, text="기존 품목을 모두 지우고 엑셀 내용으로 다시 만듭니다. "
+                             "학습된 별칭과 가격 이력도 함께 삭제됩니다.",
+                  style="Secondary.TLabel", wraplength=520).pack(anchor="w", padx=36, pady=(0, 12))
+
+        btn_row = ttk.Frame(self)
+        btn_row.pack(fill="x", padx=16, pady=(0, 16))
+        ttk.Button(btn_row, text="취소", style="Secondary.TButton",
+                   command=self._cancel).pack(side="right")
+        ttk.Button(btn_row, text="불러오기", style="Accent.TButton",
+                   command=self._submit).pack(side="right", padx=8)
+
+        theme.autosize(self, min_w=560, min_h=300)
+
+    def _submit(self):
+        if self.mode.get() == "replace" and not messagebox.askyesno(
+            "전체 교체 확인",
+            "기존 품목·별칭·가격 이력을 모두 삭제하고 새 엑셀로 다시 만듭니다.\n계속할까요?",
+            parent=self,
+        ):
+            return
+        self.result = self.mode.get()
+        self.destroy()
+
+    def _cancel(self):
+        self.result = None
+        self.destroy()

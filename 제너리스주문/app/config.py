@@ -14,8 +14,11 @@ DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "genelis.db"
 EXPORT_DIR = DATA_DIR / "exports"
 
+# 최초 실행 시 읽어들이는 기본 마스터 엑셀. 사용자가 교체하면 그 경로를
+# settings 테이블(MASTER_PATH_SETTING)에 저장해 이후부터는 그쪽을 쓴다.
 SOURCE_MASTER_XLSX = Path(r"C:\Users\JW\Desktop\제너리스연신내점\01.제너리스_주문 최종.xlsx")
 SOURCE_MASTER_SHEET = "품목별 단가"
+MASTER_PATH_SETTING = "master_xlsx_path"
 
 # 매칭 후보 유사도 임계값
 AUTO_MATCH_THRESHOLD = 0.92  # 1등 후보 점수가 이 이상이면 match_type을 "자동확인"으로 기록(후보 개수는 보지 않음)

@@ -1,5 +1,6 @@
 """제너리스 주문 변환·관리 프로그램 (Phase 1 MVP)."""
 import datetime as dt
+import os
 import sys
 import tkinter as tk
 from pathlib import Path
@@ -7,10 +8,20 @@ from tkinter import filedialog, messagebox, ttk
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import db, excel_export, importer, matching, theme
-from app.config import EXPORT_DIR
-from app.dialogs import CandidatePickerDialog, NewItemDialog, PriceHistoryDialog
+from app import db, excel_export, grid_edit, importer, matching, theme
+from app.config import EXPORT_DIR, SOURCE_MASTER_SHEET
+from app.dialogs import (CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
+                         PriceHistoryDialog)
 from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates
+
+
+try:  # 탐색기에서 파일을 끌어다 놓는 기능(없어도 나머지 기능은 그대로 동작)
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+
+    BaseTk = TkinterDnD.Tk
+except ImportError:  # pragma: no cover - 배포 환경에 따라 없을 수 있다
+    DND_FILES = None
+    BaseTk = tk.Tk
 
 
 class OrderTab(ttk.Frame):
@@ -25,7 +36,6 @@ class OrderTab(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, style="TFrame", padding=16)
         self.session = OrderEditSession()
-        self._active_editor: tuple | None = None
         self._build()
 
     def _build(self):
@@ -54,7 +64,12 @@ class OrderTab(ttk.Frame):
         self.tree.tag_configure("normal_even", background="#FFFFFF")
         self.tree.tag_configure("normal_odd", background="#F5F7FB")
         self.tree.tag_configure("new_row", background="#FAFBFD", foreground=theme.TEXT_SECONDARY)
-        self.tree.bind("<Button-1>", self._on_tree_click)
+        self.editor = grid_edit.InlineCellEditor(
+            self.tree, self.COLUMNS, on_commit=self._commit_cell_edit,
+            is_editable=self._is_editable, left_aligned={"raw", "remark"},
+            initial_value=self._editor_value,
+        )
+        self.tree.bind("<Button-1>", self.editor.handle_click)
         self.tree.bind("<Delete>", lambda e: self._delete_selected())
 
         hint = ttk.Label(
@@ -116,7 +131,7 @@ class OrderTab(ttk.Frame):
         self._refresh_grid()
         new_idx = len(self.session.lines) - 1
         self.tree.selection_set(str(new_idx))
-        self._begin_cell_edit(str(new_idx), "qty")
+        self.editor.begin(str(new_idx), "qty")
 
     def _rematch_line(self, idx: int, new_raw_text: str):
         resolved = self._resolve_item_for_text(new_raw_text)
@@ -127,7 +142,7 @@ class OrderTab(ttk.Frame):
         self.session.rematch_line(idx, new_raw_text, item, match_type)
         self._refresh_grid()
         self.tree.selection_set(str(idx))
-        self._begin_cell_edit(str(idx), "qty")
+        self.editor.begin(str(idx), "qty")
 
     # ---- 그리드 렌더링 ----
     def _refresh_grid(self):
@@ -169,89 +184,24 @@ class OrderTab(ttk.Frame):
             "새로 작성하기", "입력한 내용을 모두 지우고 새로 작성할까요?"
         ):
             return
-        self._cancel_active_editor()
+        self.editor.cancel_active()
         self.session = OrderEditSession()
         theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, None, False)
         self.date_var.set(dt.date.today().strftime("%y%m%d"))
         self._refresh_grid()
         self.tree.selection_remove(*self.tree.selection())
 
-    def _cancel_active_editor(self):
-        """열려 있는 셀 편집기를 커밋하지 않고 닫는다."""
-        if self._active_editor is None:
-            return
-        entry = self._active_editor[0]
-        self._active_editor = None
-        entry.destroy()
-
     # ---- 셀 인라인 편집 ----
-    def _on_tree_click(self, event):
-        region = self.tree.identify("region", event.x, event.y)
-        if region != "cell":
-            return
-        row_iid = self.tree.identify_row(event.y)
-        col_id = self.tree.identify_column(event.x)
-        if not row_iid or not col_id:
-            return
-        col_index = int(col_id.replace("#", "")) - 1
-        if col_index < 0 or col_index >= len(self.COLUMNS):
-            return
-        col_name = self.COLUMNS[col_index]
-
+    def _is_editable(self, row_iid: str, col_name: str) -> bool:
         if row_iid == self.NEW_ROW_IID:
-            if col_name not in ("raw", "qty"):
-                return
-        elif col_name not in self.EDITABLE:
-            return
+            return col_name in ("raw", "qty")
+        return col_name in self.EDITABLE
 
-        if self._active_editor is not None:
-            self._active_editor[1]()  # 이전 편집을 즉시 커밋
-
-        self.after(1, lambda: self._begin_cell_edit(row_iid, col_name))
-
-    def _begin_cell_edit(self, row_iid: str, col_name: str):
-        if not self.tree.exists(row_iid):
-            return
-        bbox = self.tree.bbox(row_iid, col_name)
-        if not bbox:
-            return
-        x, y, width, height = bbox
-        current_value = self.tree.set(row_iid, col_name)
+    def _editor_value(self, row_iid: str, col_name: str) -> str:
+        """빈 줄이 아닌 raw 칸은 화면에 보이는 정식 품목명 대신 병원 원문을 편집한다."""
         if col_name == "raw" and row_iid != self.NEW_ROW_IID:
-            current_value = self.session.lines[int(row_iid)].origin_text
-
-        left_aligned = col_name in ("raw", "remark")
-        entry = tk.Entry(self.tree, font=theme.FONT_BASE, justify="left" if left_aligned else "center")
-        entry.insert(0, current_value)
-        entry.place(x=x, y=y, width=width, height=height)
-        entry.focus_set()
-        entry.select_range(0, "end")
-
-        def commit(_event=None):
-            if self._active_editor is None or self._active_editor[0] is not entry:
-                return
-            new_value = entry.get()
-            is_return = _event is not None and getattr(_event, "keysym", None) in ("Return", "KP_Enter")
-            self._active_editor = None
-            entry.destroy()
-            self._commit_cell_edit(row_iid, col_name, new_value)
-            if is_return and row_iid != self.NEW_ROW_IID:
-                if col_name == "qty":
-                    self._begin_cell_edit(row_iid, "remark")
-                elif col_name == "remark":
-                    self._begin_cell_edit(self.NEW_ROW_IID, "raw")
-
-        def cancel(_event=None):
-            if self._active_editor is None or self._active_editor[0] is not entry:
-                return
-            self._active_editor = None
-            entry.destroy()
-
-        self._active_editor = (entry, commit)
-        entry.bind("<Return>", commit)
-        entry.bind("<KP_Enter>", commit)
-        entry.bind("<Escape>", cancel)
-        entry.bind("<FocusOut>", commit)
+            return self.session.lines[int(row_iid)].origin_text
+        return self.tree.set(row_iid, col_name)
 
     def _commit_cell_edit(self, row_iid: str, col_name: str, new_value: str):
         new_value = new_value.strip()
@@ -263,7 +213,7 @@ class OrderTab(ttk.Frame):
             elif col_name == "raw" and new_value:
                 qty = self._parse_qty(self.session.pending_qty)
                 self._create_line_from_input(new_value, qty)
-            return
+            return None
 
         idx = int(row_iid)
         line = self.session.lines[idx]
@@ -271,7 +221,7 @@ class OrderTab(ttk.Frame):
         if col_name == "raw":
             if new_value and new_value != line.origin_text:
                 self._rematch_line(idx, new_value)
-            return
+            return None
 
         error = None
         if col_name == "qty":
@@ -288,6 +238,12 @@ class OrderTab(ttk.Frame):
 
         self._refresh_grid()
         self.tree.selection_set(row_iid)
+        # Enter로 넘어갈 다음 칸: 수량 → 특이사항 → 새 줄의 품목
+        if col_name == "qty":
+            return row_iid, "remark"
+        if col_name == "remark":
+            return self.NEW_ROW_IID, "raw"
+        return None
 
     # ---- 저장/내보내기 ----
     def _save_order(self):
@@ -357,6 +313,10 @@ class MasterTab(ttk.Frame):
     WIDTHS = {"category": 100, "order_name": 150, "manufacturer": 110,
               "product_name": 150, "spec": 110, "buy": 90, "sell": 90, "base_date": 90}
     CENTERED = {"category", "spec", "buy", "sell", "base_date"}
+    # 기준일자는 가격을 고칠 때 자동으로 갱신되므로 직접 편집하지 않는다.
+    EDITABLE = ("category", "order_name", "manufacturer", "product_name", "spec", "buy", "sell")
+    TEXT_FIELDS = {"category": "category", "order_name": "order_name",
+                   "manufacturer": "manufacturer", "product_name": "product_name", "spec": "spec"}
     SORT_KEYS = {
         "category": lambda item: item["category"] or "",
         "order_name": lambda item: item["order_name"] or "",
@@ -377,6 +337,8 @@ class MasterTab(ttk.Frame):
         self._load(db.all_items())
 
     def _build(self):
+        self._build_master_file_card()
+
         search_card = theme.card(self)
         search_card.pack(fill="x", pady=(0, 12))
         ttk.Label(search_card, text="검색", style="Card.TLabel").pack(side="left")
@@ -390,9 +352,12 @@ class MasterTab(ttk.Frame):
         ttk.Button(search_card, text="전체보기", style="Secondary.TButton",
                    command=lambda: self._load(db.all_items())).pack(side="left", padx=8)
 
+        detail_card = theme.card(self)
+        detail_card.pack(side="bottom", fill="x")
+
         grid_card = theme.card(self)
         grid_card.pack(fill="both", expand=True, pady=(0, 12))
-        self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=14)
+        self.tree = ttk.Treeview(grid_card, columns=self.COLUMNS, show="headings", height=10)
         dividers = theme.setup_grid_columns(self.tree, self.COLUMNS, self.HEADINGS, self.WIDTHS,
                                              self.CENTERED, on_sort=self._sort_by)
         self.tree.pack(fill="both", expand=True)
@@ -401,34 +366,136 @@ class MasterTab(ttk.Frame):
         self.tree.bind("<<TreeviewSelect>>", self._on_select)
         theme.track_column_resize(self.tree, self.COLUMNS, dividers)
 
-        detail_card = theme.card(self)
-        detail_card.pack(fill="x")
+        self.editor = grid_edit.InlineCellEditor(
+            self.tree, self.COLUMNS, on_commit=self._commit_cell_edit,
+            is_editable=lambda row_iid, col: col in self.EDITABLE,
+            left_aligned={"order_name", "manufacturer", "product_name"},
+            initial_value=self._editor_value,
+        )
+        self.tree.bind("<Button-1>", self.editor.handle_click)
+
+        ttk.Label(grid_card,
+                  text="셀을 클릭하면 그 자리에서 수정됩니다 · Enter로 같은 행의 다음 칸 이동 · Esc 취소",
+                  style="CardSecondary.TLabel").pack(anchor="w", pady=(8, 0))
+
         self.detail_label = ttk.Label(detail_card, text="품목을 선택하세요.", style="Card.TLabel",
                                        font=theme.FONT_BOLD)
-        self.detail_label.grid(row=0, column=0, columnspan=6, sticky="w")
+        self.detail_label.grid(row=0, column=0, columnspan=4, sticky="w")
 
         self.alias_var = tk.StringVar()
         ttk.Label(detail_card, text="별칭 추가", style="Card.TLabel").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(detail_card, textvariable=self.alias_var, width=20).grid(row=2, column=0, sticky="w")
+        alias_entry = ttk.Entry(detail_card, textvariable=self.alias_var, width=20)
+        alias_entry.grid(row=2, column=0, sticky="w")
+        alias_entry.bind("<Return>", lambda e: self._add_alias())
         ttk.Button(detail_card, text="추가", style="Secondary.TButton",
                    command=self._add_alias).grid(row=2, column=1, sticky="w", padx=4)
-
-        self.buy_var = tk.StringVar()
-        self.sell_var = tk.StringVar()
-        ttk.Label(detail_card, text="매입가", style="Card.TLabel").grid(row=1, column=2, sticky="w", padx=(16, 0), pady=(8, 0))
-        ttk.Entry(detail_card, textvariable=self.buy_var, width=10).grid(row=2, column=2, sticky="w", padx=(16, 0))
-        ttk.Label(detail_card, text="매출가", style="Card.TLabel").grid(row=1, column=3, sticky="w", pady=(8, 0))
-        ttk.Entry(detail_card, textvariable=self.sell_var, width=10).grid(row=2, column=3, sticky="w")
-        ttk.Button(detail_card, text="가격 수정", style="Accent.TButton",
-                   command=self._update_price).grid(row=2, column=4, sticky="w", padx=8)
         ttk.Button(detail_card, text="가격 이력", style="Secondary.TButton",
-                   command=self._show_history).grid(row=2, column=5, sticky="w", padx=4)
+                   command=self._show_history).grid(row=2, column=2, sticky="w", padx=8)
 
         self.alias_list_label = ttk.Label(detail_card, text="", style="CardSecondary.TLabel", wraplength=700)
-        self.alias_list_label.grid(row=3, column=0, columnspan=6, sticky="w", pady=(8, 0))
+        self.alias_list_label.grid(row=3, column=0, columnspan=4, sticky="w", pady=(8, 0))
 
         self._selected_item = None
 
+    # ---- 마스터 엑셀 파일 ----
+    def _build_master_file_card(self):
+        card = theme.card(self)
+        card.pack(fill="x", pady=(0, 12))
+
+        head = ttk.Frame(card, style="Card.TFrame")
+        head.pack(fill="x")
+        ttk.Label(head, text="마스터 엑셀", style="Card.TLabel", font=theme.FONT_BOLD).pack(side="left")
+        ttk.Button(head, text="다른 파일로 교체", style="Accent.TButton",
+                   command=self._choose_master_file).pack(side="right")
+        ttk.Button(head, text="지금 다시 불러오기", style="Secondary.TButton",
+                   command=lambda: self._apply_master_file(importer.current_master_path())).pack(side="right", padx=8)
+        ttk.Button(head, text="폴더 열기", style="Secondary.TButton",
+                   command=self._open_master_folder).pack(side="right")
+
+        self.master_path_label = ttk.Label(card, text="", style="Card.TLabel",
+                                           font=(theme.FONT_FAMILY, 10, "underline"),
+                                           foreground=theme.ACCENT, cursor="hand2", wraplength=900)
+        self.master_path_label.pack(anchor="w", pady=(6, 0))
+        self.master_path_label.bind("<Button-1>", lambda e: self._open_master_file())
+
+        self.master_hint_label = ttk.Label(card, text="", style="CardSecondary.TLabel")
+        self.master_hint_label.pack(anchor="w", pady=(4, 0))
+
+        self._master_drop_targets = (card, head, self.master_path_label, self.master_hint_label)
+        self._refresh_master_card()
+
+    def enable_file_drop(self, register) -> None:
+        """App이 넘겨준 등록 함수로 마스터 카드 영역을 파일 드롭 대상으로 만든다."""
+        for widget in self._master_drop_targets:
+            register(widget, self._on_files_dropped)
+
+    def _refresh_master_card(self):
+        path = importer.current_master_path()
+        self.master_path_label.configure(text=str(path))
+        count = len(db.all_items())
+        status = f"품목 {count:,}개 등록됨 · 시트 [{SOURCE_MASTER_SHEET}]"
+        if not path.exists():
+            status = "⚠ 파일을 찾을 수 없습니다 · " + status
+        self.master_hint_label.configure(
+            text=status + " · 경로를 클릭하면 엑셀이 열립니다 · 엑셀 파일을 이 영역에 끌어다 놓아도 교체됩니다."
+        )
+
+    def _open_master_file(self):
+        path = importer.current_master_path()
+        if not path.exists():
+            messagebox.showwarning("안내", f"마스터 파일을 찾을 수 없습니다:\n{path}")
+            return
+        os.startfile(str(path))
+
+    def _open_master_folder(self):
+        folder = importer.current_master_path().parent
+        if not folder.exists():
+            messagebox.showwarning("안내", f"폴더를 찾을 수 없습니다:\n{folder}")
+            return
+        os.startfile(str(folder))
+
+    def _choose_master_file(self):
+        path = filedialog.askopenfilename(
+            title="마스터 엑셀 선택",
+            initialdir=str(importer.current_master_path().parent),
+            filetypes=[("Excel 파일", "*.xlsx *.xlsm"), ("모든 파일", "*.*")],
+        )
+        if path:
+            self._apply_master_file(Path(path))
+
+    def _on_files_dropped(self, paths):
+        candidates = [Path(p) for p in paths if Path(p).suffix.lower() in (".xlsx", ".xlsm")]
+        if not candidates:
+            messagebox.showwarning("안내", "엑셀 파일(.xlsx/.xlsm)만 마스터로 사용할 수 있습니다.")
+            return
+        self._apply_master_file(candidates[0])
+
+    def _apply_master_file(self, path: Path):
+        """선택/드롭된 엑셀로 마스터 DB를 갱신한다."""
+        path = Path(path)
+        if not path.exists():
+            messagebox.showwarning("안내", f"파일을 찾을 수 없습니다:\n{path}")
+            return
+        dialog = MasterReplaceDialog(self, path)
+        self.wait_window(dialog)
+        if dialog.result is None:
+            return
+
+        try:
+            result = importer.sync_master(path, replace=(dialog.result == "replace"))
+        except Exception as exc:  # 시트 구조가 다른 파일을 고른 경우 등
+            messagebox.showerror("불러오기 실패", f"엑셀을 읽지 못했습니다:\n{exc}")
+            return
+
+        importer.remember_master_path(path)
+        self._load(db.all_items())
+        self._refresh_master_card()
+        messagebox.showinfo(
+            "불러오기 완료",
+            f"신규 {result['added']}개 · 갱신 {result['updated']}개 (엑셀 {result['total']}행)",
+        )
+
+    # ---- 목록 ----
     def _load(self, items):
         self._items = list(items)
         if self._sort_col:
@@ -445,14 +512,16 @@ class MasterTab(ttk.Frame):
         theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, self._sort_col, self._sort_reverse)
         self._render()
 
+    def _row_values(self, item):
+        return (item["category"], item["order_name"], item["manufacturer"], item["product_name"] or "",
+                item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}',
+                item["base_date"] or "")
+
     def _render(self):
         self.tree.delete(*self.tree.get_children())
         for idx, item in enumerate(self._items):
             tag = "normal_even" if idx % 2 == 0 else "normal_odd"
-            self.tree.insert("", "end", iid=str(item["id"]), tags=(tag,), values=(
-                item["category"], item["order_name"], item["manufacturer"], item["product_name"] or "",
-                item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}', item["base_date"] or "",
-            ))
+            self.tree.insert("", "end", iid=str(item["id"]), tags=(tag,), values=self._row_values(item))
 
     def _search(self):
         keyword = self.search_var.get().strip()
@@ -462,17 +531,84 @@ class MasterTab(ttk.Frame):
         self.search_var.set("")
         self._load(db.all_items())
 
+    # ---- 셀 인라인 편집 ----
+    def _editor_value(self, row_iid: str, col_name: str) -> str:
+        """가격은 천단위 콤마를 뺀 숫자를 그대로 편집한다."""
+        item = self._item_by_iid(row_iid)
+        if item is None:
+            return self.tree.set(row_iid, col_name)
+        if col_name == "buy":
+            return f'{item["buy_price"]:g}'
+        if col_name == "sell":
+            return f'{item["sell_price"]:g}'
+        return self.tree.set(row_iid, col_name)
+
+    def _item_by_iid(self, row_iid: str):
+        item_id = int(row_iid)
+        for item in self._items:
+            if item["id"] == item_id:
+                return item
+        return None
+
+    def _commit_cell_edit(self, row_iid: str, col_name: str, new_value: str):
+        new_value = new_value.strip()
+        item = self._item_by_iid(row_iid)
+        if item is None:
+            return None
+
+        if col_name in self.TEXT_FIELDS:
+            self._save_text_field(item, self.TEXT_FIELDS[col_name], new_value)
+        else:
+            self._save_price_field(item, col_name, new_value)
+
+        self.tree.item(row_iid, values=self._row_values(item))
+        self.tree.selection_set(row_iid)
+        return self._next_editable(row_iid, col_name)
+
+    def _next_editable(self, row_iid: str, col_name: str):
+        idx = self.EDITABLE.index(col_name)
+        if idx + 1 < len(self.EDITABLE):
+            return row_iid, self.EDITABLE[idx + 1]
+        return None
+
+    def _save_text_field(self, item, field: str, value: str):
+        if field == "order_name" and not value:
+            messagebox.showwarning("입력 오류", "제너리스주문명은 비울 수 없습니다.")
+            return
+        if item[field] == value:
+            return
+        db.update_item_fields(item["id"], **{field: value})
+        item[field] = value
+        if field == "order_name":
+            db.add_alias(item["id"], value)  # 바뀐 이름으로도 매칭되도록 별칭에 남긴다
+
+    def _save_price_field(self, item, col_name: str, value: str):
+        try:
+            number = float(value.replace(",", ""))
+        except ValueError:
+            messagebox.showwarning("입력 오류", "매입가/매출가는 숫자여야 합니다.")
+            return
+        buy = number if col_name == "buy" else item["buy_price"]
+        sell = number if col_name == "sell" else item["sell_price"]
+        if buy == item["buy_price"] and sell == item["sell_price"]:
+            return
+        if buy > sell and not messagebox.askyesno("역마진 경고", "매입가가 매출가보다 큽니다. 그대로 수정할까요?"):
+            return
+        db.update_item_prices(item["id"], buy, sell, memo="품목 마스터 관리 화면에서 수정")
+        item.update(db.get_item(item["id"]))
+
+    # ---- 선택 품목 상세 ----
     def _on_select(self, _event):
         sel = self.tree.selection()
         if not sel:
             return
         item = db.get_item(int(sel[0]))
+        if item is None:
+            return
         self._selected_item = item
         self.detail_label.configure(
             text=f'{item["order_name"]}  |  {item["manufacturer"]}  |  {item["product_name"]}'
         )
-        self.buy_var.set(str(item["buy_price"]))
-        self.sell_var.set(str(item["sell_price"]))
         aliases = db.get_aliases(item["id"])
         self.alias_list_label.configure(text="별칭: " + (", ".join(aliases) if aliases else "(없음)"))
 
@@ -486,29 +622,13 @@ class MasterTab(ttk.Frame):
         self.alias_var.set("")
         self._on_select(None)
 
-    def _update_price(self):
-        if not self._selected_item:
-            return
-        try:
-            buy = float(self.buy_var.get())
-            sell = float(self.sell_var.get())
-        except ValueError:
-            messagebox.showwarning("입력 오류", "매입가/매출가는 숫자여야 합니다.")
-            return
-        if buy > sell:
-            if not messagebox.askyesno("역마진 경고", "매입가가 매출가보다 큽니다. 그대로 수정할까요?"):
-                return
-        db.update_item_prices(self._selected_item["id"], buy, sell, memo="품목 마스터 관리 화면에서 수정")
-        self._search()
-        messagebox.showinfo("완료", "가격이 수정되었습니다.")
-
     def _show_history(self):
         if not self._selected_item:
             return
         PriceHistoryDialog(self, self._selected_item)
 
 
-class App(tk.Tk):
+class App(BaseTk):
     def __init__(self):
         super().__init__()
         self.title("제너리스 주문 변환·관리")
@@ -518,19 +638,31 @@ class App(tk.Tk):
         db.init_db()
         if db.is_empty():
             try:
-                n = importer.import_master()
-                messagebox.showinfo("초기 설정", f"마스터 엑셀에서 {n}개 품목을 불러왔습니다.")
+                result = importer.sync_master(importer.current_master_path())
+                messagebox.showinfo("초기 설정", f"마스터 엑셀에서 {result['total']}개 품목을 불러왔습니다.")
             except FileNotFoundError:
                 messagebox.showwarning(
                     "안내",
                     "마스터 엑셀 파일을 찾지 못해 빈 DB로 시작합니다.\n"
-                    "품목 마스터 관리 화면에서 직접 등록해주세요.",
+                    "품목 마스터 관리 화면에서 마스터 파일을 지정해주세요.",
                 )
 
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True)
         notebook.add(OrderTab(notebook), text="새 주문 처리")
-        notebook.add(MasterTab(notebook), text="품목 마스터 관리")
+        master_tab = MasterTab(notebook)
+        notebook.add(master_tab, text="품목 마스터 관리")
+        master_tab.enable_file_drop(self._register_file_drop)
+
+    def _register_file_drop(self, widget, handler) -> None:
+        """탐색기에서 끌어다 놓은 파일 경로 목록을 handler로 넘긴다.
+
+        tkinterdnd2가 없으면 드롭만 동작하지 않고 나머지 기능은 그대로 쓴다.
+        """
+        if DND_FILES is None:
+            return
+        widget.drop_target_register(DND_FILES)
+        widget.dnd_bind("<<Drop>>", lambda event: handler(list(self.tk.splitlist(event.data))))
 
 
 def main():

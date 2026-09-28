@@ -33,6 +33,7 @@ FONT_BASE = (FONT_FAMILY, 10)
 FONT_BOLD = (FONT_FAMILY, 10, "bold")
 FONT_HEADING = (FONT_FAMILY, 14, "bold")
 FONT_SMALL = (FONT_FAMILY, 9)
+FONT_TAB_SELECTED = (FONT_FAMILY, 12, "bold")
 
 
 def tag_color(seed: str):
@@ -58,11 +59,16 @@ def apply(root: tk.Misc) -> None:
     style.configure("CardSecondary.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY, font=FONT_SMALL)
 
     style.configure("TNotebook", background=APP_BG, borderwidth=0)
+    # 비선택 탭은 작고 흐리게, 선택 탭은 크고 진하게. clam 기본값은 선택 탭이
+    # 오히려 눌려 들어가 보여서 expand/padding/font를 상태별로 직접 지정한다.
     style.configure("TNotebook.Tab", background=APP_BG, foreground=TEXT_SECONDARY,
-                    font=FONT_BASE, padding=(16, 8))
+                    font=FONT_SMALL, padding=(12, 5))
     style.map("TNotebook.Tab",
               background=[("selected", CARD_BG)],
-              foreground=[("selected", ACCENT)])
+              foreground=[("selected", ACCENT)],
+              font=[("selected", FONT_TAB_SELECTED)],
+              padding=[("selected", (22, 10))],
+              expand=[("selected", (1, 1, 1, 0))])
 
     style.configure("Accent.TButton", background=ACCENT, foreground="#FFFFFF",
                     font=FONT_BOLD, padding=(14, 7), borderwidth=0)
@@ -71,6 +77,9 @@ def apply(root: tk.Misc) -> None:
     style.configure("Secondary.TButton", background=CARD_BG, foreground=TEXT_PRIMARY,
                     font=FONT_BASE, padding=(12, 6), borderwidth=1, relief="solid")
     style.map("Secondary.TButton", bordercolor=[("!disabled", BORDER)])
+
+    style.configure("TRadiobutton", background=APP_BG, foreground=TEXT_PRIMARY, font=FONT_BASE)
+    style.map("TRadiobutton", background=[("active", APP_BG)])
 
     style.configure("TEntry", fieldbackground="#FFFFFF", padding=6, font=FONT_BASE)
     style.configure("TCombobox", fieldbackground="#FFFFFF", padding=6, font=FONT_BASE)

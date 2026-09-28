@@ -47,6 +47,11 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS order_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -92,6 +97,21 @@ def is_empty() -> bool:
     with connect() as conn:
         row = conn.execute("SELECT COUNT(*) AS c FROM items").fetchone()
         return row["c"] == 0
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else default
+
+
+def set_setting(key: str, value: str) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, value),
+        )
 
 
 def insert_item(
@@ -177,6 +197,41 @@ def get_aliases(item_id: int) -> list[str]:
             "SELECT alias_text FROM aliases WHERE item_id=? ORDER BY alias_text", (item_id,)
         ).fetchall()
         return [r["alias_text"] for r in rows]
+
+
+ITEM_TEXT_FIELDS = ("category", "order_name", "manufacturer", "product_name",
+                    "spec", "welfare_type", "note", "base_date")
+
+
+def update_item_fields(item_id: int, **fields) -> None:
+    """가격 외 텍스트 필드를 수정한다(가격은 이력이 남는 update_item_prices 사용)."""
+    fields = {k: v for k, v in fields.items() if k in ITEM_TEXT_FIELDS}
+    if not fields:
+        return
+    now = datetime.now().isoformat(timespec="seconds")
+    assignments = ", ".join(f"{k}=?" for k in fields)
+    with connect() as conn:
+        conn.execute(
+            f"UPDATE items SET {assignments}, updated_at=? WHERE id=?",
+            (*fields.values(), now, item_id),
+        )
+
+
+def find_item_by_order_name(order_name: str) -> Optional[dict]:
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM items WHERE order_name=? ORDER BY id LIMIT 1", (order_name,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def delete_all_items() -> None:
+    """마스터를 통째로 교체할 때 사용. 별칭/가격이력/주문라인 연결도 함께 정리된다."""
+    with connect() as conn:
+        conn.execute("DELETE FROM aliases")
+        conn.execute("DELETE FROM price_history")
+        conn.execute("UPDATE order_lines SET item_id=NULL")
+        conn.execute("DELETE FROM items")
 
 
 def update_item_prices(item_id: int, new_buy: float, new_sell: float, memo: str = "") -> None:
