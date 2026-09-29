@@ -1,0 +1,15 @@
+# 앱이 만드는 기준정보와 산출물
+data/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+최종엑셀_*_생성.xlsx
+
+# EXE 빌드 산출물
+build/
+dist/
+app.log
+
+# 실제 거래 자료 (병원명·사업자번호·요율표). 공개 저장소에 올리지 않는다.
+samples/*.xlsx
