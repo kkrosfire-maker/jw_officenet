@@ -4,6 +4,8 @@ auto_picturedivider/config.json
 auto_picturedivider/*.xlsx
 auto_picturedivider/*.exe
 rate_sheet/*.xlsx
+report_changer/*.xlsx
+report_changer/수탁업체명자동변환프로그램/
 
 build/
 dist/

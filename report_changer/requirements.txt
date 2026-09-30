@@ -1,0 +1,4 @@
+openpyxl
+xlwings
+pywin32
+tkinterdnd2
