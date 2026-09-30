@@ -603,6 +603,10 @@ class ReportApp(tk.Tk):
         # takefocus=0: 엔터/탭 이동 시 이 버튼을 건너뛰고 바로 다음 입력칸으로 간다.
         ttk.Button(wrap, text="달력", width=5, command=open_calendar,
                    takefocus=0).pack(side="left", padx=(2, 0))
+        # [오늘] 버튼: 누르면 오늘 날짜가 바로 입력된다.
+        ttk.Button(wrap, text="오늘", width=5,
+                   command=lambda: var.set(datetime.date.today().isoformat()),
+                   takefocus=0).pack(side="left", padx=(2, 0))
 
         def on_return(_e):
             var.set(datetime.date.today().isoformat())
