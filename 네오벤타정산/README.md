@@ -194,6 +194,7 @@ core/       로직 (UI 없음)
   notes.py       비고 제한 조건 해석
   converter.py   매핑, 검토 항목 생성, 소액처 판정
   writer.py      DB 표 행 추가, 종합 B18, 피벗 새로고침
+  slicers.py     openpyxl 이 지운 슬라이서를 원본에서 되돌리기
   final_db.py    최종 엑셀 DB 표 읽기
   apply.py       검토 선택을 마스터·설정에 반영
   changelog.py   변경 이력

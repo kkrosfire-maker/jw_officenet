@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime
 import shutil
+import zipfile
 
 import openpyxl
 import pytest
@@ -187,3 +188,35 @@ def test_피벗은_열때_새로고침(tmp_path, resolved_result):
         assert pivots
         assert all(p.cache.refreshOnLoad for p in pivots)
         wb.close()
+
+
+def _slicer_parts(path) -> set[str]:
+    with zipfile.ZipFile(path) as zf:
+        return {n for n in zf.namelist() if "/slicers/" in n or "/slicerCaches/" in n}
+
+
+def test_슬라이서가_두_파일_모두에_남는다(tmp_path, resolved_result):
+    """openpyxl 은 슬라이서를 지운다. 원본에서 되돌려 놓아야 한다."""
+    base = tmp_path / "최종엑셀.xlsx"
+    shutil.copy2(FINAL, base)
+    원본슬라이서 = _slicer_parts(FINAL)
+    assert 원본슬라이서, "샘플 최종엑셀에 슬라이서가 없다"
+
+    report = writer.write_settlement(
+        base, resolved_result, replace_month=True, desktop_out_dir=tmp_path
+    )
+
+    assert _slicer_parts(report.final_path) == 원본슬라이서
+    assert _slicer_parts(report.desktop_path) == 원본슬라이서
+    assert report.슬라이서 == 2
+
+    for path in (report.final_path, report.desktop_path):
+        with zipfile.ZipFile(path) as zf:
+            시트 = zf.read("xl/worksheets/sheet3.xml").decode("utf-8")
+            관계 = zf.read("xl/worksheets/_rels/sheet3.xml.rels").decode("utf-8")
+            형식 = zf.read("[Content_Types].xml").decode("utf-8")
+            assert "x14:slicerList" in 시트
+            assert "<drawing " in 시트
+            assert "relationships/slicer" in 관계
+            assert "ms-excel.slicer+xml" in 형식
+            assert "x15:slicerCaches" in zf.read("xl/workbook.xml").decode("utf-8")

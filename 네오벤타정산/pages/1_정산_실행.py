@@ -444,6 +444,7 @@ else:
             st.caption(
                 f"표 범위 {report.표범위} · 전체 {report.총행수}행 · "
                 f"바탕화면 파일 {report.연도}년 {report.연도행수}행 · "
+                f"슬라이서 {report.슬라이서}개 · "
                 f"소액처 {report.소액처그룹}그룹/{report.소액처행수}행 · "
                 f"종합 B18 = {report.확정금액합계:,.2f}"
             )
