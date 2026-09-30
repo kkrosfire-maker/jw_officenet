@@ -1,10 +1,19 @@
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 
 FUZZY_THRESHOLD = 0.8
+
+_PAREN_RE = re.compile(r"\(.*?\)")
+
+
+def _strip_parenthetical(name: str) -> str:
+    """'병원명(내용)' 형태에서 괄호와 그 안의 내용을 제거해 병원명만 남긴다."""
+    stripped = _PAREN_RE.sub("", name).strip()
+    return stripped or name
 
 
 @dataclass
@@ -36,15 +45,16 @@ def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
         stem = Path(filename).stem
         parts = stem.split()
         hospital = parts[0] if parts else stem
+        match_target = _strip_parenthetical(hospital)
 
-        if hospital in lookup:
+        if match_target in lookup:
             results.append(MatchResult(
                 filename=filename, hospital=hospital,
-                match_type="exact", manager=lookup[hospital],
-                matched_key=hospital, ratio=1.0,
+                match_type="exact", manager=lookup[match_target],
+                matched_key=match_target, ratio=1.0,
             ))
         else:
-            matched_key, ratio = _best_fuzzy_match(hospital, lookup)
+            matched_key, ratio = _best_fuzzy_match(match_target, lookup)
             if matched_key:
                 results.append(MatchResult(
                     filename=filename, hospital=hospital,
