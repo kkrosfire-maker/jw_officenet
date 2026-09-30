@@ -1,5 +1,6 @@
 """사진 원근 보정 프로그램."""
 import ctypes
+import sys
 import io
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -306,10 +307,24 @@ class ImageCanvas(tk.Canvas):
 
 # ── 메인 앱 ─────────────────────────────────────────────────────────────
 
+def _apply_window_icon(win):
+    """소스 실행·exe 실행 모두에서 app.ico를 창 아이콘으로 적용한다."""
+    here = Path(__file__).resolve().parent
+    for root in (Path(getattr(sys, "_MEIPASS", here)), here, here.parent):
+        ico = root / "app.ico"
+        if ico.exists():
+            try:
+                win.iconbitmap(default=str(ico))
+            except Exception:
+                pass
+            return
+
+
 class App(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
         self.title("사진 원근 보정")
+        _apply_window_icon(self)
         self.geometry("1360x750")
         self.configure(bg="#242424")
         self.resizable(True, True)

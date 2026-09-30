@@ -628,10 +628,24 @@ class MasterTab(ttk.Frame):
         PriceHistoryDialog(self, self._selected_item)
 
 
+def _apply_window_icon(win):
+    """소스 실행·exe 실행 모두에서 app.ico를 창 아이콘으로 적용한다."""
+    here = Path(__file__).resolve().parent
+    for root in (Path(getattr(sys, "_MEIPASS", here)), here, here.parent):
+        ico = root / "app.ico"
+        if ico.exists():
+            try:
+                win.iconbitmap(default=str(ico))
+            except Exception:
+                pass
+            return
+
+
 class App(BaseTk):
     def __init__(self):
         super().__init__()
         self.title("제너리스 주문 변환·관리")
+        _apply_window_icon(self)
         self.geometry("1180x780")
         theme.apply(self)
 

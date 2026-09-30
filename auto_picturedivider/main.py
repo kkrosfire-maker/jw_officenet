@@ -491,8 +491,22 @@ class PictureDivider:
         save_config({"photo_dir": self.photo_dir.get(), "excel_path": self.excel_path.get()})
 
 
+def _apply_window_icon(win):
+    """소스 실행·exe 실행 모두에서 app.ico를 창 아이콘으로 적용한다."""
+    here = Path(__file__).resolve().parent
+    for root in (Path(getattr(sys, "_MEIPASS", here)), here, here.parent):
+        ico = root / "app.ico"
+        if ico.exists():
+            try:
+                win.iconbitmap(default=str(ico))
+            except Exception:
+                pass
+            return
+
+
 def main():
     root = TkinterDnD.Tk()
+    _apply_window_icon(root)
     style = ttk.Style(root)
     available = style.theme_names()
     for theme in ("vista", "winnative", "clam", "alt"):

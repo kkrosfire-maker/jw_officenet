@@ -1,4 +1,6 @@
 import ctypes
+import sys
+from pathlib import Path
 import os
 import re
 import threading
@@ -1231,8 +1233,22 @@ class RateSheetApp:
             win32clipboard.CloseClipboard()
 
 
+def _apply_window_icon(win):
+    """소스 실행·exe 실행 모두에서 app.ico를 창 아이콘으로 적용한다."""
+    here = Path(__file__).resolve().parent
+    for root in (Path(getattr(sys, "_MEIPASS", here)), here, here.parent):
+        ico = root / "app.ico"
+        if ico.exists():
+            try:
+                win.iconbitmap(default=str(ico))
+            except Exception:
+                pass
+            return
+
+
 def main():
     root = tk.Tk()
+    _apply_window_icon(root)
     app = RateSheetApp(root)
     root.mainloop()
 

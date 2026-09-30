@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('app.ico', '.')]
 binaries = []
-hiddenimports = ['PIL', 'PIL._tkinter_finder', 'tkinterdnd2']
+hiddenimports = []
 tmp_ret = collect_all('tkinterdnd2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -29,7 +29,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='photo_converter',
+    name='사진분류프로그램',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
