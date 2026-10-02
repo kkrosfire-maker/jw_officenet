@@ -51,11 +51,18 @@ class ThumbPanel:
         self.hdr = tk.Label(hdr_row, text="파일 목록", bg="#1e1e1e", fg="#555",
                              font=("Segoe UI", 8), anchor="w", padx=6, pady=3)
         self.hdr.pack(side="left")
-        tk.Button(hdr_row, text="선택삭제", command=on_delete_selected,
-                  bg="#3d4043", fg="#ddd", relief="flat", padx=5, pady=0,
-                  font=("Segoe UI", 7), cursor="hand2", bd=0,
+        btn_row = tk.Frame(self.panel, bg="#1e1e1e")
+        btn_row.pack(fill="x", padx=4, pady=(0, 4))
+        self.all_btn = tk.Button(btn_row, text="모두선택", command=self.toggle_all,
+                  bg="#3d4043", fg="#ddd", relief="flat", padx=10, pady=6,
+                  font=("Segoe UI", 10), cursor="hand2", bd=0,
+                  activebackground="#3a5f8a", activeforeground="white")
+        self.all_btn.pack(side="left", fill="x", expand=True, padx=(0, 2))
+        tk.Button(btn_row, text="선택삭제", command=on_delete_selected,
+                  bg="#3d4043", fg="#ddd", relief="flat", padx=10, pady=6,
+                  font=("Segoe UI", 10), cursor="hand2", bd=0,
                   activebackground="#6b3a3a", activeforeground="white"
-                  ).pack(side="right", padx=4, pady=2)
+                  ).pack(side="left", fill="x", expand=True, padx=(2, 0))
 
         inner = tk.Frame(self.panel, bg="#1e1e1e")
         inner.pack(fill="both", expand=True)
@@ -91,6 +98,7 @@ class ThumbPanel:
             w.destroy()
         self.items.clear()
         self.photos.clear()
+        self.all_btn.configure(text="모두선택")
 
         n = len(files)
         self.hdr.config(text=f"파일 목록  {n}개" if n else "파일 목록")
@@ -105,6 +113,8 @@ class ThumbPanel:
         self.highlight(current_idx)
         self.canvas.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+        self._refresh_all_btn()
 
         self.gen += 1
         gen = self.gen
@@ -175,6 +185,7 @@ class ThumbPanel:
         name_lbl.pack(side="left", fill="x", expand=True)
 
         var = tk.BooleanVar(value=self._checkbox_default)
+        var.trace_add("write", lambda *_: self._refresh_all_btn())
         cb = tk.Checkbutton(bot, variable=var, bg=BG,
                              activebackground=BG, selectcolor="#555",
                              bd=0, highlightthickness=0, padx=0)
@@ -261,6 +272,18 @@ class ThumbPanel:
 
     def checked_indices(self):
         return [i for i, item in enumerate(self.items) if item["var"].get()]
+
+    def _refresh_all_btn(self):
+        all_on = bool(self.items) and all(it["var"].get() for it in self.items)
+        self.all_btn.configure(text="모두해제" if all_on else "모두선택")
+
+    def toggle_all(self):
+        """전부 체크돼 있으면 모두 해제, 아니면 모두 선택."""
+        if not self.items:
+            return
+        value = not all(it["var"].get() for it in self.items)
+        for it in self.items:
+            it["var"].set(value)
 
     def is_checked(self, idx):
         """idx가 아직 패널에 반영 안 됐으면(썸네일 미구성 상태) 기본 포함으로 취급."""

@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 
 from converter import auto_detect_corners, process_image
+from corner_memory import CornerMemory
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
 from file_list_controller import FileListController
@@ -25,6 +26,19 @@ ZOOM_MIN, ZOOM_MAX = 0.3, 15.0
 
 
 # ── 드래그 가능한 이미지 캔버스 ──────────────────────────────────────────
+
+def _log_error(where: str, exc: BaseException):
+    """예외를 APPDATA 아래 photo_converter/error.log 에 남긴다 (pythonw/exe에는 콘솔이 없음)."""
+    try:
+        import os, time, traceback
+        d = Path(os.environ.get("APPDATA") or Path.home()) / "photo_converter"
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / "error.log", "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {where}\n")
+            f.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)) + "\n")
+    except Exception:
+        pass
+
 
 class ImageCanvas(tk.Canvas):
     """
@@ -333,6 +347,8 @@ class App(TkinterDnD.Tk):
         self._cv_result     = None
         self._current_path  = None
         self._transform_job = None
+        self._memory        = CornerMemory()
+        self.report_callback_exception = lambda t, v, tb: _log_error("tk callback", v)
 
         self._build_ui()
 
@@ -366,7 +382,12 @@ class App(TkinterDnD.Tk):
         tk.Button(tb, text="폴더 열기",  command=self._open_folder, **B).pack(side="left", padx=4)
         _sep(tb)
         tk.Button(tb, text="재감지",     command=self._redetect,    **B).pack(side="left", padx=4)
-        tk.Button(tb, text="변환 적용",  command=self._apply,       **B).pack(side="left", padx=4)
+        tk.Button(tb, text="학습적용",  command=self._apply,       **B).pack(side="left", padx=4)
+        tk.Button(tb, text="학습하기",   command=self._learn,       **B).pack(side="left", padx=4)
+        self._learn_lbl = tk.Label(tb, text="", bg="#2e2e2e", fg="#aaa", font=("Segoe UI", 9),
+                                   cursor="hand2")
+        self._learn_lbl.pack(side="left", padx=(2, 4))
+        self._learn_lbl.bind("<Button-3>", self._learn_menu)
         _sep(tb)
         tk.Button(tb, text="변환파일 폴더에 저장", command=self._save,             **B).pack(side="left", padx=4)
         tk.Button(tb, text="위치 지정 저장",       command=self._save_as,          **B).pack(side="left", padx=4)
@@ -424,6 +445,7 @@ class App(TkinterDnD.Tk):
                              bg="#2e2e2e", fg="#888", anchor="w",
                              font=("Segoe UI", 9), padx=8, pady=4)
         self._st.pack(fill="x", side="bottom")
+        self._update_learn_label()
 
     def _show_hint(self):
         if self._cv_orig is None:
@@ -493,7 +515,13 @@ class App(TkinterDnD.Tk):
     # ── 이미지 로드 & 감지 ───────────────────────────────────────────────
 
     def _load(self, path: str):
-        img = read_image(path)
+        # 한 장이 실패해도 다른 사진으로 계속 넘어갈 수 있게, 어떤 예외도 여기서 막는다
+        try:
+            img = read_image(path)
+        except Exception as e:
+            _log_error("read_image", e)
+            self._st.config(text=f"읽기 실패: {Path(path).name} ({e})")
+            return
         if img is None:
             self._st.config(text=f"읽기 실패: {path}")
             return
@@ -503,10 +531,25 @@ class App(TkinterDnD.Tk):
         self._res_cv.clear()
         self.update_idletasks()
         self._st.config(text=f"{Path(path).name}  ({img.shape[1]}×{img.shape[0]})")
-        self._redetect(silent=True)
+        try:
+            self._redetect(silent=True)
+        except Exception as e:
+            _log_error("redetect", e)
+            self._st.config(text=f"자동 감지 중 오류: {e} — 꼭짓점을 직접 맞춰주세요.")
 
     def _redetect(self, silent=False):
         if self._cv_orig is None:
+            return
+        try:
+            learned = self._memory.match(self._cv_orig)
+        except Exception as e:      # 학습 매칭이 실패해도 일반 자동 감지로 계속 진행
+            _log_error("memory.match", e)
+            learned = None
+        if learned is not None:
+            self._orig_cv.show(self._cv_orig, learned.pts.tolist(), reset_view=True)
+            self._apply()
+            self._st.config(text=f"학습된 영역 적용 (참고: {learned.source or '이전 사진'}). "
+                                 "틀리면 꼭짓점을 고친 뒤 '학습하기'를 다시 누르세요.")
             return
         pts = auto_detect_corners(self._cv_orig)
         if pts is None:
@@ -540,6 +583,40 @@ class App(TkinterDnD.Tk):
         )
         self._cv_result = r.image
         self._res_cv.show(r.image)
+
+    # ── 학습 ─────────────────────────────────────────────────────────────
+
+    def _learn(self):
+        if self._cv_orig is None:
+            messagebox.showwarning("알림", "학습할 사진이 없습니다.")
+            return
+        pts = self._orig_cv.get_points()
+        if len(pts) != 4:
+            return
+        source = Path(self._current_path).name if self._current_path else ""
+        n = self._memory.add(self._cv_orig, pts, source)
+        self._update_learn_label()
+        self._st.config(text=f"학습 완료 — 비슷한 사진에는 이 영역이 자동 적용됩니다. (학습된 사진 {n}장)")
+
+    def _update_learn_label(self):
+        n = len(self._memory)
+        self._learn_lbl.config(text=f"학습 {n}장" if n else "")
+
+    def _learn_menu(self, event):
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="학습 기록 모두 지우기", command=self._clear_learning)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _clear_learning(self):
+        if not messagebox.askyesno("학습 초기화",
+                                   f"학습된 사진 {len(self._memory)}장의 기록을 모두 지울까요?"):
+            return
+        self._memory.clear()
+        self._update_learn_label()
+        self._st.config(text="학습 기록을 모두 지웠습니다.")
 
     # ── 회전 ──────────────────────────────────────────────────────────────
 
@@ -662,7 +739,12 @@ class App(TkinterDnD.Tk):
                 img = read_image(fpath)
                 if img is None:
                     fail += 1; continue
-                r       = process_image(img)
+                try:
+                    learned = self._memory.match(img)
+                except Exception as e:
+                    _log_error("memory.match(batch)", e)
+                    learned = None
+                r       = process_image(img, learned.pts if learned else None)
                 p       = Path(fpath)
                 out_dir = p.parent / SAVE_FOLDER
                 out_dir.mkdir(exist_ok=True)
