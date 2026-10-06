@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -69,18 +70,81 @@ def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
     return results
 
 
-def _move_file(photo_dir: str, filename: str, manager: str) -> None:
+def _unique_path(directory: str, filename: str) -> str:
+    """directory 안에서 겹치지 않는 경로를 돌려준다. (겹치면 _1, _2 …)"""
+    dst = os.path.join(directory, filename)
+    base, ext = Path(filename).stem, Path(filename).suffix
+    counter = 1
+    while os.path.exists(dst):
+        dst = os.path.join(directory, f"{base}_{counter}{ext}")
+        counter += 1
+    return dst
+
+
+def _move_file(photo_dir: str, filename: str, manager: str) -> str:
+    """파일을 담당자 폴더로 옮기고, 실제로 저장된 파일명을 돌려준다."""
     target_dir = os.path.join(photo_dir, manager)
     os.makedirs(target_dir, exist_ok=True)
     src = os.path.join(photo_dir, filename)
-    dst = os.path.join(target_dir, filename)
-    if os.path.exists(dst):
-        base, ext = Path(filename).stem, Path(filename).suffix
-        counter = 1
-        while os.path.exists(dst):
-            dst = os.path.join(target_dir, f"{base}_{counter}{ext}")
-            counter += 1
+    dst = _unique_path(target_dir, filename)
     shutil.move(src, dst)
+    return os.path.basename(dst)
+
+
+# ── 되돌리기 ─────────────────────────────────────────────────────────────────
+
+UNDO_FILE = ".분류되돌리기.json"
+
+
+def _undo_path(photo_dir: str) -> str:
+    return os.path.join(photo_dir, UNDO_FILE)
+
+
+def has_undo(photo_dir: str) -> bool:
+    return os.path.isfile(_undo_path(photo_dir))
+
+
+def _save_undo_log(photo_dir: str, moves: list[dict]) -> None:
+    if not moves:
+        return
+    with open(_undo_path(photo_dir), "w", encoding="utf-8") as f:
+        json.dump(moves, f, ensure_ascii=False, indent=1)
+
+
+def undo_last_sort(photo_dir: str) -> tuple[int, list[str]]:
+    """마지막 병원별 분류를 되돌린다. (되돌린 개수, 실패 메시지 목록)을 반환.
+
+    이동 기록의 역순으로 파일을 사진 폴더로 되돌리고, 비게 된 담당자 폴더는 지운다.
+    되돌린 뒤에는 기록 파일을 삭제한다.
+    """
+    with open(_undo_path(photo_dir), encoding="utf-8") as f:
+        moves = json.load(f)
+
+    restored = 0
+    errors: list[str] = []
+    folders: set[str] = set()
+    for m in reversed(moves):
+        folder = os.path.join(photo_dir, m["folder"])
+        folders.add(folder)
+        src = os.path.join(folder, m["stored"])
+        if not os.path.isfile(src):
+            errors.append(f"{m['folder']}\\{m['stored']} 파일을 찾을 수 없음")
+            continue
+        try:
+            shutil.move(src, _unique_path(photo_dir, m["file"]))
+            restored += 1
+        except Exception as e:
+            errors.append(f"{m['stored']}: {e}")
+
+    for folder in folders:
+        try:
+            os.rmdir(folder)  # 비어 있을 때만 삭제됨
+        except OSError:
+            pass
+
+    if not errors:
+        os.remove(_undo_path(photo_dir))
+    return restored, errors
 
 
 @dataclass
@@ -120,6 +184,7 @@ def execute_moves(
 
     moved_exact = moved_fuzzy = 0
     skipped_count = 0
+    undo_moves: list[dict] = []
 
     for r in results:
         if r.match_type == "none":
@@ -127,7 +192,8 @@ def execute_moves(
             emit(SortEvent(kind="skipped", filename=r.filename, hospital=r.hospital))
             continue
 
-        _move_file(photo_dir, r.filename, r.manager)
+        stored = _move_file(photo_dir, r.filename, r.manager)
+        undo_moves.append({"file": r.filename, "folder": r.manager, "stored": stored})
         if r.match_type == "exact":
             moved_exact += 1
         else:
@@ -137,6 +203,8 @@ def execute_moves(
             filename=r.filename, manager=r.manager, match_type=r.match_type,
             hospital=r.hospital, matched_key=r.matched_key, ratio=r.ratio,
         ))
+
+    _save_undo_log(photo_dir, undo_moves)
 
     emit(SortEvent(
         kind="summary",

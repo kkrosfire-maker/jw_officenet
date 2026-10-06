@@ -227,11 +227,13 @@ class PictureDivider:
         btn_zip.grid(row=0, column=0, padx=6, pady=(0, 4))
         btn_sort = ttk.Button(btn_frame, text="②  병원별 사진 분류", command=self._sort_photos, width=20)
         btn_sort.grid(row=0, column=1, padx=6, pady=(0, 4))
+        btn_undo = ttk.Button(btn_frame, text="③  병원별 분류 되돌리기", command=self._undo_sort, width=22)
+        btn_undo.grid(row=0, column=2, padx=6, pady=(0, 4))
         btn_clear = ttk.Button(btn_frame, text="로그 지우기", command=self._clear_log, width=12)
         btn_clear.grid(row=1, column=0, padx=6)
         btn_reset = ttk.Button(btn_frame, text="초기화", command=self._reset, width=10)
         btn_reset.grid(row=1, column=1, padx=6)
-        self._buttons = [btn_zip, btn_sort, btn_clear, btn_reset]
+        self._buttons = [btn_zip, btn_sort, btn_undo, btn_clear, btn_reset]
 
         # 로그
         log_frame = ttk.LabelFrame(main, text=" 분류 결과 ", padding=8)
@@ -429,6 +431,28 @@ class PictureDivider:
                 self.root.after(0, lambda: self.status_var.set(msg))
 
         photo_sort.execute_moves(photo_dir, results, on_event=on_event)
+
+    # ── 분류 되돌리기 ─────────────────────────────────────────────────────────
+
+    def _undo_sort(self):
+        photo_dir = self.photo_dir.get().strip()
+        if not photo_dir or not os.path.isdir(photo_dir):
+            messagebox.showwarning("경고", "사진 폴더를 선택해주세요.")
+            return
+        if not photo_sort.has_undo(photo_dir):
+            messagebox.showinfo("안내", "되돌릴 분류 기록이 없습니다.\n(이 폴더에서 병원별 분류를 실행한 적이 없거나 이미 되돌렸습니다)")
+            return
+        if not messagebox.askyesno("되돌리기 확인", "마지막 병원별 분류를 되돌릴까요?\n담당자 폴더의 사진이 원래 위치로 돌아옵니다."):
+            return
+        self._run_in_thread(self._undo_sort_worker, photo_dir)
+
+    def _undo_sort_worker(self, photo_dir: str):
+        self._log(f"\n{'─'*50}", "info")
+        restored, errors = photo_sort.undo_last_sort(photo_dir)
+        self._log(f"[되돌리기 완료]  {restored}개 파일을 원래 위치로 복원", "info")
+        for msg in errors:
+            self._log(f"  ✗  {msg}", "fail")
+        self.root.after(0, lambda: self.status_var.set(f"되돌리기 완료 — {restored}개 복원"))
 
     # ── 처리 중 상태 관리 / 스레드 헬퍼 ─────────────────────────────────────
 
