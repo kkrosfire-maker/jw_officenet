@@ -48,11 +48,14 @@ def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
         hospital = parts[0] if parts else stem
         match_target = _strip_parenthetical(hospital)
 
-        if match_target in lookup:
+        # 괄호 포함 전체 이름(예: 다솜의원(연제구))을 먼저 시도해 동명 지점을 구분
+        exact_key = hospital if hospital in lookup else (
+            match_target if match_target in lookup else None)
+        if exact_key:
             results.append(MatchResult(
                 filename=filename, hospital=hospital,
-                match_type="exact", manager=lookup[match_target],
-                matched_key=match_target, ratio=1.0,
+                match_type="exact", manager=lookup[exact_key],
+                matched_key=exact_key, ratio=1.0,
             ))
         else:
             matched_key, ratio = _best_fuzzy_match(match_target, lookup)
