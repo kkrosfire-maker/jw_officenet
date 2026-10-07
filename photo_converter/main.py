@@ -760,6 +760,7 @@ class App(TkinterDnD.Tk):
         out = unique_path(out_dir, p.stem, p.suffix)
         if write_image(str(out), self._cv_result):
             self._st.config(text=f"저장됨: {out}")
+            os.startfile(str(out_dir))
         else:
             messagebox.showerror("오류", "저장 실패")
 
@@ -782,6 +783,7 @@ class App(TkinterDnD.Tk):
             return
         if write_image(path, self._cv_result):
             self._st.config(text=f"저장됨: {path}")
+            os.startfile(str(dest.parent))
         else:
             messagebox.showerror("오류", "저장 실패")
 
@@ -841,8 +843,12 @@ class App(TkinterDnD.Tk):
                 else:
                     fail += 1
 
-            self.after(0, lambda: messagebox.showinfo(
-                "완료", f"완료: 성공 {ok}개, 실패 {fail}개\n'변환파일' 폴더에 저장됨"))
+            def done():
+                messagebox.showinfo(
+                    "완료", f"완료: 성공 {ok}개, 실패 {fail}개\n'변환파일' 폴더에 저장됨")
+                if ok:
+                    os.startfile(str(Path(targets[0][1]).parent / SAVE_FOLDER))
+            self.after(0, done)
             self.after(0, lambda: self._st.config(
                 text=f"처리 완료: {ok}/{len(targets)}"))
 

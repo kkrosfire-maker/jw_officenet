@@ -1,4 +1,5 @@
 """2단계(annotate.py) 단독 테스트용 GUI. main.py와는 독립적으로 실행된다."""
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
@@ -532,6 +533,7 @@ class App(TkinterDnD.Tk):
 
         if write_image(str(out), self._cv_result):
             self._st.config(text=f"저장됨: {out}")
+            os.startfile(str(out.parent))
         else:
             messagebox.showerror("오류", "저장 실패")
 
