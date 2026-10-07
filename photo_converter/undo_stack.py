@@ -18,6 +18,11 @@ class UndoStack:
             self._undo.pop(0)
         self._redo.clear()
 
+    def discard_last(self):
+        """가장 최근에 push한 스냅샷을 없던 일로 한다 (실제로는 변화가 없었던 조작 취소용)."""
+        if self._undo:
+            self._undo.pop()
+
     def undo(self, current_snapshot):
         """
         current_snapshot(되돌아올 현재 상태)을 redo에 보관하고 가장 최근
@@ -63,6 +68,9 @@ class HistoryController:
 
     def push(self, snapshot):
         self._stack.push(snapshot)
+
+    def discard_last(self):
+        self._stack.discard_last()
 
     def clear(self):
         self._stack.clear()

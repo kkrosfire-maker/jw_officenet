@@ -1,5 +1,6 @@
 """사진 원근 보정 프로그램."""
 import ctypes
+import os
 import sys
 import io
 import tkinter as tk
@@ -16,6 +17,7 @@ from corner_memory import CornerMemory
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
 from file_list_controller import FileListController
+from undo_stack import HistoryController
 
 SUPPORTED_EXT      = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 SAVE_FOLDER        = "변환파일"
@@ -49,11 +51,14 @@ class ImageCanvas(tk.Canvas):
     - 더블클릭: 줌·패닝 초기화
     """
 
-    def __init__(self, parent, label: str, on_change=None, pannable=True, **kw):
+    def __init__(self, parent, label: str, on_change=None, pannable=True,
+                 on_edit_start=None, on_edit_cancel=None, **kw):
         super().__init__(parent, bg="#1a1a1a", highlightthickness=1,
                          highlightbackground="#3a3a3a", **kw)
         self._label     = label
         self._on_change = on_change
+        self._on_edit_start  = on_edit_start    # 점 조작 시작 직전 점 목록 전달 (실행취소용)
+        self._on_edit_cancel = on_edit_cancel   # 더블클릭으로 조작이 취소됐을 때
         self._pannable  = pannable
 
         self._cv_img     = None
@@ -130,6 +135,8 @@ class ImageCanvas(tk.Canvas):
         # 클릭 위치로 스냅시킬 수 있으므로, 더블클릭 직전 상태로 점 위치도 복원한다.
         if self._pts_before_click is not None and self._pts_before_click != self._pts:
             self._pts = [list(p) for p in self._pts_before_click]
+            if self._on_edit_cancel:
+                self._on_edit_cancel()
             if self._on_change:
                 self._on_change(self._pts)
         self.reset_view()
@@ -237,6 +244,8 @@ class ImageCanvas(tk.Canvas):
         # 스냅샷을 유지, 아니면 새 클릭 시퀀스로 보고 지금 상태를 스냅샷한다.
         if event.time - self._last_click_time > DOUBLE_CLICK_MS:
             self._pts_before_click = [list(p) for p in self._pts]
+            if self._on_edit_start and len(self._pts) == 4:
+                self._on_edit_start(self._pts_before_click)
         self._last_click_time = event.time
 
         idx = None
@@ -348,7 +357,15 @@ class App(TkinterDnD.Tk):
         self._current_path  = None
         self._transform_job = None
         self._memory        = CornerMemory()
+        self._rot           = {}    # 파일경로 -> 현재 회전 상태(시계방향 90도 횟수)
+        self._edits         = {}    # 파일경로 -> {"rot": 시계방향 90도 횟수, "pts": 꼭짓점} (사진별 조정 기억)
         self.report_callback_exception = lambda t, v, tb: _log_error("tk callback", v)
+
+        # 꼭짓점 위치 실행취소(Ctrl+Z) / 다시실행(Ctrl+Y). 스냅샷 = 꼭짓점 좌표 목록
+        self._history = HistoryController(
+            snapshot_fn=lambda: [list(p) for p in self._orig_cv.get_points()],
+            restore_fn=self._restore_points,
+        )
 
         self._build_ui()
 
@@ -365,6 +382,8 @@ class App(TkinterDnD.Tk):
         self.bind("<Delete>", self._on_key_delete)
         self.bind_all("<Control-c>", self._on_key_copy)
         self.bind_all("<Control-C>", self._on_key_copy)
+        self._history.bind_keys(self, ignore_types=(tk.Entry, tk.Text),
+                                status_fn=self._history_status)
         self.after(120, self._show_hint)
 
     # ── UI ──────────────────────────────────────────────────────────────
@@ -381,17 +400,21 @@ class App(TkinterDnD.Tk):
         tk.Button(tb, text="파일 열기",  command=self._open_file,   **B).pack(side="left", padx=4)
         tk.Button(tb, text="폴더 열기",  command=self._open_folder, **B).pack(side="left", padx=4)
         _sep(tb)
-        tk.Button(tb, text="재감지",     command=self._redetect,    **B).pack(side="left", padx=4)
-        tk.Button(tb, text="학습적용",  command=self._apply,       **B).pack(side="left", padx=4)
+        tk.Button(tb, text="학습적용",  command=self._redetect,    **B).pack(side="left", padx=4)
         tk.Button(tb, text="학습하기",   command=self._learn,       **B).pack(side="left", padx=4)
         self._learn_lbl = tk.Label(tb, text="", bg="#2e2e2e", fg="#aaa", font=("Segoe UI", 9),
                                    cursor="hand2")
         self._learn_lbl.pack(side="left", padx=(2, 4))
         self._learn_lbl.bind("<Button-3>", self._learn_menu)
         _sep(tb)
-        tk.Button(tb, text="변환파일 폴더에 저장", command=self._save,             **B).pack(side="left", padx=4)
+        tk.Button(tb, text="변환파일 저장",       command=self._save,             **B).pack(side="left", padx=4)
+        tk.Button(tb, text="변환파일 전체 저장",   command=self._save_all,         **B).pack(side="left", padx=4)
         tk.Button(tb, text="위치 지정 저장",       command=self._save_as,          **B).pack(side="left", padx=4)
         tk.Button(tb, text="클립보드 복사",        command=self._copy_to_clipboard,**B).pack(side="left", padx=4)
+        tk.Button(tb, text="변환파일 폴더 열기",   command=self._open_output_folder,**B).pack(side="left", padx=4)
+        _sep(tb)
+        tk.Button(tb, text="↶ 되돌리기", command=lambda: self._history_status("undo", self._history.undo()),
+                  **B).pack(side="left", padx=4)
         _sep(tb)
         tk.Button(tb, text="↺ 좌회전", command=self._rotate_left,  **B).pack(side="left", padx=4)
         tk.Button(tb, text="↻ 우회전", command=self._rotate_right, **B).pack(side="left", padx=4)
@@ -432,6 +455,8 @@ class App(TkinterDnD.Tk):
             "원본  |  클릭·드래그: 가장 가까운 꼭짓점 이동",
             on_change=self._on_pts_change,
             pannable=False,
+            on_edit_start=self._history.push,
+            on_edit_cancel=self._history.discard_last,
         )
         self._orig_cv.pack(side="left", fill="both", expand=True, padx=(0, 3))
 
@@ -525,9 +550,11 @@ class App(TkinterDnD.Tk):
         if img is None:
             self._st.config(text=f"읽기 실패: {path}")
             return
+        img = _rotate_quarter(img, self._rot.get(path, 0))
         self._cv_orig      = img
         self._cv_result    = None
         self._current_path = path
+        self._history.clear()
         self._res_cv.clear()
         self.update_idletasks()
         self._st.config(text=f"{Path(path).name}  ({img.shape[1]}×{img.shape[0]})")
@@ -539,6 +566,13 @@ class App(TkinterDnD.Tk):
 
     def _redetect(self, silent=False):
         if self._cv_orig is None:
+            return
+        if not silent and len(self._orig_cv.get_points()) == 4:
+            self._history.push([list(p) for p in self._orig_cv.get_points()])   # 재감지도 되돌릴 수 있게
+        saved = self._edits.get(self._current_path) if silent else None
+        if saved and saved["pts"] and saved["rot"] == self._rot_now():
+            self._orig_cv.show(self._cv_orig, saved["pts"], reset_view=True)
+            self._apply()
             return
         try:
             learned = self._memory.match(self._cv_orig)
@@ -583,6 +617,19 @@ class App(TkinterDnD.Tk):
         )
         self._cv_result = r.image
         self._res_cv.show(r.image)
+        if self._current_path and len(pts) == 4:
+            self._edits[self._current_path] = {"rot": self._rot_now(),
+                                               "pts": [list(p) for p in pts]}
+
+    # ── 실행취소 ─────────────────────────────────────────────────────────
+
+    def _restore_points(self, pts):
+        self._orig_cv.set_points(pts)
+        self._apply()
+
+    def _history_status(self, action, ok):
+        name = "되돌리기" if action == "undo" else "다시 실행"
+        self._st.config(text=name + (" 완료" if ok else " — 더 이상 없습니다."))
 
     # ── 학습 ─────────────────────────────────────────────────────────────
 
@@ -624,12 +671,23 @@ class App(TkinterDnD.Tk):
         if self._cv_orig is None:
             return
         self._cv_orig = cv2.rotate(self._cv_orig, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        self._redetect(silent=True)
+        self._turn(-1)
 
     def _rotate_right(self):
         if self._cv_orig is None:
             return
         self._cv_orig = cv2.rotate(self._cv_orig, cv2.ROTATE_90_CLOCKWISE)
+        self._turn(1)
+
+    def _rot_now(self):
+        return self._rot.get(self._current_path, 0)
+
+    def _turn(self, delta):
+        """회전 횟수를 기록하고, 좌표계가 바뀌었으므로 점 기록·저장된 조정은 버리고 재감지."""
+        if self._current_path:
+            self._rot[self._current_path] = (self._rot_now() + delta) % 4
+            self._edits.pop(self._current_path, None)
+        self._history.clear()
         self._redetect(silent=True)
 
     # ── 뷰 초기화 ────────────────────────────────────────────────────────
@@ -680,6 +738,18 @@ class App(TkinterDnD.Tk):
 
     # ── 저장 ────────────────────────────────────────────────────────────
 
+    def _open_output_folder(self):
+        """현재 사진 옆의 '변환파일' 폴더를 탐색기로 연다 (없으면 사진이 있는 폴더)."""
+        if not self._current_path:
+            messagebox.showinfo("알림", "열린 사진이 없습니다.")
+            return
+        out_dir = Path(self._current_path).parent / SAVE_FOLDER
+        if not out_dir.is_dir():
+            messagebox.showinfo("알림", "아직 저장된 변환파일이 없습니다.\n"
+                                        "'변환파일 폴더에 저장' 또는 '전체 자동 처리'를 먼저 실행하세요.")
+            return
+        os.startfile(str(out_dir))
+
     def _save(self):
         if self._cv_result is None or not self._current_path:
             messagebox.showwarning("알림", "저장할 결과 이미지가 없습니다.")
@@ -717,19 +787,32 @@ class App(TkinterDnD.Tk):
 
     # ── 배치 ────────────────────────────────────────────────────────────
 
+    def _checked_targets(self):
+        return [(i, fpath) for i, fpath in enumerate(self._files.files)
+                if self._thumb_panel.is_checked(i)]
+
     def _batch(self):
-        targets = [
-            (i, fpath)
-            for i, fpath in enumerate(self._files.files)
-            if self._thumb_panel.is_checked(i)
-        ]
+        self._run_batch("전체 자동 처리", use_edits=False,
+                        how="자동 감지(학습된 영역 우선)로 처리하여")
+
+    def _save_all(self):
+        self._run_batch("변환파일 전체 저장", use_edits=True,
+                        how="사진별로 직접 조정한 꼭짓점·회전 그대로\n(조정 안 한 사진은 자동 감지로)")
+
+    def _run_batch(self, title, use_edits, how):
+        # 현재 화면의 조정 중인 상태도 반영되도록 저장소를 먼저 갱신
+        if use_edits and self._cv_orig is not None:
+            self._apply()
+        targets = self._checked_targets()
         if not targets:
             messagebox.showinfo("알림", "처리할 파일이 없습니다.\n썸네일 체크박스를 확인해 주세요.")
             return
-        if not messagebox.askyesno("전체 자동 처리",
-                                    f"체크된 {len(targets)}개 파일을 자동 처리하여\n"
+        if not messagebox.askyesno(title,
+                                    f"체크된 {len(targets)}개 파일을 {how}\n"
                                     f"'변환파일' 폴더에 저장할까요?\n(기존 파일은 덮어쓰지 않습니다)"):
             return
+        edits = {k: v["pts"] for k, v in self._edits.items()} if use_edits else {}
+        rots  = dict(self._rot) if use_edits else {}
 
         def worker():
             ok = fail = 0
@@ -739,12 +822,16 @@ class App(TkinterDnD.Tk):
                 img = read_image(fpath)
                 if img is None:
                     fail += 1; continue
-                try:
-                    learned = self._memory.match(img)
-                except Exception as e:
-                    _log_error("memory.match(batch)", e)
-                    learned = None
-                r       = process_image(img, learned.pts if learned else None)
+                img = _rotate_quarter(img, rots.get(fpath, 0))
+                pts = edits.get(fpath)
+                if pts is None:
+                    try:
+                        learned = self._memory.match(img)
+                    except Exception as e:
+                        _log_error("memory.match(batch)", e)
+                        learned = None
+                    pts = learned.pts if learned else None
+                r       = process_image(img, np.array(pts, dtype="float32") if pts is not None else None)
                 p       = Path(fpath)
                 out_dir = p.parent / SAVE_FOLDER
                 out_dir.mkdir(exist_ok=True)
@@ -760,6 +847,13 @@ class App(TkinterDnD.Tk):
                 text=f"처리 완료: {ok}/{len(targets)}"))
 
         threading.Thread(target=worker, daemon=True).start()
+
+
+def _rotate_quarter(img, k):
+    """시계방향 90도 k번 회전 (k=0이면 그대로)."""
+    for _ in range(k % 4):
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    return img
 
 
 def _sep(parent):
