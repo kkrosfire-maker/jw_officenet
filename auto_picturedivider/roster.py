@@ -21,11 +21,12 @@ def parse_excel(filepath: str) -> list[dict]:
     if not rows:
         raise ExcelParseError("엑셀 파일이 비어 있습니다.")
 
-    # 첫 행 헤더 여부 자동 감지
-    start_row = 0
-    first = [str(c).strip() if c else "" for c in rows[0]]
-    if any(k in " ".join(first) for k in ["거래처", "담당자", "이름", "성명"]):
-        start_row = 1
+    # 맨 위의 빈 줄은 건너뛰고, 첫 데이터 줄이 헤더인지 자동 감지
+    start_row = next((i for i, r in enumerate(rows) if any(c not in (None, "") for c in r)), len(rows))
+    if start_row < len(rows):
+        first = [str(c).strip() if c else "" for c in rows[start_row]]
+        if any(k in " ".join(first) for k in ["거래처", "담당자", "이름", "성명"]):
+            start_row += 1
 
     data = []
     for row in rows[start_row:]:

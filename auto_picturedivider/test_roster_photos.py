@@ -19,6 +19,22 @@ def test_parse_with_header(tmp_path):
     assert roster.parse_excel(f) == [{"거래처명": "A의원", "담당자": "김"}]
 
 
+def test_parse_blank_rows_before_header(tmp_path):
+    f = _xlsx(tmp_path, [(None, None), (None, None), ("거래처명", "담당자"), ("A의원", "김")])
+    assert roster.parse_excel(f) == [{"거래처명": "A의원", "담당자": "김"}]
+
+
+def test_parse_blank_rows_before_data_without_header(tmp_path):
+    f = _xlsx(tmp_path, [(None, None), ("A의원", "김")])
+    assert roster.parse_excel(f) == [{"거래처명": "A의원", "담당자": "김"}]
+
+
+def test_parse_only_blank_rows(tmp_path):
+    f = _xlsx(tmp_path, [(None, None), (None, None)])
+    with pytest.raises(roster.ExcelParseError):
+        roster.parse_excel(f)
+
+
 def test_parse_without_header(tmp_path):
     f = _xlsx(tmp_path, [("A의원", "김")])
     assert roster.parse_excel(f) == [{"거래처명": "A의원", "담당자": "김"}]
