@@ -4,11 +4,12 @@ import os
 import sys
 import json
 import threading
-import openpyxl
 from pathlib import Path
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
 import photo_sort
+import photos
+from roster import ExcelParseError, parse_excel
 
 try:
     import pharma_zip
@@ -43,53 +44,6 @@ def save_config(data: dict) -> None:
         CONFIG_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
-
-
-# ── 엑셀 파싱 ─────────────────────────────────────────────────────────────────
-
-class ExcelParseError(Exception):
-    pass
-
-
-def parse_excel(filepath: str) -> list[dict]:
-    """엑셀에서 거래처명/담당자 목록을 파싱해 반환.
-
-    Raises:
-        ExcelParseError: 빈 파일이거나 유효한 데이터 행이 없을 때
-        Exception: openpyxl 읽기 실패
-    """
-    wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
-    ws = wb.active
-    rows = list(ws.iter_rows(values_only=True))
-    wb.close()
-
-    if not rows:
-        raise ExcelParseError("엑셀 파일이 비어 있습니다.")
-
-    # 첫 행 헤더 여부 자동 감지
-    start_row = 0
-    first = [str(c).strip() if c else "" for c in rows[0]]
-    if any(k in " ".join(first) for k in ["거래처", "담당자", "이름", "성명"]):
-        start_row = 1
-
-    data = []
-    for row in rows[start_row:]:
-        if len(row) < 2:
-            continue
-        name = str(row[0]).strip() if row[0] else ""
-        manager = str(row[1]).strip() if row[1] else ""
-        if name and manager:
-            data.append({"거래처명": name, "담당자": manager})
-
-    if not data:
-        raise ExcelParseError("유효한 데이터가 없습니다.\n(거래처명, 담당자 열을 확인하세요)")
-
-    return data
-
-
-# ── 분류기 ───────────────────────────────────────────────────────────────────
-
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp", ".jfif"}
 
 
 # ── DnD 헬퍼 ─────────────────────────────────────────────────────────────────
@@ -344,7 +298,7 @@ class PictureDivider:
             messagebox.showwarning("경고", "사진 폴더를 선택해주세요.")
             return
 
-        files = self._list_images(photo_dir)
+        files = photos.list_images(photo_dir)
         if not files:
             self._log("[제약사폴더] 이미지 파일이 없습니다.", "fail")
             return
@@ -388,7 +342,7 @@ class PictureDivider:
             return
 
         lookup = {item["거래처명"]: item["담당자"] for item in self.excel_data}
-        files = self._list_images(photo_dir)
+        files = photos.list_images(photo_dir)
         if not files:
             self._log("[분류] 이미지 파일이 없습니다.", "fail")
             return
@@ -473,13 +427,6 @@ class PictureDivider:
             finally:
                 self.root.after(0, lambda: self._set_processing(False))
         threading.Thread(target=_run, daemon=True).start()
-
-    def _list_images(self, photo_dir: str) -> list[str]:
-        return [
-            f for f in os.listdir(photo_dir)
-            if os.path.isfile(os.path.join(photo_dir, f))
-            and Path(f).suffix.lower() in IMAGE_EXTS
-        ]
 
     # ── 로그 (스레드 안전) ────────────────────────────────────────────────────
 
