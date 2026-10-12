@@ -89,7 +89,7 @@ def parse_excel(filepath: str) -> list[dict]:
 
 # ── 분류기 ───────────────────────────────────────────────────────────────────
 
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp", ".jfif"}
 
 
 # ── DnD 헬퍼 ─────────────────────────────────────────────────────────────────

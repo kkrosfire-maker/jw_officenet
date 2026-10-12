@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 
-FUZZY_THRESHOLD = 0.8
+from filename_parser import parse_filename
+
+FUZZY_THRESHOLD = 0.85
 
 _PAREN_RE = re.compile(r"\(.*?\)")
 
@@ -20,7 +22,7 @@ def _strip_parenthetical(name: str) -> str:
 @dataclass
 class MatchResult:
     filename: str
-    hospital: str       # 파일명 첫 단어 (추출된 거래처명)
+    hospital: str       # 파일명에서 추출한 거래처명
     match_type: str     # "exact" | "fuzzy" | "none"
     manager: str = ""
     matched_key: str = ""
@@ -39,37 +41,48 @@ def _best_fuzzy_match(hospital: str, lookup: dict) -> tuple[str | None, float]:
     return None, best_ratio
 
 
+def _exact_key(candidate: str, lookup: dict) -> str | None:
+    # 괄호 포함 전체 이름(예: 다솜의원(연제구))을 먼저 시도해 동명 지점을 구분
+    if candidate in lookup:
+        return candidate
+    stripped = _strip_parenthetical(candidate)
+    return stripped if stripped in lookup else None
+
+
 def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
     """파일 목록을 거래처명 lookup으로 분류. 파일 이동 등 부수효과 없음."""
     results = []
     for filename in sorted(files):
-        stem = Path(filename).stem
-        parts = stem.split()
-        hospital = parts[0] if parts else stem
-        match_target = _strip_parenthetical(hospital)
+        candidates = parse_filename(filename).hospital_candidates
 
-        # 괄호 포함 전체 이름(예: 다솜의원(연제구))을 먼저 시도해 동명 지점을 구분
-        exact_key = hospital if hospital in lookup else (
-            match_target if match_target in lookup else None)
-        if exact_key:
+        # 1) 후보를 우선순위대로 정확 매칭
+        hit = next(((c, k) for c in candidates if (k := _exact_key(c, lookup))), None)
+        if hit:
+            candidate, key = hit
             results.append(MatchResult(
-                filename=filename, hospital=hospital,
-                match_type="exact", manager=lookup[exact_key],
-                matched_key=exact_key, ratio=1.0,
+                filename=filename, hospital=candidate,
+                match_type="exact", manager=lookup[key],
+                matched_key=key, ratio=1.0,
+            ))
+            continue
+
+        # 2) 모든 후보 중 유사도가 가장 높은 것
+        best_candidate, best_key, best_ratio = candidates[0], None, 0.0
+        for c in candidates:
+            key, ratio = _best_fuzzy_match(_strip_parenthetical(c), lookup)
+            if ratio > best_ratio:
+                best_candidate, best_key, best_ratio = c, key, ratio
+        if best_key:
+            results.append(MatchResult(
+                filename=filename, hospital=best_candidate,
+                match_type="fuzzy", manager=lookup[best_key],
+                matched_key=best_key, ratio=best_ratio,
             ))
         else:
-            matched_key, ratio = _best_fuzzy_match(match_target, lookup)
-            if matched_key:
-                results.append(MatchResult(
-                    filename=filename, hospital=hospital,
-                    match_type="fuzzy", manager=lookup[matched_key],
-                    matched_key=matched_key, ratio=ratio,
-                ))
-            else:
-                results.append(MatchResult(
-                    filename=filename, hospital=hospital,
-                    match_type="none", ratio=ratio,
-                ))
+            results.append(MatchResult(
+                filename=filename, hospital=candidates[0],
+                match_type="none", ratio=best_ratio,
+            ))
     return results
 
 

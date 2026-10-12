@@ -1,21 +1,16 @@
 import os
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image
 
+from filename_parser import parse_filename
+
 
 def extract_pharma(filename: str) -> str:
-    """파일명 마지막 단어에서 제약사명 추출. (주), 기호, 끝 일련번호 제거."""
-    stem = Path(filename).stem
-    parts = stem.split()
-    raw = parts[-1] if parts else stem
-    cleaned = re.sub(r'\(주\)', '', raw)
-    cleaned = re.sub(r'[^가-힣a-zA-Z0-9]', '', cleaned)
-    cleaned = re.sub(r'\d+$', '', cleaned)  # 끝 일련번호 제거 (안국약품2 → 안국약품)
-    return cleaned.strip() if cleaned.strip() else "기타"
+    """파일명에서 제약사명 추출. 규칙은 filename_parser가 담당."""
+    return parse_filename(filename).pharma
 
 
 @dataclass
@@ -61,9 +56,12 @@ def build_pharma_folders(
 
     out_dir.mkdir(exist_ok=True)
 
+    # Windows 폴더명은 대소문자를 구분하지 않으므로 casefold 기준으로 묶는다
+    # (안 그러면 'ABC'/'abc' 그룹이 같은 폴더를 두고 rmtree로 서로 지워버림)
     pharma_groups: dict[str, list[str]] = {}
+    canonical: dict[str, str] = {}
     for f in files:
-        pharma = extract_pharma(f)
+        pharma = canonical.setdefault(extract_pharma(f).casefold(), extract_pharma(f))
         pharma_groups.setdefault(pharma, []).append(f)
 
     emit(FolderEvent(
@@ -86,7 +84,12 @@ def build_pharma_folders(
         converted = 0
         for fname in part_files:
             src = os.path.join(photo_dir, fname)
+            # 확장자만 다른 같은 이름(a.png / a.jpg)이 서로 덮어쓰지 않도록 번호를 붙인다
             dst = part_dir / (Path(fname).stem + ".jpg")
+            n = 1
+            while dst.exists():
+                dst = part_dir / f"{Path(fname).stem}_{n}.jpg"
+                n += 1
             try:
                 with Image.open(src) as img:
                     if img.mode in ("RGBA", "P", "LA"):
