@@ -1,11 +1,12 @@
 import os
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image
 
-from filename_parser import parse_filename
+from filename_parser import FALLBACK_PHARMA, parse_filename
+from review import CONVERT_FAILED, PHARMA_UNKNOWN, ReviewItem
 
 
 def extract_pharma(filename: str) -> str:
@@ -30,6 +31,7 @@ class FolderEvent:
     total_pharma: int = 0
     total_folders: int = 0
     out_dir: str = ""
+    review: list[ReviewItem] = field(default_factory=list)  # summary 에서만 채워짐
 
 
 # 예전 이름 호환
@@ -72,6 +74,10 @@ def build_pharma_folders(
     ))
 
     total_folders = 0
+    review: list[ReviewItem] = [
+        ReviewItem(PHARMA_UNKNOWN, f, "파일명에서 제약사를 찾지 못해 '기타' 폴더로 분류")
+        for f in pharma_groups.get(FALLBACK_PHARMA, [])
+    ]
 
     for pharma_name, part_files in sorted(pharma_groups.items()):
         folder_name = pharma_name
@@ -97,6 +103,7 @@ def build_pharma_folders(
                     img.save(str(dst), "JPEG", quality=90)
                 converted += 1
             except Exception as e:
+                review.append(ReviewItem(CONVERT_FAILED, fname, str(e)))
                 emit(FolderEvent(kind="convert_failed", filename=fname, error=str(e)))
 
         emit(FolderEvent(
@@ -107,7 +114,7 @@ def build_pharma_folders(
         ))
         total_folders += 1
 
-    emit(FolderEvent(kind="summary", total_folders=total_folders, out_dir=str(out_dir)))
+    emit(FolderEvent(kind="summary", total_folders=total_folders, out_dir=str(out_dir), review=review))
 
     return events
 

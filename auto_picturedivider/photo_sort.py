@@ -2,11 +2,12 @@ import json
 import os
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
 
 from filename_parser import parse_filename
+from review import FUZZY, UNMATCHED, ReviewItem
 
 FUZZY_THRESHOLD = 0.85
 
@@ -180,6 +181,7 @@ class SortEvent:
     moved_exact: int = 0
     moved_fuzzy: int = 0
     skipped_count: int = 0
+    review: list[ReviewItem] = field(default_factory=list)  # summary 에서만 채워짐
 
 
 def execute_moves(
@@ -201,10 +203,12 @@ def execute_moves(
     moved_exact = moved_fuzzy = 0
     skipped_count = 0
     undo_moves: list[dict] = []
+    review: list[ReviewItem] = []
 
     for r in results:
         if r.match_type == "none":
             skipped_count += 1
+            review.append(ReviewItem(UNMATCHED, r.filename, f"추출된 거래처명: '{r.hospital}'"))
             emit(SortEvent(kind="skipped", filename=r.filename, hospital=r.hospital))
             continue
 
@@ -214,6 +218,9 @@ def execute_moves(
             moved_exact += 1
         else:
             moved_fuzzy += 1
+            review.append(ReviewItem(
+                FUZZY, r.filename,
+                f"'{r.hospital}' ≈ '{r.matched_key}' {int(r.ratio * 100)}% → [{r.manager}]"))
         emit(SortEvent(
             kind="moved",
             filename=r.filename, manager=r.manager, match_type=r.match_type,
@@ -225,6 +232,7 @@ def execute_moves(
     emit(SortEvent(
         kind="summary",
         moved_exact=moved_exact, moved_fuzzy=moved_fuzzy, skipped_count=skipped_count,
+        review=review,
     ))
 
     return events

@@ -9,6 +9,7 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 
 import photo_sort
 import photos
+from review import format_review
 from roster import ExcelParseError, parse_excel
 
 try:
@@ -323,6 +324,8 @@ class PictureDivider:
             elif e.kind == "summary":
                 self._log(f"{'─'*50}", "info")
                 self._log(f"[제약사폴더 완료]  폴더 {e.total_folders}개 생성  →  {e.out_dir}", "info")
+                for text, tag in format_review(e.review):
+                    self._log(text, tag)
                 self.root.after(0, lambda: self.status_var.set(f"제약사폴더 완료 — {e.total_folders}개 폴더 생성"))
 
         pharma_zip.build_pharma_folders(photo_dir, files, out_dir, on_event=on_event)
@@ -355,7 +358,6 @@ class PictureDivider:
         self._log(f"{'─'*50}", "info")
 
         results = photo_sort.classify(files, lookup)
-        skipped_events: list[photo_sort.SortEvent] = []
 
         def on_event(e: photo_sort.SortEvent):
             if e.kind == "moved":
@@ -368,18 +370,14 @@ class PictureDivider:
                         f"  (유사매칭: '{e.hospital}' ≈ '{e.matched_key}'  {pct}%)",
                         "fuzzy",
                     )
-            elif e.kind == "skipped":
-                skipped_events.append(e)
             elif e.kind == "summary":
                 self._log(f"{'─'*50}", "info")
                 self._log(
                     f"[완료]  정확 매칭: {e.moved_exact}개  /  유사 매칭: {e.moved_fuzzy}개  /  미매칭: {e.skipped_count}개",
                     "info",
                 )
-                if skipped_events:
-                    self._log(f"\n[미매칭 목록] 유사도 {int(photo_sort.FUZZY_THRESHOLD*100)}% 미만 — 수동 확인 필요:", "fail")
-                    for se in skipped_events:
-                        self._log(f"  ✗  {se.filename}  (추출된 거래처명: '{se.hospital}')", "fail")
+                for text, tag in format_review(e.review):
+                    self._log(text, tag)
 
                 msg = f"완료 — 정확 {e.moved_exact}개 / 유사 {e.moved_fuzzy}개 / 미매칭 {e.skipped_count}개"
                 self.root.after(0, lambda: self.status_var.set(msg))
