@@ -3,6 +3,7 @@ import ctypes
 import os
 import sys
 import io
+import math
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinterdnd2 import TkinterDnD, DND_FILES
@@ -25,6 +26,8 @@ POINT_COLORS       = ["#FF5555", "#55DD55", "#5599FF", "#FFEE44"]
 DEBOUNCE_MS        = 60
 DOUBLE_CLICK_MS    = 400
 ZOOM_MIN, ZOOM_MAX = 0.3, 15.0
+GRID_STEP          = 40          # 눈금선 간격 (화면 px)
+GRID_COLOR         = "#FF3B3B"
 
 
 # ── 드래그 가능한 이미지 캔버스 ──────────────────────────────────────────
@@ -77,6 +80,7 @@ class ImageCanvas(tk.Canvas):
         self._pts: list[list[float]] = []
         self._drag_idx = None
         self._resize_job = None
+        self._grid_on = False
 
         self._pts_before_click = None   # 더블클릭(뷰 초기화) 판별용 스냅샷
         self._last_click_time  = 0
@@ -111,6 +115,10 @@ class ImageCanvas(tk.Canvas):
 
     def get_points(self):
         return self._pts
+
+    def set_grid(self, on: bool):
+        self._grid_on = bool(on)
+        self._redraw()
 
     def show_hint(self, text="이미지를 여기에 드래그 & 드롭"):
         self._cv_img    = None
@@ -180,6 +188,7 @@ class ImageCanvas(tk.Canvas):
 
         self._draw_label()
         self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+        self._draw_grid()
         if len(self._pts) == 4:
             self._draw_overlay()
 
@@ -188,8 +197,31 @@ class ImageCanvas(tk.Canvas):
         self._draw_label()
         if self._tk_img is not None:
             self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+            self._draw_grid()
         if len(self._pts) == 4 and self._scale > 0:
             self._draw_overlay()
+
+    def _draw_grid(self):
+        """사진 위에 가로세로 눈금선 (화면 기준 일정 간격, 사진 영역 안에만)."""
+        if not self._grid_on or self._tk_img is None:
+            return
+        x0, y0 = self._ox, self._oy
+        x1, y1 = x0 + self._tk_img.width(), y0 + self._tk_img.height()
+        # 캔버스 밖으로 나간 부분은 그리지 않음 (줌·패닝 시)
+        cw, ch = self.winfo_width(), self.winfo_height()
+        vx0, vy0 = max(x0, 0), max(y0, 0)
+        vx1, vy1 = min(x1, cw), min(y1, ch)
+        if vx1 <= vx0 or vy1 <= vy0:
+            return
+        step = GRID_STEP
+        x = x0 + math.ceil((vx0 - x0) / step) * step
+        while x <= vx1:
+            self.create_line(x, vy0, x, vy1, fill=GRID_COLOR, dash=(3, 3))
+            x += step
+        y = y0 + math.ceil((vy0 - y0) / step) * step
+        while y <= vy1:
+            self.create_line(vx0, y, vx1, y, fill=GRID_COLOR, dash=(3, 3))
+            y += step
 
     def _draw_label(self):
         self.create_text(10, 10, anchor="nw", text=self._label,
@@ -408,8 +440,6 @@ class App(TkinterDnD.Tk):
         self._learn_lbl.bind("<Button-3>", self._learn_menu)
         _sep(tb)
         tk.Button(tb, text="변환파일 저장",       command=self._save,             **B).pack(side="left", padx=4)
-        tk.Button(tb, text="변환파일 전체 저장",   command=self._save_all,         **B).pack(side="left", padx=4)
-        tk.Button(tb, text="위치 지정 저장",       command=self._save_as,          **B).pack(side="left", padx=4)
         tk.Button(tb, text="클립보드 복사",        command=self._copy_to_clipboard,**B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 폴더 열기",   command=self._open_output_folder,**B).pack(side="left", padx=4)
         _sep(tb)
@@ -420,6 +450,13 @@ class App(TkinterDnD.Tk):
         tk.Button(tb, text="↻ 우회전", command=self._rotate_right, **B).pack(side="left", padx=4)
         _sep(tb)
         tk.Button(tb, text="원래대로", command=self._reset_views, **B).pack(side="left", padx=4)
+        _sep(tb)
+        self._grid_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(tb, text="눈금선", variable=self._grid_var,
+                       command=lambda: self._res_cv.set_grid(self._grid_var.get()),
+                       bg="#2e2e2e", fg="white", selectcolor="#3d4043",
+                       activebackground="#2e2e2e", activeforeground="white",
+                       font=("Segoe UI", 9), cursor="hand2").pack(side="left", padx=4)
 
         # 배치 네비 (폴더·다중 파일 로드 시 표시)
         self._nav = tk.Frame(tb, bg="#2e2e2e")
