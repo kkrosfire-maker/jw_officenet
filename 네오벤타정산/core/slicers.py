@@ -337,3 +337,90 @@ def restore_slicers(donor: str | Path, target: str | Path) -> int:
             out.writestr(name, data)
     shutil.move(str(temporary), str(target))
     return slicers
+
+
+# ---------------------------------------------------------------- 가로 길이 맞춤
+
+SLICER_END_COL = 15          # 0부터 센 열 번호 15 = P열의 왼쪽 끝 = O열이 끝나는 자리
+EMU_PER_PX = 9525
+ANCHOR = re.compile(
+    r"<xdr:(from|to)><xdr:col>(\d+)</xdr:col><xdr:colOff>(-?\d+)</xdr:colOff>"
+)
+
+
+def _column_emus(sheet_xml: str):
+    """열 번호(0부터) → 그 열의 너비(EMU)."""
+    default = re.search(r'<sheetFormatPr[^>]*\bdefaultColWidth="([\d.]+)"', sheet_xml)
+    default_px = _width_px(float(default.group(1))) if default else 64
+    widths: dict[int, int] = {}
+    for tag in re.findall(r"<col\b[^>]*>", sheet_xml):
+        attrs = dict(re.findall(r'(\w+)="([^"]*)"', tag))
+        if "min" not in attrs or "max" not in attrs or "width" not in attrs:
+            continue
+        px = 0 if attrs.get("hidden") == "1" else _width_px(float(attrs["width"]))
+        for col in range(int(attrs["min"]) - 1, int(attrs["max"])):
+            widths[col] = px
+    return lambda col: widths.get(col, default_px) * EMU_PER_PX
+
+
+def _width_px(width: float) -> int:
+    return int((256 * width + int(128 / 7)) / 256 * 7)
+
+
+def _fit_drawing(drawing_xml: str, col_emu, end_col: int) -> str:
+    """슬라이서들이 차지하는 가로 범위를 비율은 그대로 두고 `end_col` 앞에서 끝나게 줄인다."""
+    points = [(int(c), int(o)) for _, c, o in ANCHOR.findall(drawing_xml)]
+    if not points:
+        return drawing_xml
+
+    def to_emu(col: int, off: int) -> int:
+        return sum(col_emu(i) for i in range(col)) + off
+
+    def from_emu(value: int) -> tuple[int, int]:
+        col = 0
+        while value >= col_emu(col) and col < 200:
+            value -= col_emu(col)
+            col += 1
+        return col, value
+
+    start = min(to_emu(c, o) for c, o in points)
+    end = max(to_emu(c, o) for c, o in points)
+    target = to_emu(end_col, 0)
+    if end <= target or end == start:
+        return drawing_xml          # 이미 O열 안쪽이다
+    scale = (target - start) / (end - start)
+
+    def swap(match: re.Match) -> str:
+        col, off = from_emu(round(start + (to_emu(int(match.group(2)), int(match.group(3))) - start) * scale))
+        return f"<xdr:{match.group(1)}><xdr:col>{col}</xdr:col><xdr:colOff>{off}</xdr:colOff>"
+
+    return ANCHOR.sub(swap, drawing_xml)
+
+
+def fit_slicers(path: str | Path, end_col: int = SLICER_END_COL) -> int:
+    """파일 안의 슬라이서가 `end_col` 앞(기본 O열 끝)을 넘지 않게 가로를 줄인다. 손댄 그림 수를 돌려준다."""
+    path = Path(path)
+    if not path.exists():
+        return 0
+    with zipfile.ZipFile(path) as zf:
+        parts = {name: zf.read(name) for name in zf.namelist()}
+        changed = 0
+        for part in _sheet_parts(zf).values():
+            for rel in _read_rels(zf, part):
+                if rel.type != REL_DRAWING or rel.part not in parts:
+                    continue
+                xml = parts[rel.part].decode("utf-8")
+                if "slicer" not in xml:
+                    continue
+                fitted = _fit_drawing(xml, _column_emus(parts[part].decode("utf-8")), end_col)
+                if fitted != xml:
+                    parts[rel.part] = fitted.encode("utf-8")
+                    changed += 1
+    if not changed:
+        return 0
+    temporary = path.with_name(path.name + ".fit.tmp")
+    with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as out:
+        for name, data in parts.items():
+            out.writestr(name, data)
+    shutil.move(str(temporary), str(path))
+    return changed

@@ -29,7 +29,7 @@ from .config import (
     ensure_dirs,
 )
 from .converter import ConversionResult, OutRow
-from .slicers import has_slicers, restore_slicers
+from .slicers import fit_slicers, has_slicers, restore_slicers
 from .utils import desktop_dir, month_shift, month_to_date, yymm
 
 AMOUNT_FORMULA = "=DB[[#This Row],[수량]]*DB[[#This Row],[단가]]"
@@ -257,12 +257,14 @@ def write_settlement(
     # openpyxl 은 슬라이서를 모르고 지운다. 저장 직전 백업에서 되돌린다.
     if donor:
         restore_slicers(donor, source_path)
+    fit_slicers(source_path)
 
     desktop_path = _write_year_file(
         source_path, target_month, year, result, out_dir=desktop_out_dir
     )
     # 바탕화면 파일도 openpyxl 로 저장했으니 방금 고친 원본에서 다시 옮긴다.
     slicers = restore_slicers(source_path, desktop_path)
+    fit_slicers(desktop_path)
     year_rows = sum(1 for v in all_values if _month_text(v[2]).startswith(year))
 
     return WriteReport(

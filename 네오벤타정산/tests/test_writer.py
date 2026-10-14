@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 import shutil
 import zipfile
 
@@ -221,3 +222,17 @@ def test_슬라이서가_두_파일_모두에_남는다(tmp_path, resolved_resul
             assert "relationships/slicer" in 관계
             assert "ms-excel.slicer+xml" in 형식
             assert "x15:slicerCaches" in zf.read("xl/workbook.xml").decode("utf-8")
+
+
+def test_슬라이서는_O열_끝에서_끝난다(tmp_path):
+
+    from core.slicers import fit_slicers
+
+    base = tmp_path / "최종엑셀.xlsx"
+    shutil.copy2(FINAL, base)
+    fit_slicers(base)
+    xml = zipfile.ZipFile(base).read("xl/drawings/drawing1.xml").decode()
+    ends = [int(c) * 10**7 + int(o) for c, o in re.findall(
+        r"<xdr:to><xdr:col>(\d+)</xdr:col><xdr:colOff>(\d+)</xdr:colOff>", xml)]
+    assert max(ends) <= 15 * 10**7
+    assert fit_slicers(base) == 0          # 두 번 해도 그대로
