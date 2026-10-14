@@ -1,0 +1,7 @@
+PySide6
+pandas
+openpyxl
+xlrd
+playwright
+pywin32
+pyinstaller

@@ -1,0 +1,13 @@
+__pycache__/
+build/
+dist/
+config.json
+송하인마스터.xlsx
+*.tmp.xlsx
+downloads/
+output/
+backup/
+logs/
+
+# 실제 정산 자료(입주사명 등) — 공개 저장소에 올리지 않음
+tests/data/
