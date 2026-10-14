@@ -88,13 +88,14 @@ def test_바탕화면_파일이름(tmp_path, resolved_result):
     report = writer.write_settlement(
         base, resolved_result, replace_month=True, desktop_out_dir=tmp_path
     )
-    assert report.desktop_path.name == "정원유니어스 판매정산내역 (2609) 네오벤타.xlsx"
+    assert report.desktop_path.name == "정원유니어스 판매정산내역 (2610) 네오벤타.xlsx"
     assert report.desktop_path.exists()
 
 
 def test_파일이름_규칙():
-    assert writer.desktop_file_name("2026-09") == "정원유니어스 판매정산내역 (2609) 네오벤타.xlsx"
-    assert writer.desktop_file_name("2027-01") == "정원유니어스 판매정산내역 (2701) 네오벤타.xlsx"
+    assert writer.desktop_file_name("2026-09") == "정원유니어스 판매정산내역 (2610) 네오벤타.xlsx"
+    assert writer.desktop_file_name("2027-01") == "정원유니어스 판매정산내역 (2702) 네오벤타.xlsx"
+    assert writer.desktop_file_name("2026-12") == "정원유니어스 판매정산내역 (2701) 네오벤타.xlsx"
 
 
 def test_바탕화면_파일은_그해_정산분만(tmp_path, resolved_result):

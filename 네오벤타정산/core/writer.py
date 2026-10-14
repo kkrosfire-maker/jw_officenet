@@ -3,7 +3,7 @@
 두 개를 만든다.
 1. **기존 최종 엑셀에 이번 달 행을 추가**한다 (원본을 고치기 전에 data/backup/ 에 백업).
 2. **바탕화면에 그 해의 정산분만 담은 파일**을 만든다.
-   이름: `정원유니어스 판매정산내역 (YYMM) 네오벤타.xlsx` (YYMM = 정산연월)
+   이름: `정원유니어스 판매정산내역 (YYMM) 네오벤타.xlsx` (YYMM = 정산연월의 다음 달)
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from openpyxl.worksheet.table import Table
 
 from .config import (
     BACKUP_DIR,
+    DATA_DIR,
     FINAL_DETAIL_SHEET,
     FINAL_HEADER_ROW,
     FINAL_SUMMARY_ISSUE_CELL,
@@ -28,8 +29,8 @@ from .config import (
     ensure_dirs,
 )
 from .converter import ConversionResult, OutRow
-from .slicers import restore_slicers
-from .utils import desktop_dir, month_to_date, yymm
+from .slicers import has_slicers, restore_slicers
+from .utils import desktop_dir, month_shift, month_to_date, yymm
 
 AMOUNT_FORMULA = "=DB[[#This Row],[수량]]*DB[[#This Row],[단가]]"
 FIXED_FORMULA = "=DB[[#This Row],[금액]]*O{row}"
@@ -64,8 +65,8 @@ class WriteReport:
 
 
 def desktop_file_name(settlement_month: str) -> str:
-    """'2026-09' → '정원유니어스 판매정산내역 (2609) 네오벤타.xlsx'"""
-    return f"정원유니어스 판매정산내역 ({yymm(settlement_month)}) 네오벤타.xlsx"
+    """정산월의 다음 달을 이름에 넣는다. '2026-09' → '정원유니어스 판매정산내역 (2610) 네오벤타.xlsx'"""
+    return f"정원유니어스 판매정산내역 ({yymm(month_shift(settlement_month, 1))}) 네오벤타.xlsx"
 
 
 def build_output_path(settlement_month: str, out_dir=None) -> Path:
@@ -180,6 +181,23 @@ def _set_pivot_refresh(wb) -> None:
             pivot.cache.refreshOnLoad = True
 
 
+SLICER_TEMPLATE = DATA_DIR / "slicer_template.xlsx"
+
+
+def _slicer_donor(source: Path, backup: Optional[Path]) -> Optional[Path]:
+    """슬라이서를 가져올 파일. 슬라이서가 있는 파일을 만나면 템플릿으로 기억해 둔다.
+
+    사용자가 고른 최종 엑셀에서 이미 슬라이서가 빠져 있어도(예: 한 번 잘못 저장된 파일)
+    예전에 본 슬라이서 파일로 되살릴 수 있게 한다.
+    """
+    for candidate in (backup, source):
+        if candidate and candidate.exists() and has_slicers(candidate):
+            ensure_dirs()
+            shutil.copy2(candidate, SLICER_TEMPLATE)
+            return candidate
+    return SLICER_TEMPLATE if SLICER_TEMPLATE.exists() else None
+
+
 def _backup(path: Path) -> Optional[Path]:
     if not path.exists():
         return None
@@ -204,6 +222,7 @@ def write_settlement(
     year = target_month.split("-")[0]
 
     backup_path = _backup(source_path)
+    donor = _slicer_donor(source_path, backup_path)
 
     wb = openpyxl.load_workbook(source_path)
     try:
@@ -236,8 +255,8 @@ def write_settlement(
         wb.close()
 
     # openpyxl 은 슬라이서를 모르고 지운다. 저장 직전 백업에서 되돌린다.
-    if backup_path:
-        restore_slicers(backup_path, source_path)
+    if donor:
+        restore_slicers(donor, source_path)
 
     desktop_path = _write_year_file(
         source_path, target_month, year, result, out_dir=desktop_out_dir

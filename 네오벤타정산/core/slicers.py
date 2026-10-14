@@ -249,6 +249,14 @@ def _jobs(donor_zip: zipfile.ZipFile, target_zip: zipfile.ZipFile) -> list[_Shee
     return jobs
 
 
+def has_slicers(path: str | Path) -> bool:
+    try:
+        with zipfile.ZipFile(path) as zf:
+            return any(n.startswith("xl/slicers/") for n in zf.namelist())
+    except (OSError, zipfile.BadZipFile):
+        return False
+
+
 def restore_slicers(donor: str | Path, target: str | Path) -> int:
     """`donor` 의 슬라이서를 `target` 에 옮긴다. 옮긴 슬라이서 개수를 돌려준다.
 
