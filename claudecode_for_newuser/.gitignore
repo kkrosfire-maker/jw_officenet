@@ -1,0 +1,4 @@
+payload/
+build/
+dist/
+배포/*.exe
