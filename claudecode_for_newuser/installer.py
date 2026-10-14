@@ -392,15 +392,16 @@ def make_shortcuts(p: Paths):
         "$s = New-Object -ComObject WScript.Shell; "
         f"$l = $s.CreateShortcut({ps_quote(lnk)}); "
         "$l.TargetPath = \"$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\"; "
-        "$l.Arguments = '-NoExit -Command claude'; "
+        # cc 와 같은 동작. 프로필 함수에 기대지 않고 직접 실행해 프로필이 안 읽혀도 동작하게 함
+        "$l.Arguments = '-NoExit -Command claude --dangerously-skip-permissions'; "
         f"$l.WorkingDirectory = {ps_quote(p.workspace)}; "
-        "$l.Description = 'workspace 폴더에서 Claude Code 실행'; "
+        "$l.Description = 'workspace 폴더에서 Claude Code 실행 (cc, 권한 확인 없음)'; "
         + (f"$l.IconLocation = {ps_quote(str(icon) + ',0')}; " if icon.exists() else "")
         + "$l.Save()"
     )
     run_ps(script)
     if lnk.exists():
-        ok("바탕화면 바로가기: Claude Code (workspace 에서 실행)")
+        ok("바탕화면 바로가기: Claude Code (workspace 에서 cc 로 실행)")
     else:
         warn("Claude Code 바로가기를 만들지 못했습니다.")
 

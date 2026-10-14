@@ -36,6 +36,7 @@
 
   workspace 폴더   작업 파일이 모이는 곳 (Claude Code 가 여기서 일함)
   Claude Code      더블클릭하면 workspace 에서 Claude Code 실행
+                   (cc 와 같음: 작업마다 허락을 묻지 않음)
   Claude.ai        웹 버전 claude.ai 열기
 
   크롬/엣지 즐겨찾기 바에도 "Claude" 가 추가된다.
@@ -46,7 +47,7 @@
   q  또는 ㅂ          workspace 폴더로 이동
   q 폴더이름          workspace 안의 폴더로 이동 (Tab 으로 이름 자동완성)
   claude              Claude Code 실행 (작업마다 허락을 물어봄)
-  cc 또는 ㅊㅊ        Claude Code 를 허락 묻지 않고 실행 (익숙해진 뒤에 사용)
+  cc 또는 ㅊㅊ        Claude Code 를 허락 묻지 않고 실행 (바탕화면 아이콘과 같음)
 
   Claude Code 안에서
   /c-push             변경 내용을 git 에 커밋하고 올리기
