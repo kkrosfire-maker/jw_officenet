@@ -1,0 +1,91 @@
+{
+  "title": "정원유니어스 프로그램 보드",
+  "programs": [
+    {
+      "id": "officeboard",
+      "name": "공유오피스 대시보드",
+      "desc": "호실·계약·비상주 운영 현황",
+      "group": "업무",
+      "icon": "icons/officeboard.png",
+      "type": "url",
+      "url": "https://jw-officenet.onrender.com/"
+    },
+    {
+      "id": "app1",
+      "name": "제너리스 주문관리",
+      "desc": "제너리스 주문 변환 · 품목 마스터",
+      "group": "업무",
+      "icon": "icons/app1.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\제너리스주문\\dist\\제너리스주문관리.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\제너리스주문\\dist"
+    },
+    {
+      "id": "app2",
+      "name": "네오벤타 정산문서",
+      "desc": "lawdata + 요율표 → 정산 엑셀",
+      "group": "업무",
+      "icon": "icons/app2.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\네오벤타정산\\dist\\네오벤타정산\\네오벤타정산.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\네오벤타정산\\dist\\네오벤타정산"
+    },
+    {
+      "id": "app3",
+      "name": "정산파일변경",
+      "desc": "수탁업체명 자동 변환",
+      "group": "업무",
+      "icon": "icons/app3.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\report_changer\\수탁업체명자동변환프로그램\\수탁업체명자동변환프로그램.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\report_changer\\수탁업체명자동변환프로그램"
+    },
+    {
+      "id": "app4",
+      "name": "요율표검색기",
+      "desc": "정원유니어스 요율표 검색",
+      "group": "업무",
+      "icon": "icons/app4.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\rate_sheet\\dist\\요율표검색기.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\rate_sheet\\dist"
+    },
+    {
+      "id": "app5",
+      "name": "사이즈조절기",
+      "desc": "사진 원근 보정 · 크기 조절",
+      "group": "사진·발행",
+      "icon": "icons/app5.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\photo_converter\\dist\\photo_converter.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\photo_converter\\dist"
+    },
+    {
+      "id": "app6",
+      "name": "사진분류",
+      "desc": "제약사 통계 사진 자동 분류",
+      "group": "사진·발행",
+      "icon": "icons/app6.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\auto_picturedivider\\사진분류프로그램.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\auto_picturedivider"
+    },
+    {
+      "id": "app7",
+      "name": "카카오채널 자동발행",
+      "desc": "공지 URL로 소식 발행",
+      "group": "사진·발행",
+      "icon": "icons/app7.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행\\공지자동발행.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행"
+    }
+  ]
+}

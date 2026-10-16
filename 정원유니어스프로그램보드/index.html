@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/png" href="assets/icons/officeboard.png">
+<link rel="apple-touch-icon" href="assets/icons/officeboard.png">
+<title>정원유니어스 프로그램 보드</title>
+<style>
+:root{
+  --green:#0D4A32; --green-dark:#0A3A28; --green-tint:#5E8168;
+  --border:#C6D3CC; --hover:#EAF1ED; --ink:#1F2A24; --bg:#FFFFFF; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;min-height:100vh;position:relative;overflow-x:hidden}
+/* 하단 곡선 장식 */
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(22vw,200px);
+  background:url(assets/swoosh.png) right bottom/cover no-repeat;pointer-events:none;z-index:0;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px 200px}
+header{display:flex;align-items:center;gap:18px;padding-bottom:22px;border-bottom:2px solid var(--green)}
+header img{width:64px;height:64px;border-radius:10px}
+.title h1{margin:0;font-size:26px;color:var(--green);letter-spacing:-.5px}
+.title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
+.clock{margin-left:auto;text-align:right}
+.clock .time{font-size:40px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:1px}
+.clock .time small{font-size:16px;font-weight:600;margin-right:6px;color:var(--green-tint)}
+.clock .date{margin-top:6px;font-size:14px;color:var(--ink)}
+section{margin-top:28px}
+h2{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16px;color:var(--green)}
+h2::before{content:"";width:4px;height:18px;background:var(--green);border-radius:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{display:flex;align-items:center;gap:14px;padding:16px;background:var(--card);border:1px solid var(--border);
+  border-radius:14px;cursor:pointer;text-align:left;font:inherit;color:inherit;
+  transition:transform .12s,box-shadow .12s,background .12s,border-color .12s}
+.card:hover{background:var(--hover);border-color:var(--green);transform:translateY(-2px);box-shadow:0 6px 16px rgba(13,74,50,.14)}
+.card:active{background:#DEE9E3;transform:none}
+.card:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.card img{width:52px;height:52px;border-radius:12px;flex:none}
+.card b{display:block;font-size:16px}
+.card span{display:block;margin-top:3px;font-size:12px;color:var(--green-tint);line-height:1.35}
+.card .tag{display:inline-block;margin-top:5px;font-size:11px;color:var(--green);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--green);color:#fff;padding:10px 20px;
+  border-radius:99px;font-size:14px;opacity:0;transition:.25s;z-index:5;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.err{background:#B3261E}
+@media(max-width:640px){header{flex-wrap:wrap}.clock{margin-left:0;text-align:left;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/logo.png" alt="정원유니어스">
+    <div class="title"><h1 id="ttl">정원유니어스 프로그램 보드</h1><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
+    <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
+  </header>
+  <main id="main"></main>
+</div>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,'0');
+function tick(){
+  const d=new Date(), h=d.getHours();
+  $('time').innerHTML=`<small>${h<12?'오전':'오후'}</small>${pad(h%12||12)}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  $('date').textContent=d.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+}
+tick(); setInterval(tick,1000);
+
+let tt;
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='',2200)}
+
+async function launch(p){
+  try{
+    const r=await fetch('/api/launch',{method:'POST',body:p.id});
+    const j=await r.json();
+    j.ok?toast(`${p.name} 실행 중…`):toast(`실행 실패: ${j.error}`,true);
+  }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
+}
+
+fetch('/api/programs').then(r=>r.json()).then(cfg=>{
+  document.title=$('ttl').textContent=cfg.title;
+  const groups={};
+  cfg.programs.forEach(p=>(groups[p.group||'기타']??=[]).push(p));
+  const main=$('main');
+  Object.entries(groups).forEach(([g,list])=>{
+    const s=document.createElement('section');
+    s.innerHTML=`<h2>${g}</h2><div class="grid"></div>`;
+    list.forEach(p=>{
+      const b=document.createElement('button');b.className='card';
+      b.innerHTML=`<img src="assets/${p.icon}" alt=""><div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
+      b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
+      b.onclick=()=>launch(p);
+      s.querySelector('.grid').appendChild(b);
+    });
+    main.appendChild(s);
+  });
+}).catch(()=>toast('programs.json 을 읽지 못했어요',true));
+</script>
+</body>
+</html>
