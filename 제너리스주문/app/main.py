@@ -306,13 +306,28 @@ class OrderTab(ttk.Frame):
         messagebox.showinfo("내보내기 완료", f"저장되었습니다:\n{path}")
 
 
+def _margin_rate(item) -> float | None:
+    """마진율 = (매출가 - 매입가) / 매입가. 마스터 엑셀 K열(원가 기준)과 같은 정의."""
+    buy = item["buy_price"]
+    if not buy:
+        return None
+    return (item["sell_price"] - buy) / buy
+
+
+def _format_margin(item) -> str:
+    rate = _margin_rate(item)
+    return "-" if rate is None else f"{rate * 100:.1f}%"
+
+
 class MasterTab(ttk.Frame):
-    COLUMNS = ("category", "order_name", "manufacturer", "product_name", "spec", "buy", "sell", "base_date")
+    COLUMNS = ("category", "order_name", "manufacturer", "product_name", "spec", "buy", "sell", "margin",
+               "base_date")
     HEADINGS = {"category": "항목", "order_name": "제너리스주문명", "manufacturer": "제조사",
-                "product_name": "제품명", "spec": "규격", "buy": "매입가", "sell": "매출가", "base_date": "기준일자"}
+                "product_name": "제품명", "spec": "규격", "buy": "매입가", "sell": "매출가", "margin": "마진율",
+                "base_date": "기준일자"}
     WIDTHS = {"category": 100, "order_name": 150, "manufacturer": 110,
-              "product_name": 150, "spec": 110, "buy": 90, "sell": 90, "base_date": 90}
-    CENTERED = {"category", "spec", "buy", "sell", "base_date"}
+              "product_name": 150, "spec": 110, "buy": 90, "sell": 90, "margin": 80, "base_date": 90}
+    CENTERED = {"category", "spec", "buy", "sell", "margin", "base_date"}
     # 기준일자는 가격을 고칠 때 자동으로 갱신되므로 직접 편집하지 않는다.
     EDITABLE = ("category", "order_name", "manufacturer", "product_name", "spec", "buy", "sell")
     TEXT_FIELDS = {"category": "category", "order_name": "order_name",
@@ -325,6 +340,7 @@ class MasterTab(ttk.Frame):
         "spec": lambda item: item["spec"] or "",
         "buy": lambda item: item["buy_price"],
         "sell": lambda item: item["sell_price"],
+        "margin": lambda item: _margin_rate(item) if _margin_rate(item) is not None else float("-inf"),
         "base_date": lambda item: item["base_date"] or "",
     }
 
@@ -515,7 +531,7 @@ class MasterTab(ttk.Frame):
     def _row_values(self, item):
         return (item["category"], item["order_name"], item["manufacturer"], item["product_name"] or "",
                 item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}',
-                item["base_date"] or "")
+                _format_margin(item), item["base_date"] or "")
 
     def _render(self):
         self.tree.delete(*self.tree.get_children())
