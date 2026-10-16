@@ -1,0 +1,10 @@
+profile/
+__pycache__/
+kakao_page.html
+downloads/
+build/
+dist/
+*.spec.bak
+selftest.txt
+learned_rules.json
+corrections.jsonl
