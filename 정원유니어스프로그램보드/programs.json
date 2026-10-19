@@ -86,6 +86,42 @@
       "path": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행\\공지자동발행.exe",
       "args": "",
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행"
+    },
+    {
+      "id": "custom1",
+      "name": "연세예스내과_블로그",
+      "desc": "블로그",
+      "group": "온라인마케팅",
+      "icon": "icons/custom1.png",
+      "type": "url",
+      "url": "https://blog.naver.com/yesclinic_juan"
+    },
+    {
+      "id": "custom2",
+      "name": "연세예스내과_홈페이지",
+      "desc": "홈페이지",
+      "group": "온라인마케팅",
+      "icon": "icons/custom2.png",
+      "type": "url",
+      "url": "https://yonseiyesclinic-mo4.imweb.me/"
+    },
+    {
+      "id": "custom3",
+      "name": "네이버_스마트플레이스",
+      "desc": "스마트플레이스",
+      "group": "온라인마케팅",
+      "icon": "icons/custom3.png",
+      "type": "url",
+      "url": "https://new.smartplace.naver.com/"
+    },
+    {
+      "id": "custom4",
+      "name": "미리캔버스",
+      "desc": "미리캔버스",
+      "group": "온라인마케팅",
+      "icon": "icons/custom4.png",
+      "type": "url",
+      "url": "https://www.miricanvas.com/ko/workspace/drive"
     }
   ]
 }

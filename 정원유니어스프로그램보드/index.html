@@ -20,7 +20,8 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(22vw,20
   background:url(assets/swoosh.png) right bottom/cover no-repeat;pointer-events:none;z-index:0;
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px 200px}
-header{display:flex;align-items:center;gap:18px;padding-bottom:22px;border-bottom:2px solid var(--green)}
+header{display:flex;align-items:center;gap:18px;padding:28px 24px 22px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
+  position:sticky;top:0;z-index:3;background:var(--bg);box-shadow:0 6px 12px -6px rgba(13,74,50,.25)}
 header img{width:64px;height:64px;border-radius:10px}
 .title h1{margin:0;font-size:26px;color:var(--green);letter-spacing:-.5px}
 .title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
@@ -46,6 +47,22 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
   border-radius:99px;font-size:14px;opacity:0;transition:.25s;z-index:5;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #toast.err{background:#B3261E}
+.tools{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+.btn{font:inherit;font-size:13px;padding:7px 14px;border-radius:99px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.pri{background:var(--green);color:#fff}.btn.pri:hover{background:var(--green-dark)}
+.btn.del{border-color:#B3261E;color:#B3261E}
+.btn.on{background:var(--green);color:#fff}
+.editing .card{border-style:dashed;border-color:var(--green)}
+.editing .card::after{content:"✎";margin-left:auto;color:var(--green)}
+.ph{width:52px;height:52px;border-radius:12px;flex:none;background:var(--green);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700}
+dialog{border:1px solid var(--border);border-radius:16px;padding:22px;width:min(440px,92vw);color:var(--ink);font-family:inherit}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog h3{margin:0 0 14px;color:var(--green)}
+dialog label{display:block;margin-top:10px;font-size:12px;color:var(--green-tint)}
+dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px}
+.row{display:flex;gap:6px}.row input{flex:1}.row .btn{margin-top:4px;border-radius:8px;white-space:nowrap}
+.acts{display:flex;gap:8px;margin-top:18px}.acts .sp{flex:1}
 @media(max-width:640px){header{flex-wrap:wrap}.clock{margin-left:0;text-align:left;width:100%}}
 </style>
 </head>
@@ -56,8 +73,20 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
     <div class="title"><h1 id="ttl">정원유니어스 프로그램 보드</h1><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
   </header>
+  <div class="tools"><button class="btn" id="bEdit">편집</button><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
   <main id="main"></main>
 </div>
+<dialog id="dlg"><form method="dialog" id="frm" onsubmit="return false">
+  <h3 id="dT"></h3>
+  <label>종류<select id="fType"><option value="exe">내 PC 프로그램 (exe)</option><option value="url">웹사이트</option></select></label>
+  <label>이름<input id="fName" required></label>
+  <label>설명<input id="fDesc"></label>
+  <label>그룹<input id="fGroup" list="gl" placeholder="예: 업무"></label><datalist id="gl"></datalist>
+  <label id="lPath">프로그램 경로<div class="row"><input id="fPath"><button type="button" class="btn" id="bBrowse">찾아보기</button></div></label>
+  <label id="lUrl">웹 주소<input id="fUrl" placeholder="https://"></label>
+  <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
+    <button type="button" class="btn" id="bCancel">취소</button><button type="button" class="btn pri" id="bSave">저장</button></div>
+</form></dialog>
 <div id="toast"></div>
 <script>
 const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,'0');
@@ -79,24 +108,62 @@ async function launch(p){
   }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
 }
 
-fetch('/api/programs').then(r=>r.json()).then(cfg=>{
-  document.title=$('ttl').textContent=cfg.title;
+let CFG, editing=false, cur=null;
+const post=(u,b)=>fetch(u,{method:'POST',body:typeof b==='string'?b:JSON.stringify(b)}).then(r=>r.json());
+
+function render(){
+  const main=$('main');main.innerHTML='';main.classList.toggle('editing',editing);
   const groups={};
-  cfg.programs.forEach(p=>(groups[p.group||'기타']??=[]).push(p));
-  const main=$('main');
+  CFG.programs.forEach(p=>(groups[p.group||'기타']??=[]).push(p));
   Object.entries(groups).forEach(([g,list])=>{
     const s=document.createElement('section');
-    s.innerHTML=`<h2>${g}</h2><div class="grid"></div>`;
+    s.innerHTML=`<h2></h2><div class="grid"></div>`;s.querySelector('h2').textContent=g;
     list.forEach(p=>{
       const b=document.createElement('button');b.className='card';
-      b.innerHTML=`<img src="assets/${p.icon}" alt=""><div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
+      b.innerHTML=`${p.icon?`<img src="assets/${p.icon}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
+      if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
-      b.onclick=()=>launch(p);
+      b.onclick=()=>editing?openDlg(p):launch(p);
       s.querySelector('.grid').appendChild(b);
     });
     main.appendChild(s);
   });
-}).catch(()=>toast('programs.json 을 읽지 못했어요',true));
+  $('gl').innerHTML=Object.keys(groups).map(g=>`<option value="${g.replace(/"/g,'&quot;')}">`).join('');
+}
+async function load(){
+  try{CFG=await (await fetch('/api/programs')).json();document.title=$('ttl').textContent=CFG.title;render()}
+  catch(e){toast('programs.json 을 읽지 못했어요',true)}
+}
+function syncType(){const u=$('fType').value==='url';$('lUrl').style.display=u?'':'none';$('lPath').style.display=u?'none':''}
+function openDlg(p){
+  cur=p;$('dT').textContent=p?'프로그램 수정':'프로그램 추가';
+  $('fType').value=p?.type||'exe';$('fName').value=p?.name||'';$('fDesc').value=p?.desc||'';
+  $('fGroup').value=p?.group||'';$('fPath').value=p?.path||'';$('fUrl').value=p?.url||'';
+  $('bDel').style.display=p?'':'none';syncType();$('dlg').showModal();
+}
+async function submit(){
+  const t=$('fType').value;
+  const program={...(cur||{}),type:t,name:$('fName').value,desc:$('fDesc').value,group:$('fGroup').value,path:$('fPath').value,url:$('fUrl').value};
+  if(cur&&t==='exe'&&cur.path!==program.path)program.cwd='';
+  try{
+    const j=await post('/api/save',{action:cur?'update':'add',program});
+    if(!j.ok)return toast(j.error,true);
+    $('dlg').close();toast('저장했어요');load();
+  }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
+}
+$('fType').onchange=syncType;
+$('bAdd').onclick=()=>openDlg(null);
+$('bEdit').onclick=()=>{editing=!editing;$('bEdit').classList.toggle('on',editing);$('bEdit').textContent=editing?'편집 끝':'편집';render()};
+$('bCancel').onclick=()=>$('dlg').close();
+$('bSave').onclick=submit;
+$('bDel').onclick=async()=>{
+  if(!confirm(`'${cur.name}' 을(를) 보드에서 삭제할까요?
+(프로그램 파일 자체는 지워지지 않아요)`))return;
+  const j=await post('/api/save',{action:'delete',id:cur.id});
+  j.ok?($('dlg').close(),toast('삭제했어요'),load()):toast(j.error,true);
+};
+$('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.path.split('\\').pop().replace(/\.[^.]+$/,'')}};
+load();
 </script>
 </body>
 </html>
