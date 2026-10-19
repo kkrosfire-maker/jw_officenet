@@ -46,11 +46,11 @@ class H(BaseHTTPRequestHandler):
         elif path == "/favicon.ico":
             path = "/assets/icons/officeboard.png"
         full = os.path.normpath(os.path.join(HERE, path.lstrip("/")))
-        allowed = path == "/index.html" or path.startswith("/assets/")
+        allowed = path in ("/index.html", "/manifest.json") or path.startswith("/assets/")
         if not (allowed and full.startswith(HERE) and os.path.isfile(full)):
             return self.send(404)
         ext = os.path.splitext(full)[1].lower()
-        ctype = {".html": "text/html; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg"}.get(ext, "application/octet-stream")
+        ctype = {".html": "text/html; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/manifest+json"}.get(ext, "application/octet-stream")
         with open(full, "rb") as f:
             self.send(200, f.read(), ctype)
 

@@ -32,7 +32,7 @@ class App(tk.Tk):
         self.title("카카오 공지 자동 발행")
         self.geometry("760x780")
         try:
-            self.iconbitmap(ICON)
+            self.iconbitmap(default=ICON)
         except tk.TclError:
             pass
         self.q: queue.Queue = queue.Queue()
