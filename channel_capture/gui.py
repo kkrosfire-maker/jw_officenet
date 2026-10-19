@@ -54,8 +54,9 @@ class App(tk.Tk):
 
         head = tk.Frame(self)
         head.pack(fill="x", padx=10, pady=(10, 6))
-        tk.Label(head, text="발췌문 (필요하면 수정 - 수정 내용은 학습됩니다)", anchor="w").pack(side="left")
-        tk.Button(head, text="학습", width=8, command=self.open_rules).pack(side="right")
+        tk.Label(head, text="발췌문 (불필요한 부분을 지운 뒤 '학습'을 누르면 기억합니다)", anchor="w").pack(side="left")
+        tk.Button(head, text="학습수정", width=8, command=self.open_rules).pack(side="right")
+        tk.Button(head, text="학습", width=8, command=self.on_learn).pack(side="right", padx=(0, 4))
         self.body = scrolledtext.ScrolledText(self, height=12, font=("맑은 고딕", 10))
         self.body.pack(fill="both", expand=True, padx=10)
         self.meta = tk.Label(self, text="", anchor="w", fg="#555")
@@ -115,6 +116,18 @@ class App(tk.Tk):
         except queue.Empty:
             pass
         self.after(150, self.pump)
+
+    # --- 학습: 추출된 발췌문 vs 현재 편집본
+    def on_learn(self):
+        if not self.info:
+            return messagebox.showinfo("학습", "먼저 공지를 추출해 주세요.", parent=self)
+        learned = learn.learn(self.shown, self.body.get("1.0", "end").strip())
+        if not learned:
+            return messagebox.showinfo("학습", "추출된 발췌문에서 바뀐 부분이 없습니다.", parent=self)
+        self.shown = self.body.get("1.0", "end").strip()
+        for msg in learned:
+            self.say(f"[{msg}]")
+        messagebox.showinfo("학습", f"{len(learned)}건 학습했습니다.", parent=self)
 
     # --- 학습 규칙 관리
     def open_rules(self):
@@ -216,9 +229,6 @@ class App(tk.Tk):
             f"'{date} 공지사항' 소식을 채널에 실제로 발행합니다.\n(친구들에게 공개됩니다)\n\n계속할까요?",
         ):
             return
-        for msg in learn.learn(self.shown, body):
-            self.say(f"[{msg}]")
-        self.shown = kakao_biz.blocks(body)
         self.btn_extract.config(state="disabled")
         self.btn_run.config(state="disabled")
         threading.Thread(target=self._run, args=(date, body, list(self.image_paths)), daemon=True).start()
@@ -228,9 +238,15 @@ class App(tk.Tk):
 
         try:
             with sync_playwright() as p:
-                ctx = kakao_biz.open_context(p, headless=False)
+                # 소식 발행은 숨김(headless)으로 처리. 로그인이 풀렸을 때만 보이는 창으로 전환.
+                ctx = kakao_biz.open_context(p, headless=True)
                 page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                visible = False
                 if not kakao_biz.is_logged_in(page):
+                    ctx.close()
+                    visible = True
+                    ctx = kakao_biz.open_context(p, headless=False)
+                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
                     self.say("로그인이 필요합니다. 열린 창에서 로그인해 주세요. (최대 5분 대기)")
                     page.goto("https://business.kakao.com/")
                     page.wait_for_url("**/space/**", timeout=300000)
@@ -243,6 +259,11 @@ class App(tk.Tk):
                     self.say("소식 발행 중...")
                     kakao_biz.write_post(page, date, body, paths, submit=True)
                     self.say("소식 발행 완료")
+                # 발송 전 직접 확인해야 하므로 메시지 작성부터는 보이는 창으로 연다.
+                if not visible:
+                    ctx.close()
+                    ctx = kakao_biz.open_context(p, headless=False)
+                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
                 self.say("메시지 작성 중...")
                 kakao_biz.write_message(page, date, body)
                 self.say("✔ 메시지 작성 완료. 브라우저에서 내용을 확인하고 '다음'으로 진행해 발송하세요.")
