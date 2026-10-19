@@ -22,6 +22,7 @@
    - 크롬/엣지가 켜져 있으면 "닫을까요?" 라고 물어본다.
      Enter(=예)를 누르면 잠시 닫고 즐겨찾기를 추가한다.
      (다시 열면 "페이지 복원" 버튼으로 탭을 되살릴 수 있음)
+   - Antigravity IDE 설치 때도 같은 창이 한 번 뜰 수 있다.
    - 전체 5~10분 정도 걸린다.
 
 3. "설치 완료!" 가 뜨면 Enter 를 눌러 창을 닫는다.
@@ -38,12 +39,16 @@
   Claude Code      더블클릭하면 workspace 에서 Claude Code 실행
                    (cc 와 같음: 작업마다 허락을 묻지 않음)
   Claude.ai        웹 버전 claude.ai 열기
+  Antigravity IDE (workspace)
+                   workspace 폴더가 열린 편집기(IDE). 아래쪽 터미널에서
+                   q, ㅂ, cc, ㅊㅊ 와 /c-push 등 스킬을 그대로 쓸 수 있음
 
   크롬/엣지 즐겨찾기 바에도 "Claude" 가 추가된다.
 
 
 [ 알아두면 편한 명령 ] (PowerShell 창에서)
 
+  (Antigravity IDE 터미널에서도 동일하게 동작)
   q  또는 ㅂ          workspace 폴더로 이동
   q 폴더이름          workspace 안의 폴더로 이동 (Tab 으로 이름 자동완성)
   claude              Claude Code 실행 (작업마다 허락을 물어봄)

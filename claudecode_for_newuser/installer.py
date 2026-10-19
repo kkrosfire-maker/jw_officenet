@@ -9,6 +9,7 @@ Claude Code 새 사용자 설치 도우미 (ClaudeCode_설치.exe 의 본체)
   5. PowerShell 프로필에 q / ㅂ / cc / ㅊㅊ 단축 명령 추가
   6. 바탕화면 바로가기 (Claude Code, Claude.ai) 생성
   7. 크롬/엣지 즐겨찾기에 claude.ai 추가
+  8. Antigravity IDE 설치 + 터미널 설정 (IDE 터미널에서도 q / ㅂ / cc / ㅊㅊ 사용)
 
 내 폴더(프로젝트 파일)·대화 기억은 포함하지 않는다.
 번들 내용(payload/)은 build.py 가 이 PC의 현재 설정으로 만든다.
@@ -96,14 +97,18 @@ class Paths:
             self.desktop = self.home / "Desktop"
             self.documents = self.home / "Documents"
             self.localappdata = self.home / "AppData" / "Local"
+            self.appdata = self.home / "AppData" / "Roaming"
         else:
             self.home = Path(os.environ["USERPROFILE"])
             self.desktop = known_folder(CSIDL_DESKTOPDIRECTORY)
             self.documents = known_folder(CSIDL_PERSONAL)
             self.localappdata = Path(os.environ["LOCALAPPDATA"])
+            self.appdata = Path(os.environ["APPDATA"])
         self.workspace = self.desktop / "workspace"
         self.claude_dir = self.home / ".claude"
         self.claude_bin = self.home / ".local" / "bin"
+        self.ide_exe = self.localappdata / "Programs" / "Antigravity IDE" / "Antigravity IDE.exe"
+        self.ide_settings = self.appdata / "Antigravity IDE" / "User" / "settings.json"
         self.ps_profiles = [
             self.documents / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1",
         ]
@@ -406,6 +411,62 @@ def make_shortcuts(p: Paths):
         warn("Claude Code 바로가기를 만들지 못했습니다.")
 
 
+# ── Antigravity IDE ──────────────────────────────────────────────────────────
+
+# IDE 통합 터미널 설정. 기본 셸을 PowerShell 로 못 박아야 프로필(q/ㅂ/cc/ㅊㅊ)이 읽힌다.
+# 스킬은 전역(~/.claude/skills)에 있으므로 IDE 터미널의 claude 에서도 그대로 보인다.
+IDE_SETTINGS = {
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.enablePersistentSessions": False,  # 죽은 터미널 세션이 쌓이는 현상 방지
+    "terminal.integrated.scrollback": 20000,
+}
+
+
+def install_ide(p: Paths, test: bool):
+    if test:
+        info("(테스트 모드: 프로그램 설치 건너뜀)")
+    elif p.ide_exe.exists():
+        ok("Antigravity IDE 이미 설치됨")
+    else:
+        winget_install("Google.AntigravityIDE", "Antigravity IDE")
+        if p.ide_exe.exists():
+            ok("Antigravity IDE 설치 완료")
+        else:
+            warn("Antigravity IDE 설치를 확인하지 못했습니다. 검색창에 'Antigravity IDE' 로 직접 내려받아 설치해 주세요.")
+
+    # 설정: 기존 값은 살리고 터미널 항목만 덧씌움 (주석이 든 JSONC 라 읽히지 않으면 건드리지 않음)
+    current = {}
+    if p.ide_settings.exists():
+        try:
+            current = read_json(p.ide_settings)
+        except ValueError:
+            warn(f"IDE 설정 파일을 읽지 못해 건드리지 않았습니다. 터미널 기본 셸을 PowerShell 로 직접 지정해 주세요: {p.ide_settings}")
+            return
+        backup(p.ide_settings)
+    current.update(IDE_SETTINGS)
+    write_json(p.ide_settings, current)
+    ok("Antigravity IDE 터미널 설정 (기본 셸 PowerShell → q, ㅂ, cc, ㅊㅊ 사용 가능)")
+
+
+def make_ide_shortcut(p: Paths):
+    lnk = p.desktop / "Antigravity IDE (workspace).lnk"
+    script = (
+        "$s = New-Object -ComObject WScript.Shell; "
+        f"$l = $s.CreateShortcut({ps_quote(lnk)}); "
+        f"$l.TargetPath = {ps_quote(p.ide_exe)}; "
+        f"$l.Arguments = {ps_quote('\"' + str(p.workspace) + '\"')}; "  # workspace 폴더를 바로 열기
+        f"$l.WorkingDirectory = {ps_quote(p.workspace)}; "
+        "$l.Description = 'workspace 폴더를 Antigravity IDE 로 열기'; "
+        f"$l.IconLocation = {ps_quote(str(p.ide_exe) + ',0')}; "
+        "$l.Save()"
+    )
+    run_ps(script)
+    if lnk.exists():
+        ok("바탕화면 바로가기: Antigravity IDE (workspace 폴더로 열림)")
+    else:
+        warn("Antigravity IDE 바로가기를 만들지 못했습니다.")
+
+
 # ── 즐겨찾기 ─────────────────────────────────────────────────────────────────
 
 def webkit_now() -> str:
@@ -507,7 +568,7 @@ def main():
     print(f"""
   이 프로그램이 하는 일
    - 바탕화면에 workspace 폴더 만들기 ({p.workspace})
-   - Git, Claude Code 설치 (이미 있으면 건너뜀)
+   - Git, Claude Code, Antigravity IDE 설치 (이미 있으면 건너뜀)
    - 설정·스킬(/c-push 등)·단축 명령(q, ㅂ, cc) 적용
    - 바탕화면 바로가기, claude.ai 즐겨찾기 추가
 """)
@@ -527,6 +588,8 @@ def main():
         ("자동완성 모듈 확인", lambda: upgrade_psreadline(test)),
         ("바탕화면 바로가기 만들기", lambda: make_shortcuts(p)),
         ("claude.ai 즐겨찾기 추가", lambda: add_favorites(p, test, args.yes)),
+        ("Antigravity IDE 설치·터미널 설정", lambda: install_ide(p, test)),
+        ("Antigravity IDE 바로가기 만들기", lambda: make_ide_shortcut(p) if (test or p.ide_exe.exists()) else info("(IDE 미설치: 건너뜀)")),
     ]
     for i, (title, fn) in enumerate(steps, start=1):
         step(i, len(steps), title)
@@ -550,6 +613,7 @@ def main():
   단축 명령 (새로 연 PowerShell 창에서)
    q / ㅂ        workspace 폴더로 이동 (q 폴더명 → 하위 폴더로)
    cc / ㅊㅊ     Claude Code 를 권한 확인 없이 실행
+  (Antigravity IDE 의 터미널에서도 동일하게 쓸 수 있습니다)
 """)
     if not args.yes:
         input("  Enter 를 누르면 창이 닫힙니다 ")
