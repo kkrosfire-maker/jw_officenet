@@ -1,6 +1,6 @@
 """정원유니어스 프로그램 보드 - 로컬 실행기.
 index.html 을 서빙하고, 카드 클릭 시 programs.json 에 등록된 프로그램만 실행한다."""
-import json, os, subprocess, sys, webbrowser
+import json, os, subprocess, sys, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -68,14 +68,19 @@ class H(BaseHTTPRequestHandler):
             self.send(500, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False).encode())
 
 
+APP_ID = "JW.ProgramBoard"
+
+
 def open_board():
+    """전용 창(pywebview)으로 연다. board.ico 를 창 아이콘으로 써서 작업표시줄에서 선명하게 보인다."""
     url = f"http://127.0.0.1:{PORT}/"
-    for chrome in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                   r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"):
-        if os.path.exists(chrome):
-            subprocess.Popen([chrome, f"--app={url}", "--window-size=1180,860"])
-            return
-    webbrowser.open(url)
+    try:
+        import ctypes, webview
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+        webview.create_window("정원유니어스 프로그램 보드", url, width=1180, height=860)
+        webview.start(icon=os.path.join(HERE, "board.ico"))
+    except Exception:
+        webbrowser.open(url)
 
 
 if __name__ == "__main__":
@@ -84,6 +89,7 @@ if __name__ == "__main__":
     except OSError:  # 이미 실행 중이면 창만 연다
         open_board()
         sys.exit(0)
-    if "--no-open" not in sys.argv:
-        open_board()
-    srv.serve_forever()
+    if "--no-open" in sys.argv:
+        srv.serve_forever()
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    open_board()  # 창을 닫으면 서버도 함께 종료
