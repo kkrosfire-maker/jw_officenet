@@ -206,7 +206,7 @@ def open_board():
     try:
         import ctypes, webview
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
-        webview.create_window("정원유니어스 프로그램 보드", url, width=885, height=860)
+        webview.create_window("정원유니어스 프로그램 보드", url, width=903, height=1008)
         webview.start(icon=os.path.join(HERE, "board.ico"))
     except Exception:
         webbrowser.open(url)
