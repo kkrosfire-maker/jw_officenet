@@ -1,0 +1,88 @@
+name: mac-installer-test
+
+# claudecode_for_newuser/mac/install.command 를 진짜 macOS(Apple Silicon·Intel)에서 돌려 검증한다.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "claudecode_for_newuser/mac/**"
+      - ".github/workflows/mac-installer-test.yml"
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest        # Apple Silicon
+            expect_arch: arm64
+          - os: macos-15-intel      # Intel
+            expect_arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 테스트용 설치 꾸러미 만들기 (build.py 가 만드는 구조와 동일)
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/pkg/payload/skills/demo-skill"
+          cp claudecode_for_newuser/mac/install.command "$RUNNER_TEMP/pkg/"
+          cp claudecode_for_newuser/mac/profile_template.zsh "$RUNNER_TEMP/pkg/payload/"
+          chmod +x "$RUNNER_TEMP/pkg/install.command"
+          echo '{"theme":"dark","cleanupPeriodDays":30}' > "$RUNNER_TEMP/pkg/payload/settings.json"
+          printf '# CLAUDE.md\n\n- Platform: macOS, zsh\n' > "$RUNNER_TEMP/pkg/payload/CLAUDE.md"
+          printf -- '---\nname: demo-skill\ndescription: test\n---\n' > "$RUNNER_TEMP/pkg/payload/skills/demo-skill/SKILL.md"
+          # 기존 사용자 설정이 있을 때 병합되는지 확인하려고 미리 넣어 둔다
+          mkdir -p ~/.claude && echo '{"model":"keep-me"}' > ~/.claude/settings.json
+
+      - name: CPU 판별 확인
+        run: |
+          out="$(bash "$RUNNER_TEMP/pkg/install.command" --test-root "$RUNNER_TEMP/t" --yes)"
+          echo "$out" | grep "감지된 CPU"
+          case "${{ matrix.expect_arch }}" in
+            arm64)  echo "$out" | grep -q "Apple Silicon" ;;
+            x86_64) echo "$out" | grep -q "Intel" ;;
+          esac
+
+      - name: 실제 설치 실행 (brew cask, Claude Code 설치 포함)
+        run: bash "$RUNNER_TEMP/pkg/install.command" --yes
+
+      - name: 재실행해도 안전한지 (멱등성)
+        run: |
+          bash "$RUNNER_TEMP/pkg/install.command" --yes > /dev/null
+          test "$(grep -c '>>> claudecode_for_newuser' ~/.zshrc)" = "1"
+
+      - name: 결과 검증
+        run: |
+          set -e
+          ws="$HOME/Desktop/workspace"
+          test -d "$ws"
+          test -f "$ws/CLAUDE.md"
+          test -f ~/.claude/skills/demo-skill/SKILL.md
+          # 기존 설정은 살리고 새 설정이 병합됐는지
+          python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/settings.json')));assert d['model']=='keep-me' and d['theme']=='dark',d"
+          # IDE 설치와 터미널 설정
+          test -d "/Applications/Antigravity IDE.app"
+          python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/Library/Application Support/Antigravity IDE/User/settings.json')));assert d['terminal.integrated.defaultProfile.osx']=='zsh',d"
+          # 바탕화면 바로가기
+          test -x "$HOME/Desktop/Claude Code.command"
+          test -x "$HOME/Desktop/Antigravity IDE (workspace).command"
+          test -f "$HOME/Desktop/Claude.ai.webloc"
+          # Claude Code 설치
+          test -x "$HOME/.local/bin/claude"
+          "$HOME/.local/bin/claude" --version
+
+      - name: zsh 에서 q / ㅂ / cc / ㅊㅊ 동작 확인
+        run: |
+          set -e
+          mkdir -p "$HOME/Desktop/workspace/sub1"
+          # 새 대화형 zsh 로 ~/.zshrc 를 읽게 한다 (한글 함수명이 실제로 정의되는지가 핵심)
+          zsh -ic '
+            for f in q ㅂ cc ㅊㅊ; do whence -w $f | grep -q function || { echo "함수 없음: $f"; exit 1 }; done
+            cd /; q;   [[ "$PWD" == "$HOME/Desktop/workspace" ]] || { echo "q 실패: $PWD"; exit 1 }
+            cd /; ㅂ sub1; [[ "$PWD" == "$HOME/Desktop/workspace/sub1" ]] || { echo "ㅂ 실패: $PWD"; exit 1 }
+            print -r -- "completion q=${_comps[q]} ㅂ=${_comps[ㅂ]}"
+            [[ -n "${_comps[q]}" && -n "${_comps[ㅂ]}" ]] || { echo "자동완성 미등록"; exit 1 }
+            whence -p claude >/dev/null || { echo "claude PATH 없음"; exit 1 }
+            echo "zsh 함수 OK"
+          '
