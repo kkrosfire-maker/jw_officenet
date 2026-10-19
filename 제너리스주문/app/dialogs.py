@@ -5,6 +5,19 @@ from tkinter import messagebox, ttk
 from app import db, matching, theme
 
 
+def _margin_rate(item) -> float | None:
+    """마진율 = (매출가 - 매입가) / 매입가. 마스터 엑셀 K열(원가 기준)과 같은 정의."""
+    buy = item["buy_price"]
+    if not buy:
+        return None
+    return (item["sell_price"] - buy) / buy
+
+
+def _format_margin(item) -> str:
+    rate = _margin_rate(item)
+    return "-" if rate is None else f"{rate * 100:.1f}%"
+
+
 class CandidatePickerDialog(tk.Toplevel):
     """유사 품목 후보 목록에서 하나를 선택하거나, 검색/신규등록으로 전환."""
 
@@ -32,13 +45,13 @@ class CandidatePickerDialog(tk.Toplevel):
         ttk.Button(search_row, text="검색", style="Secondary.TButton",
                    command=self._do_search).pack(side="left")
 
-        columns = ("score", "matched_alias", "category", "order_name", "manufacturer", "spec", "buy", "sell", "base_date")
+        columns = ("score", "matched_alias", "category", "order_name", "manufacturer", "spec", "buy", "sell", "margin", "base_date")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
         headings = {"score": "유사도", "matched_alias": "일치한 별칭", "category": "항목", "order_name": "제너리스주문명",
                     "manufacturer": "제조사", "spec": "규격", "buy": "매입가", "sell": "매출가",
-                    "base_date": "기준일자"}
+                    "margin": "마진율", "base_date": "기준일자"}
         widths = {"score": 60, "matched_alias": 130, "category": 90, "order_name": 150, "manufacturer": 110,
-                  "spec": 120, "buy": 80, "sell": 80, "base_date": 90}
+                  "spec": 120, "buy": 80, "sell": 80, "margin": 70, "base_date": 90}
         for col in columns:
             self.tree.heading(col, text=headings[col])
             self.tree.column(col, width=widths[col], anchor="w")
@@ -71,7 +84,7 @@ class CandidatePickerDialog(tk.Toplevel):
                 f'{c.score*100:.0f}%', c.matched_alias, c.item["category"], c.item["order_name"],
                 c.item["manufacturer"], c.item["spec"],
                 f'{c.item["buy_price"]:,.0f}', f'{c.item["sell_price"]:,.0f}',
-                c.item["base_date"] or "",
+                _format_margin(c.item), c.item["base_date"] or "",
             ))
             self._rows[iid] = c.item
         if candidates:
@@ -91,7 +104,7 @@ class CandidatePickerDialog(tk.Toplevel):
             self.tree.insert("", "end", iid=iid, values=(
                 "-", "-", item["category"], item["order_name"], item["manufacturer"],
                 item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}',
-                item["base_date"] or "",
+                _format_margin(item), item["base_date"] or "",
             ))
             self._rows[iid] = item
 

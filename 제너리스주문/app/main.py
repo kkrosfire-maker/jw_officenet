@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import db, excel_export, grid_edit, importer, matching, theme
 from app.config import EXPORT_DIR, SOURCE_MASTER_SHEET
-from app.dialogs import (CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
+from app.dialogs import (_format_margin, _margin_rate,CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
                          PriceHistoryDialog)
 from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates
 
@@ -306,17 +306,6 @@ class OrderTab(ttk.Frame):
         messagebox.showinfo("내보내기 완료", f"저장되었습니다:\n{path}")
 
 
-def _margin_rate(item) -> float | None:
-    """마진율 = (매출가 - 매입가) / 매입가. 마스터 엑셀 K열(원가 기준)과 같은 정의."""
-    buy = item["buy_price"]
-    if not buy:
-        return None
-    return (item["sell_price"] - buy) / buy
-
-
-def _format_margin(item) -> str:
-    rate = _margin_rate(item)
-    return "-" if rate is None else f"{rate * 100:.1f}%"
 
 
 class MasterTab(ttk.Frame):
