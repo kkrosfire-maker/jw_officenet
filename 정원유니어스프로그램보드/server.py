@@ -104,6 +104,94 @@ def fetch_icon(p):
     return f"icons/{p['id']}.png"
 
 
+def fetch_exe_icon(p):
+    """PC 프로그램(exe·lnk·bat) 자체 아이콘을 윈도우 탐색기와 같은 방식으로 가져와
+    assets/icons/<id>.png (256px 정사각)로 저장하고 상대경로를 돌려준다."""
+    import ctypes
+    from ctypes import wintypes as wt
+    from PIL import Image
+    path = p.get("path", "")
+    if not os.path.exists(path):
+        return ""
+    sh, u32, g32 = ctypes.windll.shell32, ctypes.windll.user32, ctypes.windll.gdi32
+    ctypes.windll.ole32.CoInitialize(None)
+
+    class SHFILEINFOW(ctypes.Structure):
+        _fields_ = [("hIcon", wt.HICON), ("iIcon", ctypes.c_int), ("dwAttributes", wt.DWORD),
+                    ("szDisplayName", wt.WCHAR * 260), ("szTypeName", wt.WCHAR * 80)]
+
+    class GUID(ctypes.Structure):
+        _fields_ = [("a", wt.DWORD), ("b", wt.WORD), ("c", wt.WORD), ("d", ctypes.c_ubyte * 8)]
+
+    info = SHFILEINFOW()
+    sh.SHGetFileInfoW.argtypes = [wt.LPCWSTR, wt.DWORD, ctypes.c_void_p, wt.UINT, wt.UINT]
+    if not sh.SHGetFileInfoW(path, 0, ctypes.byref(info), ctypes.sizeof(info), 0x4000):  # SYSICONINDEX
+        return ""
+    iid = GUID(0x46EB5926, 0x582E, 0x4017, (ctypes.c_ubyte * 8)(0x9F, 0xDF, 0xE8, 0x99, 0x8D, 0xAA, 0x09, 0x50))
+    hicon, size = None, 256
+    for shil, size in ((4, 256), (2, 48)):  # JUMBO(256) → 안 되면 EXTRALARGE(48)
+        il = ctypes.c_void_p()
+        if sh.SHGetImageList(shil, ctypes.byref(iid), ctypes.byref(il)) == 0 and il.value:
+            vt = ctypes.cast(ctypes.cast(il, ctypes.POINTER(ctypes.c_void_p))[0], ctypes.POINTER(ctypes.c_void_p))
+            get_icon = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_int, wt.UINT,
+                                          ctypes.POINTER(wt.HICON))(vt[10])  # IImageList::GetIcon
+            h = wt.HICON()
+            if get_icon(il, info.iIcon, 0x20, ctypes.byref(h)) == 0 and h.value:  # ILD_TRANSPARENT
+                hicon = h
+                break
+    if hicon is None:
+        return ""
+
+    def render(bg):
+        """bg 색 바탕에 아이콘을 그려 RGB 바이트를 돌려준다."""
+        class BMIH(ctypes.Structure):
+            _fields_ = [("biSize", wt.DWORD), ("biWidth", ctypes.c_long), ("biHeight", ctypes.c_long),
+                        ("biPlanes", wt.WORD), ("biBitCount", wt.WORD), ("biCompression", wt.DWORD),
+                        ("biSizeImage", wt.DWORD), ("a", ctypes.c_long), ("b", ctypes.c_long),
+                        ("c", wt.DWORD), ("d", wt.DWORD)]
+        bmi = BMIH(ctypes.sizeof(BMIH), size, -size, 1, 32, 0, 0, 0, 0, 0, 0)
+        bits = ctypes.c_void_p()
+        hdc = g32.CreateCompatibleDC(None)
+        g32.CreateDIBSection.restype = ctypes.c_void_p
+        bmp = g32.CreateDIBSection(hdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
+        old = g32.SelectObject(hdc, ctypes.c_void_p(bmp))
+        ctypes.memset(bits, bg, size * size * 4)
+        u32.DrawIconEx(hdc, 0, 0, hicon, size, size, 0, None, 3)  # DI_NORMAL
+        data = ctypes.string_at(bits, size * size * 4)
+        g32.SelectObject(hdc, old)
+        g32.DeleteObject(ctypes.c_void_p(bmp))
+        g32.DeleteDC(hdc)
+        return Image.frombuffer("RGBA", (size, size), data, "raw", "BGRA", 0, 1).convert("RGB")
+
+    try:
+        # 검정·흰 바탕에 각각 그려 차이로 투명도를 계산 → 오래된 아이콘도 투명 배경이 정확하다
+        black, white = render(0), render(255)
+    finally:
+        u32.DestroyIcon(hicon)
+    from PIL import ImageChops
+    alpha = ImageChops.invert(ImageChops.subtract(white, black).convert("L"))
+    img = black.copy()
+    img.putalpha(alpha)
+    # 투명도로 나눈 원래 색 복원(premultiplied → straight)
+    px, a = img.load(), alpha.load()
+    for y in range(size):
+        for x in range(size):
+            al = a[x, y]
+            if 0 < al < 255:
+                r, g, b, _ = px[x, y]
+                px[x, y] = (min(255, r * 255 // al), min(255, g * 255 // al), min(255, b * 255 // al), al)
+    box = alpha.point(lambda v: 255 if v > 8 else 0).getbbox()  # 작은 아이콘이 왼쪽 위에 몰린 경우 대비
+    if not box:
+        return ""
+    img = img.crop(box)
+    w, h = img.size
+    side = max(w, h)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.paste(img, ((side - w) // 2, (side - h) // 2))
+    sq.resize((256, 256), Image.LANCZOS).save(os.path.join(HERE, "assets", "icons", p["id"] + ".png"))
+    return f"icons/{p['id']}.png"
+
+
 def launch(p):
     if p.get("type") == "url":
         webbrowser.open(p["url"])
@@ -182,14 +270,15 @@ class H(BaseHTTPRequestHandler):
                     while f"custom{n}" in {x["id"] for x in progs}:
                         n += 1
                     p["id"] = f"custom{n}"
-                    if p["type"] == "url":
-                        p["icon"] = fetch_icon(p)
+                    p["icon"] = fetch_icon(p) if p["type"] == "url" else fetch_exe_icon(p)
                     progs.append(p)
                 else:
                     i = next(i for i, x in enumerate(progs) if x["id"] == p["id"])
                     p["icon"] = progs[i].get("icon", "")
                     if p["type"] == "url" and (not p["icon"] or progs[i].get("url") != p["url"]) and p["id"].startswith("custom"):
                         p["icon"] = fetch_icon(p) or p["icon"]
+                    if p["type"] == "exe" and (not p["icon"] or progs[i].get("path") != p["path"]) and p["id"].startswith("custom"):
+                        p["icon"] = fetch_exe_icon(p) or p["icon"]
                     progs[i] = p
             save(cfg)
             self.send(200, b'{"ok":true}')

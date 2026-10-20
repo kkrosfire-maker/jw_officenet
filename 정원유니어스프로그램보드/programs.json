@@ -122,6 +122,17 @@
       "icon": "icons/custom4.png",
       "type": "url",
       "url": "https://www.miricanvas.com/ko/workspace/drive"
+    },
+    {
+      "id": "custom5",
+      "name": "ShareX",
+      "desc": "화면캡쳐",
+      "group": "업무",
+      "icon": "icons/custom5.png",
+      "type": "exe",
+      "path": "C:\\Program Files\\ShareX\\ShareX.exe",
+      "args": "",
+      "cwd": "C:\\Program Files\\ShareX"
     }
   ]
 }
