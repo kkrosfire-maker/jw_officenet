@@ -25,9 +25,11 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 import winreg
+import zipfile
 from pathlib import Path
 
 CLAUDE_URL = "https://claude.ai/"
@@ -422,6 +424,68 @@ IDE_SETTINGS = {
     "workbench.secondarySideBar.defaultVisibility": "hidden",  # 시작 시 우측 agent 창 안 띄움
 }
 
+# Antigravity 는 위 설정과 상관없이 시작할 때마다 우측 agent 창을 강제로 연다.
+# 그래서 시작 직후 그 창을 닫아 주는 작은 확장을 만들어 IDE 명령줄로 설치한다.
+# (untrustedWorkspaces 지원을 켜야 '제한 모드' 폴더에서도 동작한다)
+HIDE_AGENT_EXT = {
+    "package.json": json.dumps({
+        "name": "hide-agent-panel", "publisher": "jw-local",
+        "displayName": "Hide Agent Panel on Startup", "version": "1.0.0",
+        "engines": {"vscode": "^1.80.0"},
+        "activationEvents": ["onStartupFinished"], "main": "./extension.js",
+        "capabilities": {"untrustedWorkspaces": {"supported": True}, "virtualWorkspaces": True},
+    }, indent=2),
+    "extension.js": (
+        "const vscode = require('vscode');\n"
+        "function activate() {\n"
+        "  const close = () => vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar').then(undefined, () => {});\n"
+        "  close();\n"
+        "  for (const ms of [800, 2000, 4000]) setTimeout(close, ms);\n"
+        "}\n"
+        "module.exports = { activate, deactivate() {} };\n"
+    ),
+}
+HIDE_AGENT_MANIFEST = """<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="hide-agent-panel" Version="1.0.0" Publisher="jw-local" />
+    <DisplayName>Hide Agent Panel on Startup</DisplayName>
+    <Description xml:space="preserve">Hide Agent Panel on Startup</Description>
+    <Properties><Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.80.0" /></Properties>
+  </Metadata>
+  <Installation><InstallationTarget Id="Microsoft.VisualStudio.Code"/></Installation>
+  <Dependencies/>
+  <Assets><Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" /></Assets>
+</PackageManifest>
+"""
+VSIX_CONTENT_TYPES = (
+    '<?xml version="1.0" encoding="utf-8"?>\n'
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    '<Default Extension=".json" ContentType="application/json"/>'
+    '<Default Extension=".js" ContentType="application/javascript"/>'
+    '<Default Extension=".vsixmanifest" ContentType="text/xml"/></Types>\n'
+)
+
+
+def install_hide_agent_ext(p: Paths):
+    cli = p.ide_exe.parent / "bin" / "antigravity-ide.cmd"
+    if not cli.exists():
+        warn("IDE 명령줄 도구를 찾지 못해 agent 창 숨김 확장을 설치하지 못했습니다.")
+        return
+    vsix = Path(tempfile.gettempdir()) / "hide-agent-panel.vsix"
+    with zipfile.ZipFile(vsix, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", VSIX_CONTENT_TYPES)
+        z.writestr("extension.vsixmanifest", HIDE_AGENT_MANIFEST)
+        for name, body in HIDE_AGENT_EXT.items():
+            z.writestr(f"extension/{name}", body)
+    rc = subprocess.run(["cmd", "/c", str(cli), "--install-extension", str(vsix), "--force"],
+                        capture_output=True).returncode
+    vsix.unlink(missing_ok=True)
+    if rc == 0:
+        ok("Antigravity IDE 시작 시 우측 agent 창 자동으로 닫기")
+    else:
+        warn("agent 창 숨김 확장 설치에 실패했습니다. (IDE 사용에는 지장 없음)")
+
 
 def install_ide(p: Paths, test: bool):
     if test:
@@ -434,6 +498,8 @@ def install_ide(p: Paths, test: bool):
             ok("Antigravity IDE 설치 완료")
         else:
             warn("Antigravity IDE 설치를 확인하지 못했습니다. 검색창에 'Antigravity IDE' 로 직접 내려받아 설치해 주세요.")
+    if not test and p.ide_exe.exists():
+        install_hide_agent_ext(p)
 
     # 설정: 기존 값은 살리고 터미널 항목만 덧씌움 (주석이 든 JSONC 라 읽히지 않으면 건드리지 않음)
     current = {}

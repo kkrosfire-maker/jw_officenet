@@ -207,6 +207,63 @@ JSON
         warn "IDE 설정 파일을 읽지 못해 건드리지 않았습니다. 터미널 기본 셸을 zsh 로 직접 지정해 주세요: $IDE_SETTINGS"
     fi
     rm -f "$tmp"
+
+    is_test || install_hide_agent_ext
+}
+
+# Antigravity 는 설정과 상관없이 시작할 때마다 우측 agent 창을 강제로 연다.
+# 시작 직후 그 창을 닫아 주는 작은 확장을 만들어 IDE 명령줄로 설치한다.
+install_hide_agent_ext() {
+    local cli="/Applications/Antigravity IDE.app/Contents/Resources/app/bin/antigravity-ide"
+    if [ ! -x "$cli" ]; then
+        warn "IDE 명령줄 도구를 찾지 못해 agent 창 숨김 확장을 설치하지 못했습니다."
+        return
+    fi
+    local dir; dir="$(mktemp -d)"
+    mkdir -p "$dir/extension"
+    cat > "$dir/extension/package.json" <<'JSON'
+{
+  "name": "hide-agent-panel", "publisher": "jw-local",
+  "displayName": "Hide Agent Panel on Startup", "version": "1.0.0",
+  "engines": {"vscode": "^1.80.0"},
+  "activationEvents": ["onStartupFinished"], "main": "./extension.js",
+  "capabilities": {"untrustedWorkspaces": {"supported": true}, "virtualWorkspaces": true}
+}
+JSON
+    cat > "$dir/extension/extension.js" <<'JS'
+const vscode = require('vscode');
+function activate() {
+  const close = () => vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar').then(undefined, () => {});
+  close();
+  for (const ms of [800, 2000, 4000]) setTimeout(close, ms);
+}
+module.exports = { activate, deactivate() {} };
+JS
+    cat > "$dir/extension.vsixmanifest" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Language="en-US" Id="hide-agent-panel" Version="1.0.0" Publisher="jw-local" />
+    <DisplayName>Hide Agent Panel on Startup</DisplayName>
+    <Description xml:space="preserve">Hide Agent Panel on Startup</Description>
+    <Properties><Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.80.0" /></Properties>
+  </Metadata>
+  <Installation><InstallationTarget Id="Microsoft.VisualStudio.Code"/></Installation>
+  <Dependencies/>
+  <Assets><Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" /></Assets>
+</PackageManifest>
+XML
+    cat > "$dir/[Content_Types].xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension=".json" ContentType="application/json"/><Default Extension=".js" ContentType="application/javascript"/><Default Extension=".vsixmanifest" ContentType="text/xml"/></Types>
+XML
+    (cd "$dir" && zip -qr hide-agent-panel.vsix "[Content_Types].xml" extension.vsixmanifest extension)
+    if "$cli" --install-extension "$dir/hide-agent-panel.vsix" --force >/dev/null 2>&1; then
+        ok "Antigravity IDE 시작 시 우측 agent 창 자동으로 닫기"
+    else
+        warn "agent 창 숨김 확장 설치에 실패했습니다. (IDE 사용에는 지장 없음)"
+    fi
+    rm -rf "$dir"
 }
 
 make_shortcuts() {

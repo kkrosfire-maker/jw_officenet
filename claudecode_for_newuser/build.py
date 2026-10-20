@@ -110,6 +110,7 @@ def make_mac_zip():
     def add_bytes(z, arcname, data: bytes, executable=False):
         info = zipfile.ZipInfo(arcname, date_time=(2026, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_DEFLATED
+        info.create_system = 3  # Unix 로 표시해야 맥이 실행 권한(external_attr)을 읽는다
         info.external_attr = (0o755 if executable else 0o644) << 16  # 맥에서 실행 권한 유지
         z.writestr(info, data)
 
@@ -132,6 +133,7 @@ def make_mac_zip():
                 if file.suffix in (".md", ".sh", ".json", ".txt", ".ts", ".tsx", ".js", ".mjs", ".py"):
                     data = data.replace(b"\r\n", b"\n")
                 add_bytes(z, arc, data, executable=file.suffix == ".sh")
+    shutil.copy2(HERE / "설치방법_Mac.txt", RELEASE / "설치방법_Mac.txt")
     print(f"[OK] 맥용: {zpath.name}  ({zpath.stat().st_size / 1024 / 1024:.1f} MB)")
 
 
