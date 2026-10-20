@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정원유니어스(주) 정산 대시보드</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f3f0;--surface:#fcfcfb;--line:#e3e1dc;--line-2:#d2d0ca;
+  --text:#0b0b0b;--text-2:#52514e;--text-3:#7a7974;
+  --accent:#2a78d6;--accent-soft:#e3eefb;
+  --muted:#c3c1b8;
+  --crit:#c9372c;--crit-soft:#fbe4e1;
+  --warn:#b7791f;--warn-soft:#fbf0d9;
+  --good:#2f855a;--good-soft:#e1f2e8;
+  --radius:10px;
+  --s-todo:#c9372c;--s-todo-bg:#fbe4e1;--s-wait:#b45309;--s-wait-bg:#fde8c8;--s-done:#1f7a4d;--s-done-bg:#d5efdf;--s-old:#6b6a66;--s-old-bg:#e8e6e1;
+  --me:#e3eefb;--mark:#ffe58a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;
+    --text:#f0efec;--text-2:#c3c2b7;--text-3:#8f8e86;
+    --accent:#3987e5;--accent-soft:#1d2d42;--muted:#4a4a46;
+    --crit:#ec6b5f;--crit-soft:#3a1e1b;--warn:#e0a548;--warn-soft:#382c17;--good:#5cbf88;--good-soft:#18301f;
+    --s-todo:#ff8a7d;--s-todo-bg:#4a211d;--s-wait:#f0b45a;--s-wait-bg:#47341a;--s-done:#6fd49b;--s-done-bg:#17402a;--s-old:#a3a299;--s-old-bg:#2f2f2c;
+    --me:#1d2d42;--mark:#6b5a12;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;
+  --text:#f0efec;--text-2:#c3c2b7;--text-3:#8f8e86;
+  --accent:#3987e5;--accent-soft:#1d2d42;--muted:#4a4a46;
+  --crit:#ec6b5f;--crit-soft:#3a1e1b;--warn:#e0a548;--warn-soft:#382c17;--good:#5cbf88;--good-soft:#18301f;
+  --s-todo:#ff8a7d;--s-todo-bg:#4a211d;--s-wait:#f0b45a;--s-wait-bg:#47341a;--s-done:#6fd49b;--s-done-bg:#17402a;--s-old:#a3a299;--s-old-bg:#2f2f2c;
+  --me:#1d2d42;--mark:#6b5a12;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh}
+.in{max-width:1280px;margin:0 auto;padding-left:16px;padding-right:16px}
+.top{flex:none;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .in{padding-top:16px}
+.scroll{flex:1;overflow:auto}
+.scroll .in{padding-top:14px;padding-bottom:20px}
+.bottombar{flex:none;background:var(--surface);border-top:1px solid var(--line)}
+.bottombar .in{display:flex;gap:8px;align-items:center;padding-top:8px;padding-bottom:8px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;justify-content:space-between;margin-bottom:10px}
+h1{font-size:20px;margin:0}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;flex:none}
+.sub{color:var(--text-2);font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sep{width:1px;height:22px;background:var(--line-2);margin:0 2px}
+button,.btn{font:inherit;font-size:13px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.sm{padding:3px 9px;font-size:12px}
+button:hover{filter:brightness(.97)}
+button:disabled{opacity:.45;cursor:default;filter:none}
+.chatbar{font-size:12.5px;color:var(--text-2);margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chatbar b.wait{color:var(--warn)}
+.chatbar b.ok{color:var(--good)}
+.drop{border:1.5px dashed var(--line-2);border-radius:var(--radius);padding:10px 14px;color:var(--text-2);font-size:13px;margin-bottom:10px;display:none}
+body.dragging .drop{display:block;border-color:var(--accent);background:var(--accent-soft)}
+.notice{background:var(--accent-soft);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px;display:none}
+.banner{background:var(--warn-soft);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px;display:none}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;cursor:pointer}
+.kpi .l{color:var(--text-2);font-size:12px}
+.kpi .v{font-size:24px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi .d{color:var(--text-3);font-size:12px}
+.kpi.crit .v{color:var(--s-todo)} .kpi.wait .v{color:var(--s-wait)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto}
+nav.tabs button{border:0;background:none;border-radius:0;padding:10px 14px;color:var(--text-2);border-bottom:2px solid transparent}
+nav.tabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 4px}
+.card .hint{color:var(--text-2);font-size:12px;margin-bottom:10px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+select,input[type=search],input[type=text]{font:inherit;font-size:13px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 8px}
+input[type=search]{min-width:220px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;color:var(--text-2);font-weight:600;border-bottom:1px solid var(--line-2);padding:8px 6px;position:sticky;top:0;background:var(--surface);white-space:nowrap;z-index:1}
+td{border-bottom:1px solid var(--line);padding:8px 6px;vertical-align:top;overflow-wrap:anywhere}
+td.n{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--text-2)}
+td.c{font-weight:600}
+td.o{white-space:nowrap;color:var(--text-2)}
+td.x{cursor:pointer}
+td.x:hover .xt{text-decoration:underline dotted;text-underline-offset:3px}
+.src{display:inline-block;margin-left:6px;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 4px;line-height:16px;vertical-align:1px}
+tr:hover td{filter:brightness(.97)}
+/* 표 공통: 제목 눌러 정렬, 경계 끌어 폭 조절 */
+table.fx{table-layout:fixed}
+th{overflow:hidden;text-overflow:ellipsis}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--text)}
+th .ar{margin-left:4px;font-size:10px;color:var(--accent)}
+th .rz{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:col-resize}
+th .rz::after{content:"";position:absolute;right:3px;top:25%;bottom:25%;width:1px;background:var(--line-2)}
+th .rz:hover::after,body.resizing th .rz::after{background:var(--accent);width:2px}
+body.resizing{cursor:col-resize;user-select:none}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.pill[class*="st-"]{font-weight:700;padding:2px 10px 2px 8px}
+.pill[class*="st-"]::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.pill.nw{background:var(--accent);color:#fff;font-size:11px;padding:0 6px;margin-top:2px}
+/* 상태 색: 확인필요·후속기록없음 = 빨강, 답변대기중 = 주황, 완료 = 초록, 기간경과 = 회색 */
+.st-확인필요,.st-후속기록없음{background:var(--s-todo-bg);color:var(--s-todo)}
+.st-답변대기중{background:var(--s-wait-bg);color:var(--s-wait)}
+.st-완료{background:var(--s-done-bg);color:var(--s-done)}
+.st-기간경과{background:var(--s-old-bg);color:var(--s-old)}
+tbody tr td:first-child{border-left:5px solid transparent}
+tr.r-확인필요 td,tr.r-후속기록없음 td{background:color-mix(in srgb,var(--s-todo-bg) 55%,transparent)}
+tr.r-답변대기중 td{background:color-mix(in srgb,var(--s-wait-bg) 55%,transparent)}
+tr.r-완료 td{background:color-mix(in srgb,var(--s-done-bg) 40%,transparent)}
+tr.r-기간경과 td{background:color-mix(in srgb,var(--s-old-bg) 55%,transparent);color:var(--text-3)}
+tr.r-확인필요 td:first-child,tr.r-후속기록없음 td:first-child{border-left-color:var(--s-todo)}
+tr.r-답변대기중 td:first-child{border-left-color:var(--s-wait)}
+tr.r-완료 td:first-child{border-left-color:var(--s-done)}
+tr.r-기간경과 td:first-child{border-left-color:var(--s-old)}
+tr.chg td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+select.st{padding:3px 6px}
+select.st.s-확인필요,select.st.s-후속기록없음{background:var(--s-todo-bg);color:var(--s-todo);border-color:var(--s-todo);font-weight:700}
+select.st.s-답변대기중{background:var(--s-wait-bg);color:var(--s-wait);border-color:var(--s-wait);font-weight:700}
+select.st.s-완료{background:var(--s-done-bg);color:var(--s-done);border-color:var(--s-done);font-weight:700}
+select.st.s-기간경과{background:var(--s-old-bg);color:var(--s-old);border-color:var(--s-old);font-weight:700}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.ty{background:var(--bg);color:var(--text-2)}
+input.memo{width:100%}
+select.st{width:100%}
+input.ce{width:100%;padding:4px 6px}
+.f-변경{background:var(--crit-soft);color:var(--crit)} .f-신규{background:var(--warn-soft);color:var(--warn)} .f-확인{background:var(--accent-soft);color:var(--accent)} .f-반영{background:var(--good-soft);color:var(--good)}
+.latest{color:var(--crit);font-size:12px}
+.acts{white-space:nowrap;display:flex;gap:4px}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.chart svg{width:100%;height:auto;display:block}
+.bar{cursor:pointer}
+.tip{position:fixed;pointer-events:none;background:var(--text);color:var(--surface);font-size:12px;padding:6px 8px;border-radius:6px;display:none;z-index:30;white-space:nowrap}
+.typebars .row{display:grid;grid-template-columns:150px 1fr 34px;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.typebars .track{height:10px;background:var(--bg);border-radius:4px;overflow:hidden}
+.typebars .fill{height:100%;background:var(--muted);border-radius:4px}
+.typebars .row.hl .fill{background:var(--accent)}
+.count{color:var(--text-2);font-size:12px;margin-left:auto}
+.empty{color:var(--text-3);padding:20px;text-align:center}
+.small{font-size:12px;color:var(--text-2)}
+.dirty{margin-right:auto;font-size:13px;color:var(--text-3)}
+.dirty.on{color:var(--warn);font-weight:600}
+/* 원문 발췌 창 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
+.modal[hidden]{display:none}
+.mbox{background:var(--surface);border-radius:12px;width:min(760px,100%);max-height:100%;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.mhead{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.mhead b{font-size:15px}
+.mbody{overflow:auto;padding:10px 16px 16px;background:var(--bg)}
+.more{display:block;margin:6px auto}
+.day{text-align:center;font-size:12px;color:var(--text-3);margin:12px 0 6px}
+.msg{display:flex;flex-direction:column;align-items:flex-start;margin:6px 0}
+.msg.me{align-items:flex-end}
+.msg .w{font-size:11.5px;color:var(--text-3);margin:0 4px 2px}
+.msg .bub{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;max-width:82%;white-space:pre-wrap;word-break:break-word;font-size:13px}
+.msg.me .bub{background:var(--me)}
+.msg.sys .bub{background:none;border:0;color:var(--text-3);font-size:12px}
+.msg.hit .bub{outline:2px solid var(--accent);outline-offset:1px}
+mark{background:var(--mark);color:inherit;border-radius:2px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}input[type=search]{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="in">
+    <header>
+      <div class="brand">
+        <img class="logo" src="logo_small.png" alt="">
+        <div>
+          <h1>정원유니어스(주) 정산 대시보드</h1>
+          <div class="sub" id="asof"></div>
+        </div>
+      </div>
+      <div class="btns">
+        <button id="chat-add">카톡 대화 추가</button>
+        <label class="btn">엑셀 불러오기<input type="file" id="file" accept=".xlsx" hidden></label>
+        <button id="xsave">엑셀로 저장</button>
+        <span class="sep"></span>
+        <button id="undo1" class="undo">되돌리기</button>
+        <button id="save1" class="primary save">저장</button>
+      </div>
+    </header>
+    <div class="chatbar" id="chatbar"></div>
+    <div class="drop">엑셀 파일을 여기에 놓으면 대시보드가 그 파일 내용으로 바뀝니다.</div>
+    <div class="notice" id="notice"></div>
+    <div class="banner" id="banner"></div>
+    <section class="kpis">
+      <div class="kpi crit" data-go="open" data-st="확인필요"><div class="l">확인필요</div><div class="v" id="k1"></div><div class="d" id="k1d"></div></div>
+      <div class="kpi wait" data-go="open" data-st="답변대기중"><div class="l">답변대기중</div><div class="v" id="k5"></div><div class="d">상대 답변을 기다리는 건</div></div>
+      <div class="kpi crit" data-go="open" data-st="후속기록없음"><div class="l">후속기록없음</div><div class="v" id="k2"></div><div class="d">결과가 대화에 없는 건</div></div>
+      <div class="kpi" data-go="month"><div class="l" id="k3l">최근 월 이벤트</div><div class="v" id="k3"></div><div class="d" id="k3d"></div></div>
+      <div class="kpi" data-go="crit"><div class="l">기준 변경 제약사</div><div class="v" id="k4"></div><div class="d">표 수정이 필요한 곳</div></div>
+    </section>
+    <nav class="tabs">
+      <button data-tab="open" class="on">미결 체크리스트</button>
+      <button data-tab="month">월별 현황</button>
+      <button data-tab="log">이벤트 로그</button>
+      <button data-tab="crit">정산불가 기준</button>
+    </nav>
+  </div></div>
+
+  <div class="scroll" id="scroll"><div class="in">
+    <section class="panel on" id="p-open">
+      <div class="card">
+        <h2>미결 체크리스트</h2>
+        <div class="hint"><span id="o-win"></span> 상태와 메모는 바꾼 뒤 「저장」을 눌러야 반영됩니다. 저장 전까지는 행이 제자리에 있고, 「되돌리기」를 누르면 한 단계 전으로 돌아갑니다. <b>상황</b>을 누르면 카톡 원문이 보입니다. 열 제목을 누르면 오름차순 → 내림차순 → 원래 순서로 정렬되고, 제목 사이 경계를 끌면 폭이 바뀝니다.</div>
+        <div class="legend"><span class="pill st-확인필요">확인필요</span><span class="pill st-답변대기중">답변대기중</span><span class="pill st-후속기록없음">후속기록없음</span><span class="pill st-완료">완료</span><span class="pill st-기간경과">기간경과</span></div>
+        <div class="filters">
+          <select id="o-st"><option value="미결">미결 전체 (확인필요·답변대기중·후속기록없음)</option><option>확인필요</option><option>답변대기중</option><option>후속기록없음</option><option>완료</option><option>기간경과</option></select>
+          <input type="search" id="o-q" placeholder="거래처·담당자·제약사·내용 검색">
+          <span class="count" id="o-n"></span>
+        </div>
+        <table id="o-t" class="fx"></table>
+      </div>
+    </section>
+
+    <section class="panel" id="p-month">
+      <div class="grid2">
+        <div class="card chart">
+          <h2 id="m-title"></h2>
+          <div class="hint">회색 = 전체 이벤트, 파랑 = 입력누락·이월·GS 실수. 막대를 누르면 그 달 내역이 아래에 나옵니다.</div>
+          <div id="m-chart"></div>
+        </div>
+        <div class="card">
+          <h2 id="t-title">유형별 건수</h2>
+          <div class="hint" id="t-hint"></div>
+          <div class="typebars" id="t-bars"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 id="ml-title"></h2>
+        <table id="ml-t" class="fx"></table>
+      </div>
+    </section>
+
+    <section class="panel" id="p-log">
+      <div class="card">
+        <h2>이벤트 로그</h2>
+        <div class="hint">상태 칸에서 바로 바꿀 수 있습니다(예: 완료했는데 아니었던 건 → 확인필요). 미결 체크리스트처럼 「저장」을 눌러야 반영되고 「되돌리기」로 취소됩니다.</div>
+        <div class="legend"><span class="pill st-확인필요">확인필요</span><span class="pill st-답변대기중">답변대기중</span><span class="pill st-후속기록없음">후속기록없음</span><span class="pill st-완료">완료</span><span class="pill st-기간경과">기간경과</span></div>
+        <div class="filters">
+          <select id="l-m"></select>
+          <select id="l-t"></select>
+          <select id="l-s"><option value="">상태 전체</option><option>확인필요</option><option>답변대기중</option><option>후속기록없음</option><option>기간경과</option><option>완료</option></select>
+          <input type="search" id="l-q" placeholder="거래처·담당자·제약사·내용 검색">
+          <span class="count" id="l-n"></span>
+        </div>
+        <table id="l-t2" class="fx"></table>
+      </div>
+    </section>
+
+    <section class="panel" id="p-crit">
+      <div class="card">
+        <h2>제약사별 정산불가 기준</h2>
+        <div class="hint">표의 값이 정원유니어스가 쓰는 기준이고, 빨간 「대화:」 글씨는 대화에서 확인된 최신값입니다. 「확인」을 누르면 대화 최신값이 한 번에 표에 들어갑니다. 「수정」을 누른 뒤 칸을 비워 두면 대화 최신값(없으면 지금 값)이, 직접 입력하면 입력한 값이 들어갑니다. 고친 날짜는 「최신화 날짜」에 기록되고, 「저장」을 눌러야 반영됩니다. 제약사 이름을 누르면 기준 이력이 보입니다. 열 제목을 누르면 정렬되고, 제목 사이 경계를 끌면 폭이 바뀝니다(두 번 누르면 원래 폭).</div>
+        <div class="filters">
+          <select id="c-f"><option value="">전체</option><option value="변경">변경 (표 수정 필요)</option><option value="신규">신규</option><option value="확인">대화에서 확인됨</option><option value="반영">표에 반영함</option></select>
+          <input type="search" id="c-q" placeholder="제약사 검색">
+          <button id="c-x">엑셀로 내보내기</button>
+          <span class="count" id="c-n"></span>
+        </div>
+        <table id="c-t" class="fx"></table>
+      </div>
+      <div class="card" id="h-card" style="display:none">
+        <h2 id="h-title"></h2>
+        <table id="h-t" class="fx"></table>
+      </div>
+    </section>
+  </div></div>
+
+  <div class="bottombar"><div class="in">
+    <span class="dirty" id="dirty">저장할 변경 없음</span>
+    <button id="undo2" class="undo">되돌리기</button>
+    <button id="save2" class="primary save">저장</button>
+  </div></div>
+</div>
+
+<div class="modal" id="mx" hidden>
+  <div class="mbox">
+    <div class="mhead">
+      <div><b id="mx-t"></b><div class="small" id="mx-s"></div></div>
+      <button id="mx-c">닫기</button>
+    </div>
+    <div class="mbody" id="mx-b"></div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+const TYPES={1:'입력 누락',2:'자료제출 확인',3:'이월(담당자·자료)',4:'GS·제약사 실수',5:'정산불가·거래불가',6:'기타 질의·이벤트'};
+const ISSUE=new Set([1,3,4]);
+const STS=['확인필요','답변대기중','후속기록없음','기간경과','완료'];
+const OPEN=new Set(['확인필요','답변대기중','후속기록없음']);
+const LS='gs-jungsan-dash-v1';
+const $=id=>document.getElementById(id);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const p2=n=>String(n).padStart(2,'0');
+const today=()=>{const t=new Date();return `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`};
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ym=d=>d.slice(0,7);
+let api=null;
+let D=null;          // 마지막으로 저장된 데이터 (행 순서·필터 기준)
+let W=null;          // 지금 화면에서 고치는 데이터
+let baseRev=0, stack=[], chatSt=null, selMonth=null, editing=null, lastDirty=null;
+let evW=new Map(), crW=new Map(), evD=new Map(), crD=new Map(), OWN=new Map();
+
+function idx(){
+  evW=new Map(W.events.map(e=>[e.no,e]));crW=new Map(W.criteria.map(c=>[c.id,c]));
+  evD=new Map(D.events.map(e=>[e.no,e]));crD=new Map(D.criteria.map(c=>[c.id,c]));
+  const nz=s=>String(s||'').replace(/\s/g,''),core=s=>nz(s).replace(/\(.*?\)/g,'');
+  OWN=new Map();for(const c of W.clinics||[]){OWN.set(nz(c.n),c.v);if(!OWN.has('~'+core(c.n)))OWN.set('~'+core(c.n),c.v)}
+}
+function owner(e){
+  if(!e.c||e.c==='-')return '-';
+  const nz=s=>String(s||'').replace(/\s/g,''),core=s=>nz(s).replace(/\(.*?\)/g,'');
+  const r=e.c.split(/[·,]/).map(p=>OWN.get(nz(p))||OWN.get('~'+core(p))).filter(Boolean);
+  if(r.length)return [...new Set(r)].join('·');
+  return e.v&&e.v!=='-'&&e.v!=='각'?e.v:'-';
+}
+const months=()=>[...new Set(W.events.map(e=>ym(e.d)))].sort();
+function cutoff(data){const ms=[...new Set(data.events.map(e=>ym(e.d)))].sort();const m=ms.at(-1);if(!m)return '';let [y,mo]=m.split('-').map(Number);mo-=2;if(mo<1){mo+=12;y--}return `${y}-${p2(mo)}`}
+function expire(data){const c=cutoff(data);for(const e of data.events){if(OPEN.has(e.s)&&ym(e.d)<c)e.s='기간경과'}}
+function note(msg){const n=$('notice');n.textContent=msg;n.style.display='block';clearTimeout(note.t);note.t=setTimeout(()=>n.style.display='none',7000)}
+
+/* ---------- 변경·되돌리기·저장 ---------- */
+function apply(op,dir){
+  const v=op[dir];
+  if(op.k==='all'){W=clone(v);idx();return}
+  const o=op.k==='ev'?evW.get(op.id):crW.get(op.id);if(o)Object.assign(o,clone(v));
+}
+function change(k,id,nw,label){
+  const o=k==='ev'?evW.get(id):crW.get(id);if(!o)return;
+  const old={};for(const f in nw)old[f]=o[f]??'';
+  if(JSON.stringify(old)===JSON.stringify(nw))return;
+  const op={k,id,old,new:nw,label};apply(op,'new');stack.push(op);refresh();
+}
+function undo(){
+  const op=stack.pop();if(!op){note('되돌릴 작업이 없습니다.');return}
+  apply(op,'old');editing=null;refresh();note('한 단계 되돌렸습니다 — '+(op.label||''));
+}
+// 빈 값과 없는 칸은 같은 것으로 본다 (되돌리기 뒤 '' 가 남아도 변경으로 세지 않게)
+const norm=o=>JSON.stringify(Object.keys(o).filter(k=>o[k]!==''&&o[k]!=null).sort().map(k=>[k,o[k]]));
+function changedKeys(){
+  const out=[];const cd=new Map(D.criteria.map(c=>[c.id,c]));
+  for(const e of W.events){const o=evD.get(e.no);if(!o||norm(o)!==norm(e))out.push(['ev',e.no])}
+  for(const c of W.criteria){const o=cd.get(c.id);if(!o||norm(o)!==norm(c))out.push(['cr',c.id])}
+  if(W.events.length!==D.events.length||W.criteria.length!==D.criteria.length)out.push(['all',0]);
+  return out;
+}
+function updateDirty(){
+  const n=changedKeys().length;
+  $('dirty').textContent=n?`저장 안 된 변경 ${n}건`:(W.saved_at?`모두 저장됨 · 마지막 저장 ${W.saved_at}`:'저장할 변경 없음');
+  $('dirty').classList.toggle('on',!!n);
+  document.querySelectorAll('.save').forEach(b=>{b.disabled=!n;b.textContent=n?`저장 (${n})`:'저장'});
+  document.querySelectorAll('.undo').forEach(b=>b.disabled=!stack.length);
+  if(api&&lastDirty!==!!n){lastDirty=!!n;api.set_dirty(!!n)}
+  return n;
+}
+function refresh(){updateDirty();renderAll()}
+async function save(){
+  if(!changedKeys().length){note('저장할 변경이 없습니다.');return}
+  let r=await api.save(JSON.stringify(W),baseRev);
+  if(!r.ok&&r.conflict){
+    // Claude Code가 그사이 데이터를 바꿨으면, 새 데이터 위에 내 변경을 얹어서 저장
+    const keys=changedKeys(),fresh=(await api.load()).data;expire(fresh);
+    const fe=new Map(fresh.events.map(e=>[e.no,e])),fc=new Map(fresh.criteria.map(c=>[c.id,c]));
+    for(const [k,id] of keys){
+      if(k==='ev'){const e=evW.get(id),t=fe.get(id);if(t)Object.assign(t,{s:e.s,memo:e.memo,dd:e.dd||''})}
+      if(k==='cr'){const c=crW.get(id),t=fc.get(id);if(t)Object.assign(t,c);else fresh.criteria.push(clone(c))}
+    }
+    baseRev=fresh.rev||0;r=await api.save(JSON.stringify(fresh),baseRev);
+    if(r.ok){W=fresh;stack=[];chatSt=(await api.load()).chat}
+  }
+  if(!r.ok){note('저장하지 못했습니다. 다시 눌러 주세요.');return}
+  baseRev=r.rev;W.rev=r.rev;W.saved_at=r.saved_at;D=clone(W);idx();$('banner').style.display='none';
+  refresh();note(`저장했습니다 (${r.saved_at}).`);
+}
+async function reload(msg){
+  const r=await api.load();const d=r.data;expire(d);
+  D=d;W=clone(d);baseRev=d.rev||0;chatSt=r.chat;stack=[];editing=null;idx();refresh();
+  $('banner').style.display='none';if(msg)note(msg);
+}
+async function checkExternal(){
+  if(!api||!W)return;const r=await api.rev();if(r<0||r===baseRev)return;
+  if(changedKeys().length){const b=$('banner');b.textContent='Claude Code에서 카톡 정리 내용이 새로 들어왔습니다. 「저장」을 누르면 지금 고친 내용과 합쳐서 저장됩니다.';b.style.display='block'}
+  else await reload('Claude Code에서 정리한 새 내용을 불러왔습니다.');
+}
+async function migrate(){
+  // 예전 exe(GS파마)는 상태·메모를 브라우저 저장소에 저장했다. 첫 실행 때 한 번 옮긴다.
+  if(W.migrated!==false)return;
+  let s={};try{s=JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){}
+  let n=0;
+  for(const [no,x] of Object.entries(s.edits||{})){const e=evW.get(+no);if(e&&(e.s!==x.s||(e.memo||'')!==(x.memo||''))){e.s=x.s;e.memo=x.memo||'';if(x.s==='완료'&&!e.dd)e.dd='';n++}}
+  W.migrated=true;const r=await api.save(JSON.stringify(W),baseRev);
+  if(r.ok){baseRev=r.rev;W.rev=r.rev;W.saved_at=r.saved_at;D=clone(W);idx()}
+  if(n)note(`예전 화면에서 바꿔 둔 상태·메모 ${n}건을 옮겨왔습니다.`);
+}
+
+/* ---------- 상단 ---------- */
+function renderChatBar(){
+  const c=chatSt||{total:0};const el=$('chatbar');
+  if(!c.total){el.innerHTML='카톡 원문이 아직 없습니다. 「카톡 대화 추가」로 카톡 PC에서 내보낸 txt 파일을 넣어 주세요.';return}
+  el.innerHTML=`<span>카톡 원문 ${c.total.toLocaleString()}건 · <b>${esc(c.last)}</b>까지 읽음</span><span>·</span>`+
+    (c.pending?`<b class="wait">정리 대기 ${c.pending}건</b><span>— Claude Code에 "카톡 업데이트해줘"라고 하면 이벤트로 정리됩니다.</span>`:`<b class="ok">모두 정리됨</b>`);
+}
+function kpis(){
+  const cw=cutoff(W),ms=months(),last=ms.at(-1);
+  $('k1d').textContent=`최근 3개월(${cw.slice(2)}~${last.slice(2)}) · 꼭 확인`;
+  $('o-win').textContent=`처방통계는 최근 3개월(${cw}~${last})만 봅니다. 그보다 오래된 미결 건은 「기간경과」로 자동 정리됩니다.`;
+  const c=s=>W.events.filter(e=>e.s===s).length;
+  $('k1').textContent=c('확인필요');$('k5').textContent=c('답변대기중');$('k2').textContent=c('후속기록없음');
+  const n=W.events.filter(e=>ym(e.d)===last);
+  $('k3l').textContent=`최근 월(${last}) 이벤트`;$('k3').textContent=n.length;
+  $('k3d').textContent=`누락·이월·실수 ${n.filter(e=>ISSUE.has(+e.t)).length}건`;
+  $('k4').textContent=W.criteria.filter(c=>c.flag==='변경').length;
+  $('asof').textContent=`마지막 대화 ${W.asof} · 이벤트 ${W.events.length}건 · ${ms[0]} ~ ${last}`;
+}
+const stSel=e=>`<select class="st s-${esc(e.s)}" data-no="${e.no}">${STS.map(s=>`<option${s===e.s?' selected':''}>${s}</option>`).join('')}</select>`;
+const stPill=s=>`<span class="pill st-${esc(s)}">${esc(s)}</span>`;
+const match=(e,q)=>!q||[e.c,owner(e),e.p,e.v,e.x,e.f,e.memo].join(' ').toLowerCase().includes(q.toLowerCase());
+const savedS=e=>(evD.get(e.no)||e).s;
+const isChg=e=>{const o=evD.get(e.no);return !o||o.s!==e.s||(o.memo||'')!==(e.memo||'')};
+const newB=e=>e.new?'<div><span class="pill nw">새로</span></div>':'';
+const xCell=e=>`<td class="x" data-x="${e.no}" title="눌러서 카톡 원문 보기"><span class="xt">${esc(e.x)}</span><span class="src">원문</span></td>`;
+
+/* ---------- 표 공통: 열 제목 눌러 정렬, 경계 끌어 폭 조절 ---------- */
+const SORT={};    // 표 id → {k:열, dir:1(오름)|-1(내림)}
+const RENDER={};  // 표 id → 다시 그리는 함수
+let COLW={};try{COLW=JSON.parse(localStorage.getItem('dash-colw')||'{}')||{}}catch(e){}
+const FLEX_MIN=280;  // 폭을 안 정한 열(상황·내용 등)의 최소 폭
+function head(tid,cols){
+  const st=SORT[tid]||{},cw=COLW[tid]||{};
+  const t=$(tid);if(t)t.style.minWidth=cols.reduce((a,c)=>a+(cw[c.k]??c.w??FLEX_MIN),0)+'px';
+  return '<colgroup>'+cols.map(c=>{const w=cw[c.k]??c.w;return `<col data-k="${c.k}"${w?` style="width:${w}px"`:''}>`}).join('')+'</colgroup><thead><tr>'+
+    cols.map(c=>`<th data-k="${c.k}"${c.v?' class="sortable" title="눌러서 정렬"':''}>${c.label}${st.k===c.k?`<span class="ar">${st.dir>0?'▲':'▼'}</span>`:''}${c.w?'<span class="rz" title="끌어서 폭 조절 · 두 번 누르면 원래 폭"></span>':''}</th>`).join('')+'</tr></thead>';
+}
+function cmp(a,b){if(typeof a==='number'&&typeof b==='number')return a-b;return String(a).localeCompare(String(b),'ko',{numeric:true})}
+function sortRows(tid,rows,cols){
+  const st=SORT[tid],c=st&&cols.find(x=>x.k===st.k);if(!c)return rows;
+  // 빈 값·'-'는 오름·내림 어느 쪽이든 맨 아래
+  return rows.map((r,i)=>({r,v:c.v(r),i})).sort((x,y)=>{const em=v=>v===''||v==null||v==='-'||v===-1,ex=em(x.v),ey=em(y.v);if(ex!==ey)return ex?1:-1;return cmp(x.v,y.v)*st.dir||x.i-y.i}).map(o=>o.r);
+}
+document.addEventListener('click',ev=>{
+  if(ev.target.closest('.rz'))return;
+  const th=ev.target.closest('th.sortable');if(!th)return;
+  const tid=th.closest('table').id,k=th.dataset.k,st=SORT[tid];
+  if(!st||st.k!==k)SORT[tid]={k,dir:1};else if(st.dir===1)st.dir=-1;else delete SORT[tid];
+  RENDER[tid]&&RENDER[tid]();
+});
+let RZ=null;
+const saveColW=()=>{try{localStorage.setItem('dash-colw',JSON.stringify(COLW))}catch(e){}};
+document.addEventListener('mousedown',ev=>{
+  const h=ev.target.closest('.rz');if(!h)return;ev.preventDefault();
+  const th=h.parentNode,tb=th.closest('table');
+  RZ={tid:tb.id,k:th.dataset.k,col:tb.querySelector(`col[data-k="${th.dataset.k}"]`),x:ev.clientX,w:th.getBoundingClientRect().width,tb,min:parseFloat(tb.style.minWidth)||0};
+  document.body.classList.add('resizing');
+});
+addEventListener('mousemove',ev=>{if(!RZ)return;RZ.cur=Math.max(44,Math.round(RZ.w+ev.clientX-RZ.x));RZ.col.style.width=RZ.cur+'px';RZ.tb.style.minWidth=(RZ.min+RZ.cur-RZ.w)+'px'});
+addEventListener('mouseup',()=>{if(!RZ)return;if(RZ.cur){(COLW[RZ.tid]??={})[RZ.k]=RZ.cur;saveColW()}RZ=null;document.body.classList.remove('resizing')});
+document.addEventListener('dblclick',ev=>{const h=ev.target.closest('.rz');if(!h)return;const tid=h.closest('table').id;if(COLW[tid]){delete COLW[tid][h.parentNode.dataset.k];saveColW()}RENDER[tid]&&RENDER[tid]()});
+
+/* ---------- 미결 체크리스트 ---------- */
+const svE=e=>evD.get(e.no)||e;   // 정렬은 저장된 값 기준 → 저장 전에는 행이 움직이지 않음
+const OPEN_COLS=[
+  {k:'d',label:'날짜',w:100,v:e=>e.d},
+  {k:'c',label:'거래처',w:140,v:e=>e.c},
+  {k:'o',label:'담당자',w:84,v:e=>owner(e)},
+  {k:'p',label:'제약사',w:100,v:e=>e.p},
+  {k:'f',label:'무엇을 확인할지',w:140,v:e=>e.f},
+  {k:'x',label:'상황',v:e=>e.x},
+  {k:'s',label:'상태',w:112,v:e=>STS.indexOf(svE(e).s)},
+  {k:'dd',label:'완료일',w:88,v:e=>svE(e).dd||''},
+  {k:'m',label:'확인 메모',w:140,v:e=>svE(e).memo||''},
+];
+function renderOpen(){
+  const f=$('o-st').value,q=$('o-q').value.trim();
+  let rows=W.events.filter(e=>(f==='미결'?OPEN.has(savedS(e)):savedS(e)===f)&&match(e,q));
+  const pr=s=>s==='확인필요'?0:s==='답변대기중'?1:2;
+  rows.sort((a,b)=>pr(savedS(a))-pr(savedS(b))||b.d.localeCompare(a.d));
+  rows=sortRows('o-t',rows,OPEN_COLS);
+  $('o-n').textContent=`${rows.length}건`;
+  const t=$('o-t');
+  if(!rows.length){t.innerHTML='<tr><td class="empty">해당하는 건이 없습니다.</td></tr>';return}
+  t.innerHTML=head('o-t',OPEN_COLS)+'<tbody>'+
+  rows.map(e=>`<tr class="r-${esc(e.s)}${isChg(e)?' chg':''}"><td class="n">${e.d}${newB(e)}</td><td class="c">${esc(e.c)}</td><td class="o">${esc(owner(e))}</td><td>${esc(e.p)}</td><td>${esc(e.f)}</td>${xCell(e)}
+  <td>${stSel(e)}</td>
+  <td class="n">${esc(e.dd||'')}</td>
+  <td><input class="memo" type="text" data-no="${e.no}" value="${esc(e.memo)}" placeholder="예: 11/9 정산서 반영 확인"></td></tr>`).join('')+'</tbody>';
+}
+RENDER['o-t']=renderOpen;
+document.addEventListener('change',ev=>{
+  const el=ev.target;if(!el.dataset||!el.dataset.no)return;const no=+el.dataset.no,e=evW.get(no);if(!e)return;
+  if(el.classList.contains('st')){
+    const s=el.value,dd=s==='완료'?(e.s==='완료'?(e.dd||today()):today()):'';
+    change('ev',no,{s,dd},`${e.c} · ${e.p} → ${s}`);
+  }
+  if(el.classList.contains('memo'))change('ev',no,{memo:el.value},`${e.c} 메모`);
+});
+
+/* ---------- 월별 현황 ---------- */
+function renderMonth(){
+  const ms=months();if(!selMonth||!ms.includes(selMonth))selMonth=ms.at(-1);
+  const data=ms.map(m=>{const r=W.events.filter(e=>ym(e.d)===m);return{m,total:r.length,issue:r.filter(e=>ISSUE.has(+e.t)).length}});
+  const iss=data.map(d=>d.issue);
+  $('m-title').textContent=`누락·이월은 매달 ${Math.min(...iss)}~${Math.max(...iss)}건씩 나옵니다`;
+  const Wd=760,H=300,L=30,T=24,B=40,mx=Math.max(...data.map(d=>d.total)),band=(Wd-L-10)/data.length,bw=band*.64;
+  const y=v=>H-B-v/mx*(H-B-T);
+  let s=`<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="월별 이벤트 건수">`;
+  for(const g of [0,.5,1]){const v=Math.round(mx*g);s+=`<line x1="${L}" x2="${Wd-10}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--text-3)">${v}</text>`}
+  data.forEach((d,i)=>{const x=L+i*band+(band-bw)/2,on=d.m===selMonth;
+    s+=`<g class="bar" data-m="${d.m}" data-tip="${d.m} · 전체 ${d.total}건 · 누락·이월·실수 ${d.issue}건">
+    <rect x="${L+i*band}" y="${T}" width="${band}" height="${H-B-T}" fill="transparent"/>
+    <rect x="${x}" y="${y(d.total)}" width="${bw}" height="${H-B-y(d.total)}" rx="3" fill="var(--muted)" opacity="${on?1:.7}"/>
+    <rect x="${x}" y="${y(d.issue)}" width="${bw}" height="${H-B-y(d.issue)}" rx="3" fill="var(--accent)" opacity="${on?1:.75}"/>
+    ${on?`<text x="${x+bw/2}" y="${y(d.total)-6}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)">${d.total}</text>`:''}
+    <text x="${x+bw/2}" y="${H-B+16}" text-anchor="middle" font-size="10.5" fill="${on?'var(--text)':'var(--text-3)'}" font-weight="${on?700:400}">${d.m.slice(2)}</text></g>`});
+  s+=`<line x1="${L}" x2="${Wd-10}" y1="${H-B}" y2="${H-B}" stroke="var(--line-2)"/></svg>`;
+  $('m-chart').innerHTML=s;
+  const rows=W.events.filter(e=>ym(e.d)===selMonth);
+  $('t-title').textContent=`${selMonth} 유형별 건수`;$('t-hint').textContent=`총 ${rows.length}건`;
+  const tmax=Math.max(1,...Object.keys(TYPES).map(k=>rows.filter(e=>+e.t==k).length));
+  $('t-bars').innerHTML=Object.entries(TYPES).map(([k,v])=>{const n=rows.filter(e=>+e.t==k).length;
+    return `<div class="row${ISSUE.has(+k)?' hl':''}"><span>${k}. ${v}</span><div class="track"><div class="fill" style="width:${n/tmax*100}%"></div></div><b style="text-align:right">${n}</b></div>`}).join('');
+  $('ml-title').textContent=`${selMonth} 내역 (${rows.length}건)`;
+  $('ml-t').innerHTML=logTable('ml-t',rows.slice().sort((a,b)=>b.d.localeCompare(a.d)));
+}
+const LOG_COLS=[
+  {k:'d',label:'날짜',w:100,v:e=>e.d},
+  {k:'c',label:'거래처',w:140,v:e=>e.c},
+  {k:'o',label:'담당자',w:84,v:e=>owner(e)},
+  {k:'p',label:'제약사',w:100,v:e=>e.p},
+  {k:'t',label:'유형',w:124,v:e=>+e.t},
+  {k:'x',label:'내용',v:e=>e.x},
+  {k:'f',label:'후속조치·결과',w:200,v:e=>e.f},
+  {k:'s',label:'상태',w:122,v:e=>STS.indexOf(svE(e).s)},
+];
+function logTable(tid,rows){
+  if(!rows.length)return '<tr><td class="empty">해당하는 건이 없습니다.</td></tr>';
+  return head(tid,LOG_COLS)+'<tbody>'+
+  sortRows(tid,rows,LOG_COLS).map(e=>`<tr class="r-${esc(e.s)}${isChg(e)?' chg':''}"><td class="n">${e.d}${newB(e)}</td><td class="c">${esc(e.c)}</td><td class="o">${esc(owner(e))}</td><td>${esc(e.p)}</td><td><span class="pill ty">${TYPES[e.t]||e.t}</span></td>${xCell(e)}<td>${esc(e.f)}${e.memo?`<div class="small">메모: ${esc(e.memo)}</div>`:''}</td><td>${stSel(e)}${e.dd?`<div class="small">완료 ${esc(e.dd)}</div>`:''}</td></tr>`).join('')+'</tbody>';
+}
+RENDER['ml-t']=()=>renderMonth();
+const tip=$('tip');
+$('m-chart').addEventListener('mousemove',ev=>{const g=ev.target.closest('.bar');if(!g){tip.style.display='none';return}tip.textContent=g.dataset.tip;tip.style.display='block';tip.style.left=Math.min(ev.clientX+12,innerWidth-260)+'px';tip.style.top=ev.clientY+12+'px'});
+$('m-chart').addEventListener('mouseleave',()=>tip.style.display='none');
+$('m-chart').addEventListener('click',ev=>{const g=ev.target.closest('.bar');if(g){selMonth=g.dataset.m;renderMonth()}});
+
+/* ---------- 이벤트 로그 ---------- */
+function fillLogFilters(){
+  const m=$('l-m'),cur=m.value;
+  m.innerHTML='<option value="">월 전체</option>'+months().reverse().map(x=>`<option>${x}</option>`).join('');m.value=cur;
+  const t=$('l-t'),ct=t.value;
+  t.innerHTML='<option value="">유형 전체</option>'+Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${k}. ${v}</option>`).join('');t.value=ct;
+}
+function renderLog(){
+  const m=$('l-m').value,t=$('l-t').value,s=$('l-s').value,q=$('l-q').value.trim();
+  const rows=W.events.filter(e=>(!m||ym(e.d)===m)&&(!t||e.t==t)&&(!s||svE(e).s===s)&&match(e,q)).sort((a,b)=>b.d.localeCompare(a.d)||b.no-a.no);
+  $('l-n').textContent=`${rows.length}건`;$('l-t2').innerHTML=logTable('l-t2',rows);
+}
+RENDER['l-t2']=renderLog;
+['l-m','l-t','l-s'].forEach(x=>$(x).addEventListener('change',renderLog));$('l-q').addEventListener('input',renderLog);
+
+/* ---------- 정산불가 기준 ---------- */
+const upd=c=>c.upd||c.dt||'';
+const CORDER={변경:0,신규:1,확인:2,반영:3,'':4};
+const LK={ua:'a',ub:'b',uc:'c'};   // 표 칸 → 대화 최신값 칸
+const svC=c=>crD.get(c.id)||c;     // 정렬·필터는 저장된 값 기준
+const needC=c=>c.flag==='변경'||c.flag==='신규';
+const latestOf=(c,k)=>{const lk=LK[k];return needC(c)&&lk&&c[lk]&&c[lk]!==c[k]?c[lk]:''};
+const CRIT_COLS=[
+  {k:'n',label:'제약사',w:140,v:c=>c.n},
+  {k:'ua',label:'최소 인정금액',w:160,v:c=>svC(c).ua},
+  {k:'ub',label:'제출 인정기간',w:124,v:c=>svC(c).ub},
+  {k:'uc',label:'신규소액 정산기간',w:134,v:c=>svC(c).uc},
+  {k:'etc',label:'코드삭제·기타 조건',v:c=>svC(c).etc},
+  {k:'upd',label:'최신화 날짜',w:104,v:c=>upd(svC(c))},
+  {k:'flag',label:'변동',w:110,v:c=>CORDER[svC(c).flag]??4},
+  {k:'act',label:'',w:118},
+];
+function renderCrit(){
+  const f=$('c-f').value,q=$('c-q').value.trim();
+  let rows=W.criteria.filter(c=>(!f||svC(c).flag===f)&&(!q||c.n.includes(q))).sort((a,b)=>(CORDER[svC(a).flag]??4)-(CORDER[svC(b).flag]??4)||a.n.localeCompare(b.n,'ko'));
+  rows=sortRows('c-t',rows,CRIT_COLS);
+  $('c-n').textContent=`${rows.length}곳`;
+  $('c-t').innerHTML=head('c-t',CRIT_COLS)+'<tbody>'+
+  rows.map(c=>{
+    const ed=editing===c.id,need=needC(c);
+    const cell=k=>{
+      const lat=latestOf(c,k);
+      if(ed)return `<input class="ce" data-k="${k}" placeholder="${esc(lat||c[k]||'')}">`+
+        (c[k]?`<div class="small">지금 표: ${esc(c[k])}</div>`:'')+(lat?`<div class="latest">비워 두면 대화 최신값</div>`:'');
+      return esc(c[k]||'-')+(lat?`<div class="latest">대화: ${esc(lat)}</div>`:'');
+    };
+    return `<tr data-id="${esc(c.id)}"><td class="c"><a href="#" data-h="${esc(c.n)}">${esc(c.n)}</a></td><td>${cell('ua')}</td><td>${cell('ub')}</td><td>${cell('uc')}</td><td>${cell('etc')}</td>
+    <td class="n">${esc(upd(c)||'-')}</td><td>${c.flag?`<span class="pill f-${esc(c.flag)}">${esc(c.flag)}</span>`:''}${need&&c.src?`<div class="small">${esc(c.src)}</div>`:''}</td>
+    <td><div class="acts">${ed?`<button class="sm primary" data-a="done">완료</button><button class="sm" data-a="cancel">취소</button>`:
+      `${need?`<button class="sm primary" data-a="ok" title="대화 최신값을 표에 반영">확인</button>`:''}<button class="sm" data-a="edit">수정</button>`}</div></td></tr>`}).join('')+'</tbody>';
+}
+RENDER['c-t']=renderCrit;
+$('c-f').addEventListener('change',renderCrit);$('c-q').addEventListener('input',renderCrit);
+$('c-t').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-a]');
+  if(b){
+    const tr=b.closest('tr'),id=tr.dataset.id,c=crW.get(id),n=c.n,a=b.dataset.a;
+    if(a==='ok')change('cr',id,{ua:c.a,ub:c.b,uc:c.c,flag:'반영',upd:today()},`${n} 기준 표에 반영`);
+    if(a==='edit'){editing=id;renderCrit();$('c-t').querySelector(`tr[data-id="${CSS.escape(id)}"] input`)?.focus()}
+    if(a==='cancel'){editing=null;renderCrit()}
+    if(a==='done'){
+      // 직접 입력한 칸은 입력값, 비워 둔 칸은 대화 최신값(없으면 지금 표 값)
+      const v={};tr.querySelectorAll('input.ce').forEach(i=>{const k=i.dataset.k,lk=LK[k],typed=i.value.trim();v[k]=typed||(needC(c)&&lk&&c[lk]?c[lk]:'')||c[k]||''});editing=null;
+      const same=['ua','ub','uc','etc'].every(k=>(c[k]||'')===v[k]);
+      if(same&&!needC(c)){renderCrit();return}
+      change('cr',id,{...v,upd:today(),flag:needC(c)?'반영':c.flag},`${n} 기준 수정`);
+    }
+    return;
+  }
+  const h=ev.target.closest('[data-h]');if(!h)return;ev.preventDefault();
+  histName=h.dataset.h;renderHist();
+  $('h-card').scrollIntoView({behavior:'smooth',block:'start'});
+});
+let histName=null;
+const HIST_COLS=[{k:'d',label:'대화 날짜',w:110,v:x=>x.d},{k:'x',label:'내용',v:x=>x.x}];
+function renderHist(){
+  if(!histName)return;const n=histName,key=n.replace(/[\(\[\s].*$/,'').replace(/\(주\)$/,'');
+  const hs=sortRows('h-t',W.history.filter(x=>x.n.includes(key)||key.includes(x.n)).sort((a,b)=>b.d.localeCompare(a.d)),HIST_COLS);
+  $('h-card').style.display='block';$('h-title').textContent=`${n} 기준 이력 (${hs.length}건)`;
+  $('h-t').innerHTML=hs.length?head('h-t',HIST_COLS)+'<tbody>'+hs.map(x=>`<tr><td class="n">${x.d}</td><td>${esc(x.x)}</td></tr>`).join('')+'</tbody>':'<tr><td class="empty">대화에서 언급된 이력이 없습니다.</td></tr>';
+}
+RENDER['h-t']=renderHist;
+$('c-t').addEventListener('keydown',ev=>{if(ev.target.matches('input.ce')){if(ev.key==='Enter')ev.target.closest('tr').querySelector('[data-a="done"]').click();if(ev.key==='Escape'){editing=null;renderCrit()}}});
+$('c-x').addEventListener('click',()=>{
+  const rows=W.criteria.slice().sort((a,b)=>a.n.localeCompare(b.n,'ko'));
+  const last=rows.map(upd).filter(Boolean).sort().at(-1)||'-';
+  const aoa=[['제약사별 정산불가 기준'],[`마지막 수정 날짜: ${last}`,'','','','',`출력일: ${today()}`],[],
+    ['제약사명','최소 인정금액','제출 인정기간','신규소액 정산기간','코드삭제·기타 조건','마지막 수정 날짜','비고']]
+    .concat(rows.map(c=>[c.n,c.ua,c.ub,c.uc,c.etc,upd(c),c.flag==='변경'||c.flag==='신규'?`대화 최신값 미반영: ${[c.a,c.b,c.c].map(v=>v||'-').join(' / ')}`:'']));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[22,16,14,16,60,14,40].map(w=>({wch:w}));ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  ws['!autofilter']={ref:`A4:G${aoa.length}`};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'제약사별 기준');
+  const t=today().replace(/-/g,'').slice(2);
+  XLSX.writeFile(wb,`${t}_제약사별 기준.xlsx`);
+  note(changedKeys().length?'엑셀로 내보냈습니다. 화면의 저장 안 된 변경도 들어가 있으니 「저장」도 눌러 주세요.':'엑셀로 내보냈습니다.');
+});
+
+/* ---------- 카톡 원문 발췌 ---------- */
+let MX=null;
+function hl(text,keys){
+  let h=esc(text);if(!keys||!keys.length)return h;
+  const re=new RegExp(keys.filter(k=>k&&k.length>=2).map(k=>esc(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
+  return keys.length?h.replace(re,m=>`<mark>${m}</mark>`):h;
+}
+const ME=w=>/^정원유니어스|정영훈/.test(w);
+function renderMx(scrollTo){
+  const b=$('mx-b');let day='',h='';
+  if(MX.start>0)h+=`<button class="more" data-more="up">▲ 이전 대화 더 보기</button>`;
+  for(const [i,dt,who,text] of MX.msgs){
+    const d=dt.slice(0,10);if(d!==day){day=d;h+=`<div class="day">${d}</div>`}
+    const cls=who?(ME(who)?'me':''):'sys';
+    h+=`<div class="msg ${cls}${i===MX.anchor?' hit':''}" data-i="${i}">${who?`<div class="w">${esc(who)} · ${dt.slice(11)}</div>`:''}<div class="bub">${hl(text,MX.keys)}</div></div>`;
+  }
+  if(MX.end<MX.total)h+=`<button class="more" data-more="down">▼ 이후 대화 더 보기</button>`;
+  b.innerHTML=h;
+  if(scrollTo!=null){const el=b.querySelector(`[data-i="${scrollTo}"]`);if(el)el.scrollIntoView({block:scrollTo===MX.anchor?'center':'start'})}
+}
+async function openExcerpt(no){
+  const e=evW.get(no);if(!e)return;
+  const r=await api.excerpt({d:e.d,c:e.c,p:e.p,x:e.x,ref:e.ref??null});
+  $('mx-t').textContent=`${e.d} · ${e.c} · ${e.p}`;$('mx-s').textContent=e.x;
+  $('mx').hidden=false;
+  if(!r.ok){$('mx-b').innerHTML=`<div class="empty">${esc(r.msg)}</div>`;return}
+  MX=r;renderMx(r.anchor);
+}
+document.addEventListener('click',ev=>{const td=ev.target.closest('td.x');if(td)openExcerpt(+td.dataset.x)});
+$('mx-b').addEventListener('click',async ev=>{
+  const b=ev.target.closest('[data-more]');if(!b)return;
+  if(b.dataset.more==='up'){const r=await api.chat_range(MX.start-20,MX.start);const first=MX.start;MX.msgs=r.msgs.concat(MX.msgs);MX.start=r.start;renderMx(first)}
+  else{const r=await api.chat_range(MX.end,MX.end+20);const top=$('mx-b').scrollTop;MX.msgs=MX.msgs.concat(r.msgs);MX.end=r.end;renderMx(null);$('mx-b').scrollTop=top}
+});
+const closeMx=()=>{$('mx').hidden=true};
+$('mx-c').addEventListener('click',closeMx);
+$('mx').addEventListener('click',ev=>{if(ev.target.id==='mx')closeMx()});
+addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('mx').hidden)closeMx();if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='s'){ev.preventDefault();save()}});
+
+/* ---------- 탭 ---------- */
+function go(tab){document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+tab));$('scroll').scrollTop=0}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
+document.querySelectorAll('.kpi').forEach(k=>k.addEventListener('click',()=>{go(k.dataset.go);if(k.dataset.st){$('o-st').value=k.dataset.st;renderOpen()}if(k.dataset.go==='crit'){$('c-f').value='변경';renderCrit()}}));
+$('o-st').addEventListener('change',renderOpen);$('o-q').addEventListener('input',renderOpen);
+function renderAll(){kpis();renderChatBar();renderOpen();renderMonth();fillLogFilters();renderLog();renderCrit();renderHist()}
+
+/* ---------- 버튼 ---------- */
+document.querySelectorAll('.save').forEach(b=>b.addEventListener('click',save));
+document.querySelectorAll('.undo').forEach(b=>b.addEventListener('click',undo));
+$('chat-add').addEventListener('click',async()=>{
+  const r=await api.import_chat();if(r.cancel)return;
+  if(!r.ok){note(r.msg);return}
+  chatSt=r.chat;renderChatBar();
+  note(r.added?`새 대화 ${r.added}건을 추가했습니다 (${r.first} ~ ${r.last}). Claude Code에 "카톡 업데이트해줘"라고 하면 이벤트로 정리합니다.`:'추가할 새 대화가 없습니다. 마지막으로 읽은 대화 이후 내용이 없습니다.');
+});
+
+/* ---------- 엑셀 불러오기 (백업 파일 복원) ---------- */
+function toDate(v){if(v instanceof Date){const t=new Date(v.getTime()-v.getTimezoneOffset()*60000);return t.toISOString().slice(0,10)}if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);return `${d.y}-${p2(d.m)}-${p2(d.d)}`}return String(v||'').slice(0,10)}
+function loadWorkbook(buf,name){
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  const sh=wb.Sheets['이벤트로그'];if(!sh){note('「이벤트로그」 시트가 없는 파일입니다. 「엑셀로 저장」으로 받은 파일을 선택해 주세요.');return}
+  const all=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});const hdr=all[0]||[];const col=n=>hdr.indexOf(n);
+  const g=(r,n,fb)=>{const i=col(n);return i>=0?r[i]:(fb!=null?r[fb]:'')};
+  const ev=all.slice(1).filter(r=>r[0]!==''&&r[1]!=='').map(r=>{const o={no:+g(r,'No',0),d:toDate(g(r,'날짜',1)),c:g(r,'거래처',4),p:g(r,'제약사',5),v:g(r,'담당업체',6),t:+g(r,'유형코드',7)||6,x:g(r,'내용',9),f:g(r,'후속조치·결과',10),s:g(r,'상태',11)||'완료',memo:String(g(r,'확인 메모')||''),dd:toDate(g(r,'완료일'))};
+    const old=evW.get(o.no);if(old&&old.ref!=null)o.ref=old.ref;return o});
+  const out={...clone(W),events:ev};
+  const cs=wb.Sheets['정산불가 기준금액'];
+  if(cs){const a=XLSX.utils.sheet_to_json(cs,{header:1,defval:''});const hi=a.findIndex(r=>r[0]==='제약사');const h=a[hi]||[];const ci=n=>h.indexOf(n);
+    out.criteria=a.slice(hi+1).filter(r=>r[0]).map((r,i)=>({id:'c'+i,n:String(r[0]),ua:r[1],ub:r[2],uc:r[3],a:r[4],b:r[5],c:r[6],etc:r[7],dt:toDate(r[8]),src:r[9],flag:r[10],upd:ci('최신화 날짜')>=0?toDate(r[ci('최신화 날짜')]):''}))}
+  const hs=wb.Sheets['기준 변경 이력'];
+  if(hs)out.history=XLSX.utils.sheet_to_json(hs,{header:1,defval:''}).slice(1).filter(r=>r[0]).map(r=>({n:String(r[0]),d:toDate(r[1]),x:r[2]}));
+  out.asof=ev.map(e=>e.d).sort().at(-1)||W.asof;expire(out);
+  const op={k:'all',id:0,old:clone(W),new:out,label:`「${name}」 불러오기`};apply(op,'new');stack.push(op);selMonth=null;refresh();
+  note(`「${name}」을 불러왔습니다 — 이벤트 ${ev.length}건. 「저장」을 눌러야 반영되고, 「되돌리기」로 취소할 수 있습니다.`);
+}
+function readFile(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{loadWorkbook(new Uint8Array(r.result),f.name)}catch(e){note('파일을 읽지 못했습니다: '+e.message)}};r.readAsArrayBuffer(f)}
+$('file').addEventListener('change',e=>{readFile(e.target.files[0]);e.target.value=''});
+addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('dragging')});
+addEventListener('dragleave',e=>{if(e.target===document.documentElement||!e.relatedTarget)document.body.classList.remove('dragging')});
+addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('dragging');readFile(e.dataTransfer.files[0])});
+
+/* ---------- 엑셀로 저장 (전체 백업) ---------- */
+$('xsave').addEventListener('click',()=>{
+  const wb=XLSX.utils.book_new();const ms=months();
+  const ev=[['No','날짜','대화월','처방월(추정)','거래처','담당자','제약사','담당업체','유형코드','유형','내용','후속조치·결과','상태','완료일','확인 메모']].concat(
+    W.events.slice().sort((a,b)=>a.d.localeCompare(b.d)||a.no-b.no).map(e=>{const d=new Date(e.d+'T00:00:00');const p=new Date(d.getFullYear(),d.getMonth()-1,1);
+      return [e.no,e.d,ym(e.d),`${p.getFullYear()}-${p2(p.getMonth()+1)}`,e.c,owner(e),e.p,e.v,+e.t,TYPES[e.t],e.x,e.f,e.s,e.dd||'',e.memo]}));
+  const s1=XLSX.utils.aoa_to_sheet(ev);s1['!cols']=[6,11,9,11,22,12,18,13,7,18,70,40,11,11,30].map(w=>({wch:w}));s1['!autofilter']={ref:`A1:O${ev.length}`};
+  XLSX.utils.book_append_sheet(wb,s1,'이벤트로그');
+  const pr=s=>s==='확인필요'?0:s==='답변대기중'?1:2;
+  const op=W.events.filter(e=>OPEN.has(e.s)).sort((a,b)=>pr(a.s)-pr(b.s)||b.d.localeCompare(a.d));
+  const s2=XLSX.utils.aoa_to_sheet([['날짜','거래처','담당자','제약사','유형','무엇을 확인할지','상황 요약','상태','확인 메모']].concat(op.map(e=>[e.d,e.c,owner(e),e.p,TYPES[e.t],e.f,e.x,e.s,e.memo])));
+  s2['!cols']=[11,22,12,18,18,40,70,12,30].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,s2,'미결 체크리스트');
+  const sum=[['대화월',...Object.entries(TYPES).map(([k,v])=>`${k}. ${v}`),'합계',...STS.slice(0,4)]].concat(ms.map(m=>{const r=W.events.filter(e=>ym(e.d)===m);
+    return [m,...Object.keys(TYPES).map(k=>r.filter(e=>+e.t==k).length),r.length,...STS.slice(0,4).map(s=>r.filter(e=>e.s===s).length)]}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'월별 요약');
+  const cr=[['제약사별 정산불가 기준 (정원유니어스 표 + 대화에서 확인된 최신값)'],[''],['제약사','최소 인정금액 (표)','제출 인정기간 (표)','신규소액 정산기간 (표)','최소 인정금액 (대화 최신)','제출 인정기간·이월 (대화 최신)','신규소액 (대화 최신)','코드삭제·기타 조건','마지막 확인일','근거(대화 날짜)','변동','최신화 날짜']]
+    .concat(W.criteria.map(c=>[c.n,c.ua,c.ub,c.uc,c.a,c.b,c.c,c.etc,c.dt,c.src,c.flag,upd(c)]));
+  const s4=XLSX.utils.aoa_to_sheet(cr);s4['!cols']=[22,16,12,14,26,22,22,55,12,26,8,12].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,s4,'정산불가 기준금액');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['제약사','대화 날짜','내용']].concat(W.history.map(h=>[h.n,h.d,h.x]))),'기준 변경 이력');
+  if(W.clinics&&W.clinics.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['사업자번호','거래처명','담당']].concat(W.clinics.map(c=>[c.b,c.n,c.v]))),'거래처 목록');
+  XLSX.writeFile(wb,`정원유니어스_정산카톡_정리_${today().replace(/-/g,'')}.xlsx`);
+  note('엑셀 파일을 내려받았습니다.');
+});
+
+/* ---------- 시작 ---------- */
+async function init(){
+  api=window.pywebview.api;
+  const r=await api.load();const d=r.data;expire(d);
+  D=d;W=clone(d);baseRev=d.rev||0;chatSt=r.chat;idx();
+  await migrate();
+  refresh();
+  addEventListener('focus',checkExternal);setInterval(checkExternal,20000);
+}
+if(window.pywebview&&window.pywebview.api)init();else addEventListener('pywebviewready',init);
+</script>
+</body>
+</html>
