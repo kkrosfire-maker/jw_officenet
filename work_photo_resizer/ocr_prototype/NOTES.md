@@ -5,7 +5,7 @@ Tesseract가 어떤 결과를 내는지 확인하고, 빨간 테두리 영역을
 텍스트로 다룰지, (b) 컬럼 위치 기반으로 표를 파싱할지, (c) 다른 방식이 필요한지
 판단한다.
 
-**실행**: `python ocr_prototype/tui.py` (photo_converter 폴더에서)
+**실행**: `python ocr_prototype/tui.py` (work_photo_resizer 폴더에서)
 
 ## 확인된 것
 - `find_red_rects`가 annotate.py가 그리는 순수 빨강(BGR 0,0,255) 테두리를 색상
@@ -23,5 +23,5 @@ Tesseract가 어떤 결과를 내는지 확인하고, 빨간 테두리 영역을
 - raw OCR + 수동 전체 교정이 나을지, 컬럼 자동 파싱 + 부분 교정이 나을지
 
 ## 답이 나오면
-검증된 함수(find_red_rects 등 쓸만한 것)만 `photo_converter/ocr_grid.py`로
+검증된 함수(find_red_rects 등 쓸만한 것)만 `work_photo_resizer/ocr_grid.py`로
 옮기고, 이 `ocr_prototype/` 폴더는 삭제.

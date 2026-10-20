@@ -5,7 +5,7 @@ PROTOTYPE TUI — throwaway. core.py를 감싸는 얇은 터미널 셸.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # photo_converter/ (imageio_utils용)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # work_photo_resizer/ (imageio_utils용)
 
 import core
 from imageio_utils import read_image

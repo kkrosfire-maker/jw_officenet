@@ -4,7 +4,7 @@ PROTOTYPE — throwaway. 질문: 3단계(그리드 OCR) 방향을 정하기 전�
 영역을 "줄 단위 텍스트"로 볼지 "컬럼 위치 기반 표"로 파싱할지 판단한다.
 
 순수 함수만 (I/O는 파일 경로를 받는 정도). tui.py가 이 모듈을 감싸는 얇은 셸.
-답이 나오면 검증된 함수만 photo_converter/ocr_grid.py 등으로 옮기고 이 폴더는 삭제.
+답이 나오면 검증된 함수만 work_photo_resizer/ocr_grid.py 등으로 옮기고 이 폴더는 삭제.
 """
 import os
 import cv2

@@ -17,9 +17,9 @@
       "group": "업무",
       "icon": "icons/app1.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\제너리스주문\\dist\\제너리스주문관리.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_generless_order\\dist\\제너리스주문관리.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\제너리스주문\\dist"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_generless_order\\dist"
     },
     {
       "id": "app2",
@@ -28,9 +28,9 @@
       "group": "업무",
       "icon": "icons/app2.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\네오벤타정산\\dist\\네오벤타정산\\네오벤타정산.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_neoventa_settlement\\dist\\네오벤타정산\\네오벤타정산.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\네오벤타정산\\dist\\네오벤타정산"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_neoventa_settlement\\dist\\네오벤타정산"
     },
     {
       "id": "app3",
@@ -39,9 +39,9 @@
       "group": "업무",
       "icon": "icons/app3.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\report_changer\\수탁업체명자동변환프로그램\\수탁업체명자동변환프로그램.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램\\수탁업체명자동변환프로그램.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\report_changer\\수탁업체명자동변환프로그램"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램"
     },
     {
       "id": "app4",
@@ -50,9 +50,9 @@
       "group": "업무",
       "icon": "icons/app4.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\rate_sheet\\dist\\요율표검색기.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\rate_sheet\\dist"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
     },
     {
       "id": "app5",
@@ -61,9 +61,9 @@
       "group": "사진·발행",
       "icon": "icons/app5.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\photo_converter\\dist\\photo_converter.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist\\photo_converter.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\photo_converter\\dist"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist"
     },
     {
       "id": "app6",
@@ -72,9 +72,9 @@
       "group": "사진·발행",
       "icon": "icons/app6.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\auto_picturedivider\\사진분류프로그램.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter\\사진분류프로그램.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\auto_picturedivider"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter"
     },
     {
       "id": "app7",
@@ -83,9 +83,9 @@
       "group": "사진·발행",
       "icon": "icons/app7.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행\\공지자동발행.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\marketing_kakao_notice_publisher\\dist\\공지자동발행\\공지자동발행.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\channel_capture\\dist\\공지자동발행"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\marketing_kakao_notice_publisher\\dist\\공지자동발행"
     },
     {
       "id": "custom1",
@@ -133,6 +133,15 @@
       "path": "C:\\Program Files\\ShareX\\ShareX.exe",
       "args": "",
       "cwd": "C:\\Program Files\\ShareX"
+    },
+    {
+      "id": "custom6",
+      "name": "블로그게시글",
+      "desc": "게시글 초안",
+      "group": "온라인마케팅",
+      "icon": "",
+      "type": "url",
+      "url": "https://office-minipc.tail284706.ts.net:8443/staff?key=36f05410b4fc1a6cc8aae1c2"
     }
   ]
 }

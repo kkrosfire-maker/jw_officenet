@@ -11,7 +11,9 @@ if getattr(sys, "frozen", False):
 else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "genelis.db"
+DB_PATH = DATA_DIR / "generless.db"
+# 예전 철자로 만든 DB. 남아 있으면 처음 실행할 때 새 이름으로 바꾼다.
+OLD_DB_PATH = DATA_DIR / "genelis.db"
 EXPORT_DIR = DATA_DIR / "exports"
 
 # 최초 실행 시 읽어들이는 기본 마스터 엑셀. 사용자가 교체하면 그 경로를
@@ -32,3 +34,5 @@ STALE_PRICE_DAYS = 60
 def ensure_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    if not DB_PATH.exists() and OLD_DB_PATH.exists():
+        OLD_DB_PATH.rename(DB_PATH)

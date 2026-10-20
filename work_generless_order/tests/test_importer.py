@@ -1,6 +1,6 @@
 """마스터 엑셀 재불러오기(병합/전체교체) 동작 테스트.
 
-임시 DB와 임시 엑셀만 쓰므로 실제 data/genelis.db는 건드리지 않는다.
+임시 DB와 임시 엑셀만 쓰므로 실제 data/generless.db는 건드리지 않는다.
 """
 import tempfile
 import unittest

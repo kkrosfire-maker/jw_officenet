@@ -1,11 +1,11 @@
 name: mac-installer-test
 
-# claudecode_for_newuser/mac/install.command 를 진짜 macOS(Apple Silicon·Intel)에서 돌려 검증한다.
+# tools_claude_installer/mac/install.command 를 진짜 macOS(Apple Silicon·Intel)에서 돌려 검증한다.
 on:
   workflow_dispatch:
   push:
     paths:
-      - "claudecode_for_newuser/mac/**"
+      - "tools_claude_installer/mac/**"
       - ".github/workflows/mac-installer-test.yml"
 
 jobs:
@@ -26,8 +26,8 @@ jobs:
         run: |
           set -e
           mkdir -p "$RUNNER_TEMP/pkg/payload/skills/demo-skill"
-          cp claudecode_for_newuser/mac/install.command "$RUNNER_TEMP/pkg/"
-          cp claudecode_for_newuser/mac/profile_template.zsh "$RUNNER_TEMP/pkg/payload/"
+          cp tools_claude_installer/mac/install.command "$RUNNER_TEMP/pkg/"
+          cp tools_claude_installer/mac/profile_template.zsh "$RUNNER_TEMP/pkg/payload/"
           chmod +x "$RUNNER_TEMP/pkg/install.command"
           echo '{"theme":"dark","cleanupPeriodDays":30}' > "$RUNNER_TEMP/pkg/payload/settings.json"
           printf '# CLAUDE.md\n\n- Platform: macOS, zsh\n' > "$RUNNER_TEMP/pkg/payload/CLAUDE.md"

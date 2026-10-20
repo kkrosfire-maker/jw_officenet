@@ -1,6 +1,6 @@
 [새 PC에 Claude Code 환경 설치하기]
 
-1. 이 폴더(claude_env_bootstrap) 전체를 USB나 클라우드로 새 PC에 복사한다.
+1. 이 폴더(tools_claude_env_export) 전체를 USB나 클라우드로 새 PC에 복사한다.
    (install.bat, install.ps1, claude-code-env.zip이 같은 폴더 안에 있어야 함)
 
 2. 새 PC에서 install.bat 파일을 더블클릭한다.
