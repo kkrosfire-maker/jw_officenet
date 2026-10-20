@@ -419,6 +419,7 @@ IDE_SETTINGS = {
     "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.enablePersistentSessions": False,  # 죽은 터미널 세션이 쌓이는 현상 방지
     "terminal.integrated.scrollback": 20000,
+    "workbench.secondarySideBar.defaultVisibility": "hidden",  # 시작 시 우측 agent 창 안 띄움
 }
 
 

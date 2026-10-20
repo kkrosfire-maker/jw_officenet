@@ -196,7 +196,8 @@ install_ide() {
 {
   "terminal.integrated.defaultProfile.osx": "zsh",
   "terminal.integrated.enablePersistentSessions": false,
-  "terminal.integrated.scrollback": 20000
+  "terminal.integrated.scrollback": 20000,
+  "workbench.secondarySideBar.defaultVisibility": "hidden"
 }
 JSON
     backup "$IDE_SETTINGS"
