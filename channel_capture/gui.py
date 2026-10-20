@@ -49,8 +49,16 @@ class App(tk.Tk):
         self.url.pack(side="left", fill="x", expand=True, padx=6)
         self.url.focus_set()
         self.url.bind("<Return>", lambda e: self.on_extract())
+        self.url.bind("<KP_Enter>", lambda e: self.on_extract())  # 숫자 키패드 엔터
         self.btn_extract = tk.Button(top, text="1. 추출", width=10, command=self.on_extract)
         self.btn_extract.pack(side="left")
+
+        # 하단 우측: 새화면 / 끝내기 (창이 작아져도 보이도록 먼저 아래에 배치)
+        bottom = tk.Frame(self)
+        bottom.pack(side="bottom", fill="x", padx=10, pady=(0, 10))
+        tk.Button(bottom, text="끝내기", width=10, command=self.on_quit).pack(side="right")
+        tk.Button(bottom, text="새화면", width=10, command=self.on_reset).pack(side="right", padx=(0, 6))
+        self.bind("<Escape>", lambda e: self.on_quit())
 
         head = tk.Frame(self)
         head.pack(fill="x", padx=10, pady=(10, 6))
@@ -80,8 +88,35 @@ class App(tk.Tk):
 
         tk.Label(self, text="진행 로그", anchor="w").pack(fill="x", padx=10, pady=(0, 4))
         self.log = scrolledtext.ScrolledText(self, height=9, state="disabled", font=("Consolas", 9))
-        self.log.pack(fill="both", padx=10, pady=(0, 10))
+        self.log.pack(fill="both", padx=10, pady=(0, 6))
         self.after(150, self.pump)
+
+    # --- 새화면 / 끝내기
+    def on_reset(self):
+        """입력·추출 결과·로그를 비우고 처음 상태로 돌린다."""
+        if str(self.btn_extract["state"]) == "disabled":
+            return messagebox.showinfo("새화면", "작업이 진행 중입니다. 끝난 뒤에 눌러 주세요.", parent=self)
+        self.info = None
+        self.image_urls, self.image_paths = [], []
+        self.shown = ""
+        self.url.delete(0, "end")
+        self.body.delete("1.0", "end")
+        self.meta.config(text="")
+        for w in self.thumb_row.winfo_children():
+            w.destroy()
+        self._thumbs.clear()
+        self.canvas.xview_moveto(0)
+        self.log.config(state="normal")
+        self.log.delete("1.0", "end")
+        self.log.config(state="disabled")
+        self.btn_extract.config(state="normal")
+        self.btn_run.config(state="disabled")
+        self.url.focus_set()
+
+    def on_quit(self):
+        # 확인 버튼이 기본 선택이라 창이 뜬 상태에서 엔터를 치면 바로 종료된다.
+        if messagebox.askokcancel("종료", "종료할까요?", default="ok", parent=self):
+            self.destroy()
 
     # --- 로그/스레드 유틸
     def say(self, msg: str):
