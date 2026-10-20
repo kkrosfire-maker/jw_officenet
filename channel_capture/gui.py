@@ -251,9 +251,7 @@ class App(tk.Tk):
                     page.goto("https://business.kakao.com/")
                     page.wait_for_url("**/space/**", timeout=300000)
                 self.say("소식 발행 확인 중...")
-                page.goto(kakao_biz.BASE + "posts", wait_until="domcontentloaded")
-                page.wait_for_timeout(4000)
-                if f"{date} 공지사항" in page.inner_text("body"):
+                if kakao_biz.has_post(page, date):
                     self.say(f"이미 '{date} 공지사항' 소식이 있어 발행을 건너뜁니다.")
                 else:
                     self.say("소식 발행 중...")

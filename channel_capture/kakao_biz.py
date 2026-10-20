@@ -29,6 +29,13 @@ def is_logged_in(page: Page) -> bool:
     return "/posts" in page.url and "login" not in page.url
 
 
+def has_post(page: Page, date: str) -> bool:
+    """'내 소식' 목록이 다 뜬 뒤 '{date} 공지사항' 소식이 있는지 확인한다."""
+    page.goto(BASE + "posts", wait_until="domcontentloaded")
+    page.get_by_role("button", name="소식 관리 메뉴").first.wait_for(timeout=20000)
+    return page.get_by_text(f"{date} 공지사항", exact=True).count() > 0
+
+
 def blocks(body: str) -> str:
     """'▶' 줄 앞에 빈 줄을 넣어 항목 블록을 구분한다. (이미 정리된 텍스트에 다시 적용해도 같은 결과)"""
     out = []
@@ -59,7 +66,18 @@ def write_post(page: Page, date: str, body: str, images: list[str], submit: bool
         page.wait_for_timeout(1500 + 600 * len(images))
     if submit:
         page.locator("button.g_emph:has-text('등록')").first.click()
-        page.wait_for_timeout(4000)
+        # 2026-10: '일부 친구는 작성한 소식을 볼 수 없어요'(최신 카카오톡 전용 안내) 확인창이 뜬다.
+        notice = page.locator(".layer_body:has-text('일부 친구는')")
+        try:
+            notice.wait_for(timeout=5000)
+            notice.locator("xpath=ancestor-or-self::*[.//button[normalize-space()='확인']][1]") \
+                .get_by_role("button", name="확인", exact=True).click()
+        except Exception:
+            pass  # 확인창이 안 뜨는 경우
+        page.wait_for_timeout(5000)  # 업로드·발행 처리 (발행 후에도 주소는 posts/new 그대로)
+        # 실제 발행 여부는 '내 소식' 목록에 제목이 보이는지로 확인한다.
+        if not has_post(page, date):
+            raise RuntimeError(f"'{date} 공지사항' 소식이 목록에 보이지 않습니다. 발행되지 않았을 수 있습니다.")
 
 
 def write_message(page: Page, date: str, body: str, click_next: bool = False) -> str:
