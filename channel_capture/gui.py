@@ -203,9 +203,9 @@ class App(tk.Tk):
     def _extract(self, url):
         try:
             self.say("페이지 불러오는 중...")
-            h = extract.render_html(url)
-            info = extract.extract_text(h)
-            imgs = extract.extract_images(h)
+            post = extract.fetch_post(url)
+            info = extract.extract_text(post)
+            imgs = extract.extract_images(post)
             if not info["body"] or not info["date"]:
                 raise RuntimeError("발췌문 또는 날짜를 찾지 못했습니다. 공지 URL이 맞는지 확인해 주세요.")
             info["body"], applied = learn.apply(info["body"])
@@ -280,9 +280,9 @@ def selftest() -> None:
     """빌드 확인용: 샘플 공지를 추출해 결과를 selftest.txt 에 기록한다."""
     out = os.path.join(os.path.dirname(sys.executable if getattr(sys, "frozen", False) else __file__), "selftest.txt")
     try:
-        h = extract.render_html("https://pf.kakao.com/_tMlMX/114907486")
-        info = extract.extract_text(h)
-        res = f"OK {info['date']} / 이미지 {len(extract.extract_images(h))}장 / 데이터폴더 {HERE}\n{info['body']}"
+        post = extract.fetch_post("https://pf.kakao.com/_tMlMX/114907486")
+        info = extract.extract_text(post)
+        res = f"OK {info['date']} / 이미지 {len(extract.extract_images(post))}장 / 데이터폴더 {HERE}\n{info['body']}"
     except Exception as e:  # noqa: BLE001
         res = f"FAIL {type(e).__name__}: {e}"
     with open(out, "w", encoding="utf-8") as f:

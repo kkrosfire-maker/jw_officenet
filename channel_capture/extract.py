@@ -1,63 +1,56 @@
-"""카카오톡 채널 공지 페이지(pf.kakao.com)에서 본문 발췌 + 이미지 다운로드."""
-import html as htmllib
+"""카카오톡 채널 공지(pf.kakao.com)에서 제목·발췌문·이미지를 가져온다.
+
+2026-10 채널 화면 개편 이후, 화면(HTML)을 긁지 않고 채널 페이지가 내부적으로 쓰는
+JSON API(rocket-web)를 직접 읽는다. 로그인·브라우저 없이 동작한다.
+"""
+import json
 import os
 import re
 import urllib.request
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+API = "https://pf.kakao.com/rocket-web/web/profiles/{profile}/combined-posts/post/{post}"
 
 
-def render_html(url: str) -> str:
-    """Playwright(설치된 Chrome)로 렌더링한 DOM을 반환."""
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=True)
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        content = page.content()
-        browser.close()
-    return content
+def _parse_url(url: str) -> tuple[str, str]:
+    m = re.search(r"pf\.kakao\.com/(_\w+)/(\d+)", url)
+    if not m:
+        raise ValueError("공지 URL 형식이 아닙니다. 예: https://pf.kakao.com/_tMlMX/114944401")
+    return m.group(1), m.group(2)
 
 
-def _to_lines(fragment: str) -> list[str]:
-    t = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", fragment, flags=re.S)
-    t = re.sub(r"<br\s*/?>|</p>|</div>|</li>", "\n", t)
-    t = htmllib.unescape(re.sub(r"<[^>]+>", "", t))
-    return [ln.strip() for ln in t.splitlines() if ln.strip()]
+def fetch_post(url: str) -> dict:
+    """API에서 공지 글 데이터(payload)를 받아온다."""
+    profile, post = _parse_url(url)
+    req = urllib.request.Request(API.format(profile=profile, post=post), headers=UA)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.load(r)["payload"]
 
 
-def _main_post(html: str) -> str:
-    """첫 번째 포스트 영역만 자른다 ('15분 전' 같은 시간 표기 또는 '이 채널의 다른 소식' 앞까지)."""
-    start = html.find("포스트 본문영역")
-    end = html.find("이 채널의 다른 소식")
-    return html[start if start >= 0 else 0 : end if end > 0 else len(html)]
+def extract_text(post: dict) -> dict:
+    """제목, MM/DD 날짜, 본문의 첫 ▶ 줄부터 끝까지(요약부)를 반환."""
+    title = (post.get("title") or "").strip()
+    text = "".join(c.get("v", "") for c in post.get("contents") or [])
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+
+    s = next((i for i, ln in enumerate(lines) if ln.startswith("▶")), None)
+    body = "\n".join(lines[s:]) if s is not None else ""
+
+    m = re.search(r"(\d+)년\s*(\d+)월\s*(\d+)일", title) or re.search(r"\d{4}\.(\d+)\.(\d+)", text)
+    md = f"{int(m.group(m.lastindex - 1)):02d}/{int(m.group(m.lastindex)):02d}" if m else ""
+    return {"title": title, "date": md, "body": body}
 
 
-def extract_text(html: str) -> dict:
-    """제목과, 첫 ▶ 줄~마지막 ▶ 항목(첫 등장)까지의 발췌문을 반환."""
-    lines = _to_lines(_main_post(html))
-    title = next((ln for ln in lines if ln.startswith("📢")), "")
-    # 제목 줄에 '안녕하세요'가 붙어 나오는 경우 분리
-    title = title.split("안녕하세요")[0].strip()
-
-    s = next((i for i, ln in enumerate(lines) if ln.startswith("▶")), 0)
-    arrows = [i for i in range(s, len(lines)) if lines[i].startswith("▶")]
-    last = lines[arrows[-1]]
-    e = next(i for i in arrows if lines[i] == last)  # 요약부 끝 = 마지막 ▶ 줄의 첫 등장
-    m = re.search(r"(\d+)년\s*(\d+)월\s*(\d+)일", title)
-    md = f"{int(m.group(2)):02d}/{int(m.group(3)):02d}" if m else ""
-    return {"title": title, "date": md, "body": "\n".join(lines[s : e + 1])}
-
-
-def extract_images(html: str) -> list[str]:
-    """본문 이미지(alt="이미지")만 순서대로, 중복 제거."""
+def extract_images(post: dict) -> list[str]:
+    """본문 이미지 URL(큰 사이즈)을 올린 순서대로, 중복 제거."""
     seen, out = set(), []
-    for m in re.finditer(r'<img[^>]*alt="이미지"[^>]*>', _main_post(html)):
-        src = re.search(r'src="(https?://[^"]+)"', m.group(0))
-        if src and src.group(1) not in seen:
-            seen.add(src.group(1))
-            out.append(src.group(1))
+    for m in post.get("media") or []:
+        if m.get("type") != "image":
+            continue
+        u = m.get("xlarge_url") or m.get("url")
+        if u and u not in seen:
+            seen.add(u)
+            out.append(u)
     return out
 
 
@@ -78,8 +71,8 @@ def download_images(urls: list[str], out_dir: str) -> list[str]:
 if __name__ == "__main__":
     import sys
 
-    url = sys.argv[1]
-    h = render_html(url)
-    info = extract_text(h)
-    imgs = extract_images(h)
-    print(info["title"], "\n---\n" + info["body"], f"\n---\n이미지 {len(imgs)}장")
+    sys.stdout.reconfigure(encoding="utf-8")
+    p = fetch_post(sys.argv[1])
+    info = extract_text(p)
+    imgs = extract_images(p)
+    print(info["title"], info["date"], "\n---\n" + info["body"], f"\n---\n이미지 {len(imgs)}장")
