@@ -48,15 +48,17 @@ def build_message(date: str, body: str) -> str:
 
 def write_post(page: Page, date: str, body: str, images: list[str], submit: bool = False) -> None:
     """소식 작성 화면을 채운다. submit=True 일 때만 '등록'을 누른다."""
-    page.goto(BASE + "posts", wait_until="domcontentloaded")
-    page.wait_for_selector("input[placeholder='제목']", timeout=20000)
-    page.fill("input[placeholder='제목']", f"{date} 공지사항")
-    page.fill("textarea[type='creator']", blocks(body))
+    # 2026-10 개편: 작성 화면이 posts/new 로 분리, 기본이 '카드형'(제목 없음)이라 '블로그형'을 고른다.
+    page.goto(BASE + "posts/new", wait_until="domcontentloaded")
+    page.get_by_text("블로그형", exact=True).first.click()
+    page.wait_for_selector("input#title", timeout=20000)
+    page.fill("input#title", f"{date} 공지사항")
+    page.fill("textarea#description", blocks(body))
     if images:
         page.locator("input[type='file']").first.set_input_files(images)
         page.wait_for_timeout(1500 + 600 * len(images))
     if submit:
-        page.locator("button[type='submit']:has-text('등록')").first.click()
+        page.locator("button.g_emph:has-text('등록')").first.click()
         page.wait_for_timeout(4000)
 
 
