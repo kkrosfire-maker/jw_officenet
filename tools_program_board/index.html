@@ -43,7 +43,7 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
 .card b{display:block;font-size:16px}
 .card span{display:block;margin-top:3px;font-size:12px;color:var(--green-tint);line-height:1.35}
 .card .tag{display:inline-block;margin-top:5px;font-size:11px;color:var(--green);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
-#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--green);color:#fff;padding:10px 20px;
+#toast{margin:0;border:0;inset:auto;position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--green);color:#fff;padding:10px 20px;
   border-radius:99px;font-size:14px;opacity:0;transition:.25s;z-index:5;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #toast.err{background:#B3261E}
@@ -53,6 +53,9 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
 .btn.pri{background:var(--green);color:#fff}.btn.pri:hover{background:var(--green-dark)}
 .btn.del{border-color:#B3261E;color:#B3261E}
 .btn.on{background:var(--green);color:#fff}
+.card.drag{opacity:.4}
+.card.over{border-color:var(--green);box-shadow:-5px 0 0 var(--green)}
+.grid.over{outline:2px dashed var(--green);outline-offset:4px;border-radius:14px}
 .editing .card{border-style:dashed;border-color:var(--green)}
 .editing .card::after{content:"✎";margin-left:auto;color:var(--green)}
 .ph{width:52px;height:52px;border-radius:12px;flex:none;background:var(--green);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700}
@@ -87,7 +90,7 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
   <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
     <button type="button" class="btn" id="bCancel">취소</button><button type="button" class="btn pri" id="bSave">저장</button></div>
 </form></dialog>
-<div id="toast"></div>
+<div id="toast" popover="manual"></div>
 <script>
 const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,'0');
 function tick(){
@@ -98,7 +101,7 @@ function tick(){
 tick(); setInterval(tick,1000);
 
 let tt;
-function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='',2200)}
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');try{t.hidePopover();t.showPopover()}catch(e){}clearTimeout(tt);tt=setTimeout(()=>{t.className='';try{t.hidePopover()}catch(e){}},err?4000:2200)}
 
 async function launch(p){
   try{
@@ -108,7 +111,21 @@ async function launch(p){
   }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
 }
 
-let CFG, editing=false, cur=null;
+let CFG, editing=false, cur=null, dragId=null;
+async function moveTo(id,beforeId,group){
+  dragId=null;
+  const list=CFG.programs, from=list.findIndex(x=>x.id===id);
+  if(from<0||id===beforeId)return;
+  const [m]=list.splice(from,1);m.group=group;
+  const to=beforeId?list.findIndex(x=>x.id===beforeId):-1;
+  if(to<0){ // 그룹 맨 뒤에 붙인다
+    let last=-1;list.forEach((x,i)=>{if((x.group||'기타')===group)last=i});list.splice(last+1,0,m);
+  }else list.splice(to,0,m);
+  render();
+  try{const j=await post('/api/save',{action:'reorder',order:list.map(x=>({id:x.id,group:x.group||'기타'}))});
+    if(!j.ok){toast(j.error,true);load()}}
+  catch(e){toast('실행기(server.py)가 꺼져 있어요',true);load()}
+}
 const post=(u,b)=>fetch(u,{method:'POST',body:typeof b==='string'?b:JSON.stringify(b)}).then(r=>r.json());
 
 function render(){
@@ -124,8 +141,17 @@ function render(){
       if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
       b.onclick=()=>editing?openDlg(p):launch(p);
+      b.draggable=true;b.dataset.id=p.id;
+      b.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);setTimeout(()=>b.classList.add('drag'),0)};
+      b.ondragend=()=>{dragId=null;document.querySelectorAll('.drag,.over').forEach(x=>x.classList.remove('drag','over'))};
+      b.ondragover=e=>{if(!dragId||dragId===p.id)return;e.preventDefault();e.stopPropagation();document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));b.classList.add('over')};
+      b.ondrop=e=>{e.preventDefault();e.stopPropagation();moveTo(dragId,p.id,p.group||'기타')};
       s.querySelector('.grid').appendChild(b);
     });
+    const grid=s.querySelector('.grid');
+    grid.ondragover=e=>{if(dragId){e.preventDefault();grid.classList.add('over')}};
+    grid.ondragleave=e=>{if(e.target===grid)grid.classList.remove('over')};
+    grid.ondrop=e=>{e.preventDefault();moveTo(dragId,null,g)};
     main.appendChild(s);
   });
   $('gl').innerHTML=Object.keys(groups).map(g=>`<option value="${g.replace(/"/g,'&quot;')}">`).join('');
@@ -162,7 +188,7 @@ $('bDel').onclick=async()=>{
   const j=await post('/api/save',{action:'delete',id:cur.id});
   j.ok?($('dlg').close(),toast('삭제했어요'),load()):toast(j.error,true);
 };
-$('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.path.split('\\').pop().replace(/\.[^.]+$/,'')}};
+$('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.name;if(!$('fDesc').value)$('fDesc').value=j.desc}};
 load();
 </script>
 </body>

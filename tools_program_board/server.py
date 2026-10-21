@@ -30,6 +30,47 @@ def browse():
     return out.replace("/", "\\")
 
 
+def suggest(path):
+    """고른 파일에서 이름·설명 후보를 만든다. exe 의 버전 정보(제품명·파일 설명)를 쓰고, 없으면 파일명."""
+    import ctypes
+    stem = os.path.splitext(os.path.basename(path))[0]
+    target = path
+    if path.lower().endswith(".lnk"):  # 바로가기는 가리키는 프로그램의 정보를 본다
+        try:
+            ps = ("(New-Object -ComObject WScript.Shell).CreateShortcut($env:PB_LNK).TargetPath")
+            t = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True,
+                               encoding="utf-8", env={**os.environ, "PB_LNK": path}, creationflags=0x08000000,
+                               timeout=10).stdout.strip()
+            if t and os.path.exists(t):
+                target = t
+        except Exception:
+            pass
+    info = {}
+    try:
+        ver = ctypes.windll.version
+        ver.GetFileVersionInfoSizeW.argtypes = [ctypes.c_wchar_p, ctypes.c_void_p]
+        ver.GetFileVersionInfoW.argtypes = [ctypes.c_wchar_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_void_p]
+        ver.VerQueryValueW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_void_p, ctypes.c_void_p]
+        size = ver.GetFileVersionInfoSizeW(target, None)
+        if size:
+            buf = ctypes.create_string_buffer(size)
+            ver.GetFileVersionInfoW(target, 0, size, buf)
+            tr, n = ctypes.c_void_p(), ctypes.c_uint()
+            if ver.VerQueryValueW(buf, r"\VarFileInfo\Translation", ctypes.byref(tr), ctypes.byref(n)) and n.value >= 4:
+                lang, cp = ctypes.cast(tr, ctypes.POINTER(ctypes.c_ushort * 2)).contents
+                for key in ("ProductName", "FileDescription"):
+                    v, m = ctypes.c_void_p(), ctypes.c_uint()
+                    if ver.VerQueryValueW(buf, rf"\StringFileInfo\{lang:04x}{cp:04x}\{key}", ctypes.byref(v), ctypes.byref(m)) and m.value:
+                        info[key] = ctypes.wstring_at(v.value).strip()
+    except Exception:
+        pass
+    name = info.get("FileDescription") or info.get("ProductName") or stem
+    desc = info.get("ProductName", "")
+    if "operating system" in desc.lower() or name.lower() in desc.lower() or desc.lower() in name.lower():
+        desc = ""  # 윈도우 기본 프로그램의 'Microsoft Windows Operating System' 같은 군더더기, 이름과 겹치는 설명은 뺀다
+    return name, desc
+
+
 def clean(p):
     """화면에서 받은 항목을 저장 가능한 형태로 정리한다."""
     out = {"id": p.get("id", ""), "name": p["name"].strip(), "desc": p.get("desc", "").strip(),
@@ -238,7 +279,9 @@ class H(BaseHTTPRequestHandler):
             return self.send(403)
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
         if route == "/api/browse":
-            return self.send(200, json.dumps({"path": browse()}, ensure_ascii=False).encode())
+            path = browse()
+            name, desc = suggest(path) if path else ("", "")
+            return self.send(200, json.dumps({"path": path, "name": name, "desc": desc}, ensure_ascii=False).encode())
         if route == "/api/save":
             return self.do_save(body)
         pid = body
@@ -259,7 +302,16 @@ class H(BaseHTTPRequestHandler):
             cfg = load()
             progs = cfg["programs"]
             act = req["action"]
-            if act == "delete":
+            if act == "reorder":  # [{id, group}...] 순서대로 다시 배열하고 그룹도 반영
+                byid = {x["id"]: x for x in progs}
+                new = []
+                for o in req["order"]:
+                    x = byid.pop(o["id"], None)
+                    if x:
+                        x["group"] = o.get("group") or x.get("group", "기타")
+                        new.append(x)
+                cfg["programs"] = new + list(byid.values())
+            elif act == "delete":
                 cfg["programs"] = [p for p in progs if p["id"] != req["id"]]
             else:
                 p = clean(req["program"])

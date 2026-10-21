@@ -127,7 +127,7 @@
       "id": "custom5",
       "name": "ShareX",
       "desc": "화면캡쳐",
-      "group": "업무",
+      "group": "사진·발행",
       "icon": "icons/custom5.png",
       "type": "exe",
       "path": "C:\\Program Files\\ShareX\\ShareX.exe",
@@ -142,6 +142,17 @@
       "icon": "",
       "type": "url",
       "url": "https://office-minipc.tail284706.ts.net:8443/staff?key=36f05410b4fc1a6cc8aae1c2"
+    },
+    {
+      "id": "custom7",
+      "name": "정원유니어스정산대시보드",
+      "desc": "정산대시보드",
+      "group": "업무",
+      "icon": "icons/custom7.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist\\정원유니어스정산대시보드.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist"
     }
   ]
 }
