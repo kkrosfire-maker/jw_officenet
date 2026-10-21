@@ -32,7 +32,8 @@ def is_logged_in(page: Page) -> bool:
 def has_post(page: Page, date: str) -> bool:
     """'내 소식' 목록이 다 뜬 뒤 '{date} 공지사항' 소식이 있는지 확인한다."""
     page.goto(BASE + "posts", wait_until="domcontentloaded")
-    page.get_by_role("button", name="소식 관리 메뉴").first.wait_for(timeout=20000)
+    # 2026-10: 목록 항목의 메뉴 버튼 이름이 '소식 관리 메뉴' -> '더보기 메뉴'로 바뀜
+    page.get_by_role("button", name="더보기 메뉴").first.wait_for(timeout=20000)
     return page.get_by_text(f"{date} 공지사항", exact=True).count() > 0
 
 
@@ -55,17 +56,21 @@ def build_message(date: str, body: str) -> str:
 
 def write_post(page: Page, date: str, body: str, images: list[str], submit: bool = False) -> None:
     """소식 작성 화면을 채운다. submit=True 일 때만 '등록'을 누른다."""
-    # 2026-10 개편: 작성 화면이 posts/new 로 분리, 기본이 '카드형'(제목 없음)이라 '블로그형'을 고른다.
+    # 카카오 화면이 수시로 바뀐다: posts/new(카드형/블로그형 선택) 또는 posts(제목+본문 바로 입력) 둘 다 대응.
     page.goto(BASE + "posts/new", wait_until="domcontentloaded")
-    page.get_by_text("블로그형", exact=True).first.click()
-    page.wait_for_selector("input#title", timeout=20000)
-    page.fill("input#title", f"{date} 공지사항")
-    page.fill("textarea#description", blocks(body))
+    title_box = page.locator("input#title, input[placeholder='제목']").first
+    blog = page.get_by_text("블로그형", exact=True).first
+    page.wait_for_selector("input#title, input[placeholder='제목'], :text-is('블로그형')", timeout=20000)
+    if blog.count() > 0 and blog.is_visible():
+        blog.click()
+    title_box.wait_for(timeout=20000)
+    title_box.fill(f"{date} 공지사항")
+    page.locator("textarea#description, textarea[placeholder*='새 이야기']").first.fill(blocks(body))
     if images:
         page.locator("input[type='file']").first.set_input_files(images)
         page.wait_for_timeout(1500 + 600 * len(images))
     if submit:
-        page.locator("button.g_emph:has-text('등록')").first.click()
+        page.locator("button.g_emph:has-text('등록'), button[type='submit']:has-text('등록')").first.click()
         # 2026-10: '일부 친구는 작성한 소식을 볼 수 없어요'(최신 카카오톡 전용 안내) 확인창이 뜬다.
         notice = page.locator(".layer_body:has-text('일부 친구는')")
         try:
