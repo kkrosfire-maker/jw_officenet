@@ -26,7 +26,8 @@ header img{width:64px;height:64px;border-radius:10px}
 .title h1{margin:0;font-size:26px;color:var(--green);letter-spacing:-.5px}
 .title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
 .clock{margin-left:auto;text-align:right}
-.pin{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
+.trow{display:flex;align-items:center;gap:10px}
+.pin{flex:none;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
 .pin.on{background:var(--green);color:#fff;border-color:var(--green)}
 header{position:sticky}
 .clock .time{font-size:40px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:1px}
@@ -86,9 +87,8 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
 <div class="wrap">
   <header>
     <img src="assets/logo.png" alt="정원유니어스">
-    <div class="title"><h1 id="ttl">정원유니어스 프로그램 보드</h1><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
+    <div class="title"><div class="trow"><h1 id="ttl">정원유니어스 프로그램 보드</h1><button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button></div><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
-    <button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button>
   </header>
   <div class="tools"><button class="btn" id="bEdit">편집</button><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
   <main id="main"></main>
