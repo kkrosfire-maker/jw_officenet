@@ -28,3 +28,5 @@ venv/
 (delete)/cardnews_bizowner/output_bizaccount/
 (delete)/cardnews_bizowner/output_loan/
 tools_claude_usb_backup/claude-cli/claude.exe
+
+work_daily_todo/data/

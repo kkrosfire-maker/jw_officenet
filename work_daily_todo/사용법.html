@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>오늘의 할 일 사용법</title>
+<style>
+:root{--green:#0D4A32;--tint:#5E8168;--border:#C6D3CC;--hover:#EAF1ED;--ink:#1F2A24;--bg:#fff;--late:#B3261E;--late-bg:#FDF1EF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--hover);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:15px;line-height:1.7}
+.wrap{max-width:760px;margin:0 auto;padding:32px 16px 60px}
+header{background:var(--green);color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:22px}
+header h1{margin:0 0 4px;font-size:26px;letter-spacing:-.5px}
+header p{margin:0;opacity:.85}
+section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:16px}
+h2{margin:0 0 10px;font-size:18px;color:var(--green);display:flex;align-items:center;gap:10px}
+h2 .n{background:var(--green);color:#fff;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+ul{margin:6px 0 0;padding-left:20px}
+li{margin:4px 0}
+kbd,.ic{display:inline-block;border:1px solid var(--border);background:var(--hover);border-radius:6px;padding:0 7px;font-size:13px;font-family:inherit;color:var(--green);line-height:1.6}
+.tag{display:inline-block;border-radius:99px;padding:0 9px;font-size:12px;font-weight:bold}
+.tag.late{background:var(--late-bg);color:var(--late);border:1px solid #EBC4BF}
+.tag.d{background:var(--hover);color:var(--green)}
+.note{margin-top:10px;background:var(--hover);border-left:4px solid var(--green);border-radius:6px;padding:8px 12px;font-size:14px}
+.warn{background:var(--late-bg);border-left-color:var(--late)}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+th,td{border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--hover);color:var(--green)}
+@media (prefers-color-scheme:dark){
+ :root{--hover:#16241d;--bg:#1b2a22;--border:#34493d;--ink:#e6efe9;--tint:#8fb09b;--late-bg:#3a1f1c}
+ body{background:#101a15}
+ h2,th,kbd,.ic,.tag.d{color:#9fd3b4}
+ h2 .n,header{background:#0D4A32}
+ .tag.late{color:#ff9d96}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>오늘의 할 일 사용법</h1>
+  <p>프로그램 보드 옆에 띄워 두는 세로형 체크리스트 · 한 일은 엑셀로 분석</p>
+</header>
+
+<section>
+  <h2><span class="n">1</span>실행하기</h2>
+  <ul>
+    <li><b>할일_실행.bat</b>을 더블클릭하면 창이 열려요. (콘솔창은 뜨지 않아요)</li>
+    <li>프로그램 보드가 켜져 있으면 그 오른쪽 옆에 자동으로 붙어요. 창 위치·크기는 기억해요.</li>
+    <li>상단 <span class="ic">📌 고정</span>을 누르면 다른 창 위에 항상 보여요. 한 번 더 누르면 해제.</li>
+    <li>하단 <span class="ic">종료</span>로 끝내요. 데이터는 입력할 때마다 자동 저장되니 따로 저장할 필요 없어요.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">2</span>할 일 추가</h2>
+  <ul>
+    <li>입력칸에 내용을 적고 <kbd>Enter</kbd> (또는 <span class="ic">＋</span>). 최대 200자.</li>
+    <li>입력칸 옆 <span class="ic">📅</span>로 <b>완료일(마감일)</b>을 미리 정할 수 있어요. 안 정하면 오늘이 마감이에요.</li>
+    <li>새로 추가한 일은 목록 맨 위로 스크롤돼요.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">3</span>화면 구성</h2>
+  <ul>
+    <li><b>상단</b>: 오늘 날짜와 진행바. 진행바는 (오늘 + 밀린 일) 중 완료한 비율이에요.</li>
+    <li><b>어제부터 밀린 일</b> <span class="tag late">3일 밀림</span>: 이전 날짜에 적었는데 아직 안 끝낸 일이 맨 위에 빨갛게 모여요. 먼저 처리하세요.</li>
+    <li><b>오늘</b>: 오늘 적은 일. 미완료가 위, 완료가 아래로 가요.</li>
+    <li>지난 날 완료한 일은 화면에서 사라지지만 기록은 남아 있어 엑셀에 들어가요.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">4</span>각 항목에서 할 수 있는 것</h2>
+  <p style="margin:0">항목에 마우스를 올리면 오른쪽에 버튼이 나타나요.</p>
+  <table>
+    <tr><th style="width:130px">조작</th><th>설명</th></tr>
+    <tr><td>왼쪽 체크 원</td><td>완료 체크. 완료한 시각이 기록돼요. 다시 누르면 완료 취소.</td></tr>
+    <tr><td>글자 <b>더블클릭</b></td><td>내용 수정. <kbd>Enter</kbd> 저장, <kbd>Esc</kbd> 취소.</td></tr>
+    <tr><td><span class="ic">📅</span></td><td>완료일(마감일) 지정·변경. 날짜를 비우면 등록일로 돌아가요.</td></tr>
+    <tr><td><span class="ic">↳</span></td><td>후속 작업 추가. 내용을 쓰고 <kbd>Enter</kbd>하면 오늘 할 일로 추가되고, 원본 바로 아래에 <span class="tag d">↳ 후속</span>으로 붙어요.</td></tr>
+    <tr><td><span class="ic">✎</span></td><td>메모(결과·참고사항) 입력. 접으면 한 줄 미리보기(📝)로 보여요.</td></tr>
+    <tr><td><span class="ic">✕</span></td><td>삭제(확인창이 떠요). 후속 작업은 독립 항목으로 남아요.</td></tr>
+    <tr><td><span class="tag d">D-2</span> 뱃지</td><td>마감까지 남은 날. <b>D-0</b>은 오늘, <b>D+1</b>은 마감 지남. 누르면 날짜 변경. 완료한 항목은 완료한 날 기준으로 굳어요.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="n">5</span>엑셀로 저장 (분석용)</h2>
+  <ul>
+    <li>하단 <span class="ic">저장 (엑셀)</span> → 기간 선택(오늘 / 이번 주 / 이번 달 / 전체 또는 직접 날짜) → <b>저장</b>.</li>
+    <li>저장 파일은 바로 열려요. 시트 3개:
+      <ul>
+        <li><b>요약</b> — 기간 전체 통계(완료율, 후속이 생긴 건 등)</li>
+        <li><b>할일기록</b> — 등록일·요일·할 일·상태·마감일·완료일·걸린 일수·마감 대비·밀린 일수·후속·메모</li>
+        <li><b>일별요약</b> — 날짜별 등록 수, 완료 수, 당일 처리율</li>
+      </ul>
+    </li>
+    <li><span class="ic">JPG 이미지</span> — 오늘 목록(완료/대기)을 한 장의 이미지로 저장해요. 공유·보고용.</li>
+    <li>하단 <b>전체삭제</b>(목록 맨 아래 작은 글씨)는 화면에 보이는 항목을 모두 지워요. 확인창이 먼저 떠요.</li>
+  </ul>
+  <div class="note">엑셀에 담긴 <b>완료 항목은 저장 직후 화면에서 정리</b>돼요. 기록은 지워지지 않고 다음 엑셀 저장에도 다시 들어가요.</div>
+  <div class="note warn">엑셀 파일이 이미 열려 있으면 저장되지 않아요. 닫고 다시 저장하세요.</div>
+</section>
+
+<section>
+  <h2><span class="n">6</span>알아두기</h2>
+  <ul>
+    <li>데이터는 <b>data/todos.json</b>에 있어요. 이 파일을 지우면 기록이 모두 사라지니 지우지 마세요. 백업은 파일을 복사해 두면 돼요.</li>
+    <li>한글 입력 중 Enter(조합 확정)로는 추가되지 않아요. 글자가 확정된 뒤 한 번 더 Enter.</li>
+    <li>하루 일과: 아침에 밀린 일 확인 → 새 일 추가 → 끝낼 때마다 체크 → 필요할 때 엑셀로 저장.</li>
+  </ul>
+</section>
+</div>
+</body>
+</html>
