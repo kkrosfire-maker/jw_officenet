@@ -44,21 +44,32 @@
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램"
     },
     {
-      "id": "app4",
-      "name": "요율표검색기",
-      "desc": "정원유니어스 요율표 검색",
+      "id": "custom8",
+      "name": "할일_실행",
+      "desc": "",
       "group": "업무",
-      "icon": "icons/app4.png",
+      "icon": "icons/custom8.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_daily_todo\\할일_실행.bat",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_daily_todo"
+    },
+    {
+      "id": "custom7",
+      "name": "정원유니어스정산대시보드",
+      "desc": "정산대시보드",
+      "group": "통계",
+      "icon": "icons/custom7.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist\\정원유니어스정산대시보드.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist"
     },
     {
       "id": "app5",
       "name": "사이즈조절기",
       "desc": "사진 원근 보정 · 크기 조절",
-      "group": "사진·발행",
+      "group": "통계",
       "icon": "icons/app5.png",
       "type": "exe",
       "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist\\photo_converter.exe",
@@ -69,7 +80,7 @@
       "id": "app6",
       "name": "사진분류",
       "desc": "제약사 통계 사진 자동 분류",
-      "group": "사진·발행",
+      "group": "통계",
       "icon": "icons/app6.png",
       "type": "exe",
       "path": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter\\사진분류프로그램.exe",
@@ -80,12 +91,21 @@
       "id": "app7",
       "name": "카카오채널 자동발행",
       "desc": "공지 URL로 소식 발행",
-      "group": "사진·발행",
+      "group": "온라인마케팅",
       "icon": "icons/app7.png",
       "type": "exe",
       "path": "C:\\Users\\JW\\Desktop\\workspace\\marketing_kakao_notice_publisher\\dist\\공지자동발행\\공지자동발행.exe",
       "args": "",
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\marketing_kakao_notice_publisher\\dist\\공지자동발행"
+    },
+    {
+      "id": "custom6",
+      "name": "블로그게시글",
+      "desc": "게시글 초안",
+      "group": "온라인마케팅",
+      "icon": "",
+      "type": "url",
+      "url": "https://office-minipc.tail284706.ts.net:8443/staff?key=36f05410b4fc1a6cc8aae1c2"
     },
     {
       "id": "custom1",
@@ -127,7 +147,7 @@
       "id": "custom5",
       "name": "ShareX",
       "desc": "화면캡쳐",
-      "group": "사진·발행",
+      "group": "통계",
       "icon": "icons/custom5.png",
       "type": "exe",
       "path": "C:\\Program Files\\ShareX\\ShareX.exe",
@@ -135,24 +155,15 @@
       "cwd": "C:\\Program Files\\ShareX"
     },
     {
-      "id": "custom6",
-      "name": "블로그게시글",
-      "desc": "게시글 초안",
-      "group": "온라인마케팅",
-      "icon": "",
-      "type": "url",
-      "url": "https://office-minipc.tail284706.ts.net:8443/staff?key=36f05410b4fc1a6cc8aae1c2"
-    },
-    {
-      "id": "custom7",
-      "name": "정원유니어스정산대시보드",
-      "desc": "정산대시보드",
-      "group": "업무",
-      "icon": "icons/custom7.png",
+      "id": "app4",
+      "name": "요율표검색기",
+      "desc": "정원유니어스 요율표 검색",
+      "group": "통계",
+      "icon": "icons/app4.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist\\정원유니어스정산대시보드.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
     }
   ]
 }

@@ -16,20 +16,24 @@
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;min-height:100vh;position:relative;overflow-x:hidden}
 /* 하단 곡선 장식 */
-body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:min(22vw,200px);
+body::after{content:"";position:fixed;left:0;right:0;bottom:var(--fh,23px);height:min(22vw,200px);
   background:url(assets/swoosh.png) right bottom/cover no-repeat;pointer-events:none;z-index:0;
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
-.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px 200px}
-header{display:flex;align-items:center;gap:18px;padding:28px 24px 22px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px calc((200px + var(--hh,116px)) / 5)}
+header{display:flex;align-items:center;gap:18px;padding:14px 24px 22px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
   position:sticky;top:0;z-index:3;background:var(--bg);box-shadow:0 6px 12px -6px rgba(13,74,50,.25)}
 header img{width:64px;height:64px;border-radius:10px}
 .title h1{margin:0;font-size:26px;color:var(--green);letter-spacing:-.5px}
 .title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
 .clock{margin-left:auto;text-align:right}
+.pin{position:absolute;top:8px;right:8px;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
+.pin.on{background:var(--green);color:#fff;border-color:var(--green)}
+header{position:sticky}
 .clock .time{font-size:40px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:1px}
 .clock .time small{font-size:16px;font-weight:600;margin-right:6px;color:var(--green-tint)}
 .clock .date{margin-top:6px;font-size:14px;color:var(--ink)}
 section{margin-top:28px}
+main section:first-child{margin-top:14px}
 h2{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16px;color:var(--green)}
 h2::before{content:"";width:4px;height:18px;background:var(--green);border-radius:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
@@ -43,11 +47,13 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
 .card b{display:block;font-size:16px}
 .card span{display:block;margin-top:3px;font-size:12px;color:var(--green-tint);line-height:1.35}
 .card .tag{display:inline-block;margin-top:5px;font-size:11px;color:var(--green);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
+#foot{position:fixed;left:0;right:0;bottom:0;height:var(--fh,23px);background:var(--bg);z-index:2;pointer-events:none}
 #toast{margin:0;border:0;inset:auto;position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--green);color:#fff;padding:10px 20px;
   border-radius:99px;font-size:14px;opacity:0;transition:.25s;z-index:5;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #toast.err{background:#B3261E}
-.tools{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+.tools{display:flex;gap:8px;margin-top:9px;justify-content:flex-end}
+h2 .tools{margin:0 0 0 auto}
 .btn{font:inherit;font-size:13px;padding:7px 14px;border-radius:99px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
 .btn:hover{background:var(--hover)}
 .btn.pri{background:var(--green);color:#fff}.btn.pri:hover{background:var(--green-dark)}
@@ -56,8 +62,15 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
 .card.drag{opacity:.4}
 .card.over{border-color:var(--green);box-shadow:-5px 0 0 var(--green)}
 .grid.over{outline:2px dashed var(--green);outline-offset:4px;border-radius:14px}
+.ghandle{cursor:grab;color:var(--green);font-size:18px;user-select:none}
+section.over{outline:2px dashed var(--green);outline-offset:6px;border-radius:8px}
+section.drag{opacity:.4}
+.gname{font:inherit;color:inherit;background:transparent;border:1px dashed var(--green);border-radius:6px;padding:2px 8px;outline:none;min-width:60px}
+.gname:focus{background:#fff}
 .editing .card{border-style:dashed;border-color:var(--green)}
-.editing .card::after{content:"✎";margin-left:auto;color:var(--green)}
+.editing .card .cdel{margin-left:auto}
+.card .cdel{margin-top:0;font-size:16px;flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;color:#b00020;font-size:16px;font-weight:700;line-height:1}
+.card .cdel:hover{background:#f6dcdc;color:#b00020}
 .ph{width:52px;height:52px;border-radius:12px;flex:none;background:var(--green);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700}
 dialog{border:1px solid var(--border);border-radius:16px;padding:22px;width:min(440px,92vw);color:var(--ink);font-family:inherit}
 dialog::backdrop{background:rgba(0,0,0,.35)}
@@ -75,6 +88,7 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
     <img src="assets/logo.png" alt="정원유니어스">
     <div class="title"><h1 id="ttl">정원유니어스 프로그램 보드</h1><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
+    <button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button>
   </header>
   <div class="tools"><button class="btn" id="bEdit">편집</button><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
   <main id="main"></main>
@@ -90,6 +104,7 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
   <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
     <button type="button" class="btn" id="bCancel">취소</button><button type="button" class="btn pri" id="bSave">저장</button></div>
 </form></dialog>
+<div id="foot"></div>
 <div id="toast" popover="manual"></div>
 <script>
 const $=id=>document.getElementById(id), pad=n=>String(n).padStart(2,'0');
@@ -99,6 +114,14 @@ function tick(){
   $('date').textContent=d.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 }
 tick(); setInterval(tick,1000);
+// 하단 흰 여백 = 상단 헤더 높이의 1/5
+const syncHH=()=>{const h=document.querySelector('header').offsetHeight,s=document.documentElement.style;s.setProperty('--hh',h+'px');s.setProperty('--fh',h/5+'px')};
+$('pin').onclick=async()=>{
+  if(!(window.pywebview&&pywebview.api))return;
+  const on=!$('pin').classList.contains('on');
+  await pywebview.api.set_pin(on);$('pin').classList.toggle('on',on);
+};
+syncHH();addEventListener('resize',syncHH);
 
 let tt;
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');try{t.hidePopover();t.showPopover()}catch(e){}clearTimeout(tt);tt=setTimeout(()=>{t.className='';try{t.hidePopover()}catch(e){}},err?4000:2200)}
@@ -111,7 +134,7 @@ async function launch(p){
   }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
 }
 
-let CFG, editing=false, cur=null, dragId=null;
+let CFG, editing=false, cur=null, dragId=null, dragGroup=null;
 async function moveTo(id,beforeId,group){
   dragId=null;
   const list=CFG.programs, from=list.findIndex(x=>x.id===id);
@@ -126,21 +149,55 @@ async function moveTo(id,beforeId,group){
     if(!j.ok){toast(j.error,true);load()}}
   catch(e){toast('실행기(server.py)가 꺼져 있어요',true);load()}
 }
+async function moveGroup(from,before){
+  dragGroup=null;
+  if(from===before)return;
+  const names=[...new Set(CFG.programs.map(x=>x.group||'기타'))].filter(n=>n!==from);
+  const at=before==null?names.length:names.indexOf(before);
+  names.splice(at<0?names.length:at,0,from);
+  CFG.programs=names.flatMap(n=>CFG.programs.filter(x=>(x.group||'기타')===n));
+  render();
+  try{const j=await post('/api/save',{action:'reorder',order:CFG.programs.map(x=>({id:x.id,group:x.group||'기타'}))});
+    if(!j.ok){toast(j.error,true);load()}}
+  catch(e){toast('실행기(server.py)가 꺼져 있어요',true);load()}
+}
+async function renameGroup(from,to){
+  CFG.programs.forEach(x=>{if((x.group||'기타')===from)x.group=to});
+  render();
+  try{const j=await post('/api/save',{action:'reorder',order:CFG.programs.map(x=>({id:x.id,group:x.group||'기타'}))});
+    j.ok?toast('주제 이름을 바꿨어요'):(toast(j.error,true),load())}
+  catch(e){toast('실행기(server.py)가 꺼져 있어요',true);load()}
+}
 const post=(u,b)=>fetch(u,{method:'POST',body:typeof b==='string'?b:JSON.stringify(b)}).then(r=>r.json());
 
 function render(){
-  const main=$('main');main.innerHTML='';main.classList.toggle('editing',editing);
+  const main=$('main'),tools=document.querySelector('.tools');main.before(tools); // 지우기 전에 안전한 자리로 뺀다
+  main.innerHTML='';main.classList.toggle('editing',editing);
   const groups={};
   CFG.programs.forEach(p=>(groups[p.group||'기타']??=[]).push(p));
   Object.entries(groups).forEach(([g,list])=>{
     const s=document.createElement('section');
     s.innerHTML=`<h2></h2><div class="grid"></div>`;s.querySelector('h2').textContent=g;
+    if(editing){ // 편집 중에는 주제 이름을 바로 고칠 수 있다
+      const h=s.querySelector('h2'),inp=document.createElement('input');
+      inp.className='gname';inp.value=g;inp.size=Math.max(4,g.length*1.6);h.textContent='';h.appendChild(inp);
+      const done=()=>{const n=inp.value.trim();if(n&&n!==g)renameGroup(g,n);else inp.value=g};
+      const hd=document.createElement('span');hd.className='ghandle';hd.textContent='⠿';hd.title='끌어서 주제 순서 바꾸기';hd.draggable=true;h.prepend(hd);
+      hd.ondragstart=e=>{dragGroup=g;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',g);e.dataTransfer.setDragImage(s,20,20);setTimeout(()=>s.classList.add('drag'),0)};
+      hd.ondragend=()=>{dragGroup=null;document.querySelectorAll('.drag,.over').forEach(x=>x.classList.remove('drag','over'))};
+      s.ondragover=e=>{if(!dragGroup||dragGroup===g)return;e.preventDefault();document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));s.classList.add('over')};
+      s.ondrop=e=>{if(!dragGroup)return;e.preventDefault();moveGroup(dragGroup,g)};
+      inp.onchange=done;inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=g;inp.blur()}};
+    }
+    if(!main.children.length)s.querySelector('h2').appendChild(tools); // 첫 주제와 같은 줄에 둔다
     list.forEach(p=>{
       const b=document.createElement('button');b.className='card';
       b.innerHTML=`${p.icon?`<img src="assets/${p.icon}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
       if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
       b.onclick=()=>editing?openDlg(p):launch(p);
+      if(editing){const x=document.createElement('span');x.className='cdel';x.textContent='✕';x.title='삭제';x.setAttribute('role','button');
+        x.onclick=e=>{e.stopPropagation();delProg(p)};x.ondragstart=e=>e.preventDefault();b.appendChild(x)}
       b.draggable=true;b.dataset.id=p.id;
       b.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);setTimeout(()=>b.classList.add('drag'),0)};
       b.ondragend=()=>{dragId=null;document.querySelectorAll('.drag,.over').forEach(x=>x.classList.remove('drag','over'))};
@@ -182,12 +239,13 @@ $('bAdd').onclick=()=>openDlg(null);
 $('bEdit').onclick=()=>{editing=!editing;$('bEdit').classList.toggle('on',editing);$('bEdit').textContent=editing?'편집 끝':'편집';render()};
 $('bCancel').onclick=()=>$('dlg').close();
 $('bSave').onclick=submit;
-$('bDel').onclick=async()=>{
-  if(!confirm(`'${cur.name}' 을(를) 보드에서 삭제할까요?
+async function delProg(p){
+  if(!confirm(`'${p.name}' 을(를) 보드에서 삭제할까요?
 (프로그램 파일 자체는 지워지지 않아요)`))return;
-  const j=await post('/api/save',{action:'delete',id:cur.id});
+  const j=await post('/api/save',{action:'delete',id:p.id});
   j.ok?($('dlg').close(),toast('삭제했어요'),load()):toast(j.error,true);
-};
+}
+$('bDel').onclick=()=>delProg(cur);
 $('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.name;if(!$('fDesc').value)$('fDesc').value=j.desc}};
 load();
 </script>
