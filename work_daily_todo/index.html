@@ -54,6 +54,7 @@ h2.late::before{background:var(--late)}
 .memo{margin-top:2px;font-size:11px;color:var(--green-tint);white-space:pre-wrap;word-break:break-all;max-height:7em;overflow-y:auto;user-select:text;cursor:text}
 .item.done .txt{color:#8a978f;text-decoration:line-through}
 .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;font-size:11px;color:var(--green-tint);align-items:center}
+.item.has-reg{padding-bottom:17px}.reg{position:absolute;right:6px;bottom:3px;font-size:10px;line-height:1;color:#8a978f;pointer-events:none}
 .chip{border:1px solid var(--border);border-radius:99px;padding:0 7px;background:#fff}
 .chip.late{color:var(--late);border-color:var(--late-border);background:#fff;font-weight:700}
 .chip.fu{color:var(--green)}
@@ -161,7 +162,7 @@ function itemEl(t){
   body.insertBefore(line,body.firstChild);
   if(late&&!t.due)line.appendChild(el('span','chip late',`${t.late_days}일 밀림`));
   if(t.parent)line.appendChild(el('span','chip fu','↳ 후속'));
-  if(done&&!late&&t.date!==S.today)line.appendChild(el('span','chip',`${t.date.slice(5)} 등록`));
+  if(done&&!late&&t.date!==S.today){row.classList.add('has-reg');row.appendChild(el('span','reg',`${t.date.slice(5)} 등록`))}
   if(ui.notes.has(t.id)){
     const n=el('textarea','note');n.rows=1;n.placeholder='메모 (결과·참고사항)';n.value=t.note||'';n.onchange=()=>api.set_note(t.id,n.value).then(s=>{S=s});
     n.onkeydown=e=>{if(e.key==='Escape'){n.blur();ui.closeNote(t.id)}};
@@ -189,7 +190,8 @@ function render(){
   if(!S)return;
   $('dLabel').textContent=S.label;$('dWeek').textContent=S.weekday;$('dYear').textContent=S.year;
   const main=$('main');const keep=main.scrollTop;main.innerHTML='';
-  const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.date.localeCompare(b.date));
+  const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.due.localeCompare(b.due));
+  const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>a.due.localeCompare(b.due));
   const today=S.tasks.filter(t=>t.section==='today');
   const daily=S.tasks.filter(t=>t.section==='daily');
   const doneN=today.filter(t=>t.done_at).length+daily.filter(t=>t.done_at).length, all=today.length+late.length+daily.length;
@@ -208,8 +210,12 @@ function render(){
   const draw=t=>{main.appendChild(itemEl(t));(kids[t.id]||[]).forEach(draw)};
   const order=[...today.filter(t=>!t.done_at),...today.filter(t=>t.done_at)];
   order.filter(t=>!(t.parent&&today.some(p=>p.id===t.parent))).forEach(draw);
-  if(!today.length&&!late.length&&!daily.length)main.appendChild(el('div','empty','오늘 할 일을 위 입력칸에 적어 보세요.\n체크하면 완료 기록이 남고, 엑셀로 분석할 수 있어요.')).style.whiteSpace='pre-line';
+  if(!today.length&&!late.length&&!daily.length&&!upcoming.length)main.appendChild(el('div','empty','오늘 할 일을 위 입력칸에 적어 보세요.\n체크하면 완료 기록이 남고, 엑셀로 분석할 수 있어요.')).style.whiteSpace='pre-line';
   else if(!today.length)main.appendChild(el('div','empty','오늘 새로 적은 일은 아직 없어요.'));
+  if(upcoming.length){
+    const h=el('h2','','해야 할 일');h.appendChild(el('em','',`${upcoming.length}건 · 마감 전`));main.appendChild(h);
+    upcoming.forEach(t=>main.appendChild(itemEl(t)));
+  }
   if(S.tasks.length){const c=el('div','clear');const sp=el('span','','전체삭제');sp.onclick=askClearAll;c.appendChild(sp);main.appendChild(c)}
   main.scrollTop=keep;
 }

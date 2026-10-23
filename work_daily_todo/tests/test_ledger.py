@@ -44,6 +44,17 @@ class Sections(unittest.TestCase):
         self.assertEqual(sections(lg), {"밀림": "late"})
         self.assertEqual(lg.view()["tasks"][0]["late_days"], 1)
 
+    def test_task_with_future_due_is_upcoming_not_late_until_d0(self):
+        lg, clock, _ = ledger()
+        lg.add("보고서", due="2026-10-24")
+        self.assertEqual(sections(lg), {"보고서": "upcoming"})
+        clock.go("2026-10-23T09:00:00")
+        self.assertEqual(sections(lg), {"보고서": "upcoming"})  # 등록일은 지났어도 D-1 이면 밀린 일이 아니다
+        clock.go("2026-10-24T09:00:00")
+        self.assertEqual(sections(lg), {"보고서": "today"})  # D-0 이면 오늘
+        clock.go("2026-10-25T09:00:00")
+        self.assertEqual(sections(lg), {"보고서": "late"})  # 마감이 지나면 밀린 일
+
     def test_toggle_twice_reopens(self):
         lg, _, _ = ledger()
         lg.add("a")

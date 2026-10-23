@@ -157,7 +157,8 @@ class Ledger:
 
     # ---- 화면용 ----
     def view(self):
-        """화면에 보일 목록. section: daily(매일 반복) / late(밀린 일) / today(오늘). 지난 완료분은 뺀다."""
+        """화면에 보일 목록. section: daily(매일 반복) / late(밀린 일) / today(오늘) / upcoming(해야 할 일). 지난 완료분은 뺀다.
+        미완료는 등록일이 아니라 마감일로 나눈다: 지남 = 밀린 일, 오늘(D-0) = 오늘, 아직(D-1 이상) = 해야 할 일."""
         self._roll_daily()
         today = self.today()
         today_d = self.now().date()
@@ -170,8 +171,10 @@ class Ledger:
                 sec = "daily"
             elif done_day:
                 sec = "today" if done_day == today else None
-            elif t["date"] < today:
+            elif t["due"] < today:
                 sec = "late"
+            elif t["due"] > today:
+                sec = "upcoming"
             else:
                 sec = "today"
             if not sec:
