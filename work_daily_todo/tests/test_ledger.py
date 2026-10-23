@@ -129,11 +129,11 @@ class Daily(unittest.TestCase):
 
 class Routine(unittest.TestCase):
     # 2026-10-22 은 목요일(week:3), 2026-10-26 은 월요일(week:0)
-    def test_weekly_waits_in_upcoming_until_its_day(self):
+    def test_weekly_shows_in_routine_before_its_day(self):
         lg, clock, _ = ledger()
         lg.add("주간보고", repeat="week:0")
         t = lg.view()["tasks"][0]
-        self.assertEqual((t["section"], t["due"]), ("upcoming", "2026-10-26"))
+        self.assertEqual((t["section"], t["due"], t["dday"]["text"]), ("routine", "2026-10-26", "D-4"))
         clock.go("2026-10-26T09:00:00")
         self.assertEqual(sections(lg), {"주간보고": "routine"})
 
@@ -161,7 +161,7 @@ class Routine(unittest.TestCase):
         self.assertEqual(sections(lg), {"주간보고": "routine"})
         clock.go("2026-10-28T09:00:00")
         view = lg.view()["tasks"]
-        self.assertEqual([(t["section"], t["due"], t["done_at"]) for t in view], [("upcoming", "2026-11-02", None)])
+        self.assertEqual([(t["section"], t["due"], t["done_at"]) for t in view], [("routine", "2026-11-02", None)])
         self.assertTrue(lg.tasks[0]["archived"] and lg.tasks[0]["done_at"])
 
     def test_done_early_counts_for_that_occurrence(self):

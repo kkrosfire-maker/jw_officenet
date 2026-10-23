@@ -228,7 +228,7 @@ class Ledger:
     def view(self):
         """화면에 보일 목록. section: routine(반복 루틴) / late(밀린 일) / today(오늘) / upcoming(해야 할 일). 지난 완료분은 뺀다.
         미완료는 등록일이 아니라 마감일로 나눈다: 지남 = 밀린 일, 오늘(D-0) = 오늘, 아직(D-1 이상) = 해야 할 일.
-        루틴은 회차 날이 되면(못 했으면 다음 회차 전까지) 루틴 구역에, 회차 전에는 해야 할 일에 놓인다."""
+        반복 루틴은 매일·매주·매월 모두 늘 루틴 구역에 놓인다."""
         self._roll_routines()
         today = self.today()
         today_d = self.now().date()
@@ -237,7 +237,7 @@ class Ledger:
             if t.get("archived"):
                 continue
             done_day = t["done_at"][:10] if t.get("done_at") else None
-            if t.get("repeat") and (done_day or t["repeat"] == "day" or t["due"] <= today):
+            if t.get("repeat"):  # 반복 루틴은 회차 전이어도 늘 루틴 구역에 둔다(D-day로 남은 날 표시)
                 sec = "routine"
             elif done_day:
                 sec = "today" if done_day == today else None

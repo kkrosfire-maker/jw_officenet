@@ -210,18 +210,21 @@ function render(){
   const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.due.localeCompare(b.due));
   const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>a.due.localeCompare(b.due));
   const today=S.tasks.filter(t=>t.section==='today');
-  const daily=S.tasks.filter(t=>t.section==='routine');
-  const doneN=today.filter(t=>t.done_at).length+daily.filter(t=>t.done_at).length, all=today.length+late.length+daily.length;
+  // 반복 루틴: 매일 → 매주 → 매월, 같은 종류 안에서는 가나다순
+  const KO={day:0,week:1,month:2},kindOf=t=>KO[t.repeat.split(':')[0]]??3;
+  const daily=S.tasks.filter(t=>t.section==='routine').sort((a,b)=>kindOf(a)-kindOf(b)||a.text.localeCompare(b.text,'ko'));
+  const dueR=daily.filter(t=>t.done_at||t.due<=S.today);  // 완료 개수·진행률은 회차가 온 루틴만 센다
+  const doneN=today.filter(t=>t.done_at).length+dueR.filter(t=>t.done_at).length, all=today.length+late.length+dueR.length;
   $('prog').style.width=(all?(doneN/all*100):0)+'%';
   if(daily.length){
-    const h=el('h2','','반복 루틴');h.appendChild(el('em','',`${daily.filter(t=>t.done_at).length}/${daily.length} 완료`));main.appendChild(h);
+    const h=el('h2','','반복 루틴');h.appendChild(el('em','',`${dueR.filter(t=>t.done_at).length}/${dueR.length} 완료`));main.appendChild(h);
     daily.forEach(t=>main.appendChild(itemEl(t)));
   }
   if(late.length){
     const h=el('h2','late','어제부터 밀린 일');h.appendChild(el('em','',`${late.length}건 · 먼저 처리하세요`));main.appendChild(h);
     late.forEach(t=>main.appendChild(itemEl(t)));
   }
-  const h=el('h2','','오늘');h.appendChild(el('em','',`${doneN}/${today.length} 완료`));main.appendChild(h);
+  const h=el('h2','','오늘');h.appendChild(el('em','',`${today.filter(t=>t.done_at).length}/${today.length} 완료`));main.appendChild(h);
   // 후속 작업은 원본 바로 아래에 붙인다
   const kids={};today.forEach(t=>{if(t.parent&&today.some(p=>p.id===t.parent))(kids[t.parent]??=[]).push(t)});
   const draw=t=>{main.appendChild(itemEl(t));(kids[t.id]||[]).forEach(draw)};
@@ -255,7 +258,7 @@ function repDraw(){
   $('rWeek').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.d===rep.wd));
   $('rMonth').style.display=rep.kind==='month'?'block':'none';$('rMonth').value=rep.md;
   const r=repRule();
-  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'매일 맨 위에 나타나요.':`${repText(r)}에 나타나요. 그 전에는 '해야 할 일'에서 기다려요.`;
+  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'매일 맨 위에 나타나요.':`반복 루틴에 늘 보이고, ${repText(r)}까지 남은 날을 D-day로 알려줘요.`;
 }
 function pickRepeat(cur,cb){
   const[k,n]=(cur||'').split(':');const now=new Date();
