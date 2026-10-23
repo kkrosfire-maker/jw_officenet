@@ -36,8 +36,8 @@ class Api:
     def get_state(self):
         return self._ledger.view()
 
-    def add(self, text, parent=None, due=None, daily=False):
-        return self._do(self._ledger.add, text, parent, due, daily)
+    def add(self, text, parent=None, due=None, repeat=None):
+        return self._do(self._ledger.add, text, parent, due, repeat)
 
     def toggle(self, tid):
         return self._do(self._ledger.toggle, tid)
@@ -57,8 +57,8 @@ class Api:
     def set_due(self, tid, due):
         return self._do(self._ledger.set_due, tid, due)
 
-    def set_daily(self, tid, on):
-        return self._do(self._ledger.set_daily, tid, on)
+    def set_repeat(self, tid, rule):
+        return self._do(self._ledger.set_repeat, tid, rule)
 
     def set_pin(self, on):
         return docking.set_pin(on)

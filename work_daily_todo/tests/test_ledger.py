@@ -95,14 +95,14 @@ class Dday(unittest.TestCase):
 class Daily(unittest.TestCase):
     def test_daily_is_pinned_section_and_never_late(self):
         lg, clock, _ = ledger()
-        lg.add("매일", daily=True)
+        lg.add("매일", repeat="day")
         clock.go("2026-10-25T09:00:00")
         t = lg.view()["tasks"][0]
-        self.assertEqual((t["section"], t["date"]), ("daily", "2026-10-25"))
+        self.assertEqual((t["section"], t["date"]), ("routine", "2026-10-25"))
 
     def test_done_yesterday_is_archived_and_reborn_unchecked(self):
         lg, clock, _ = ledger()
-        lg.add("매일", daily=True)
+        lg.add("매일", repeat="day")
         lg.toggle(lg.tasks[0]["id"])
         old_id = lg.tasks[0]["id"]
         clock.go("2026-10-23T09:00:00")
@@ -111,20 +111,108 @@ class Daily(unittest.TestCase):
         self.assertIsNone(view[0]["done_at"])
         self.assertNotEqual(view[0]["id"], old_id)
         old = next(t for t in lg.tasks if t["id"] == old_id)
-        self.assertTrue(old["archived"] and not old["daily"] and old["done_at"])  # 엑셀 기록은 남는다
+        self.assertTrue(old["archived"] and not old["repeat"] and old["done_at"])  # 엑셀 기록은 남는다
 
     def test_done_today_stays_checked(self):
         lg, _, _ = ledger()
-        lg.add("매일", daily=True)
+        lg.add("매일", repeat="day")
         lg.toggle(lg.tasks[0]["id"])
         self.assertTrue(lg.view()["tasks"][0]["done_at"])
 
     def test_turning_off_open_daily_makes_it_a_normal_task(self):
         lg, clock, _ = ledger()
-        lg.add("매일", daily=True)
-        lg.set_daily(lg.tasks[0]["id"], False)
+        lg.add("매일", repeat="day")
+        lg.set_repeat(lg.tasks[0]["id"], None)
         clock.go("2026-10-23T09:00:00")
         self.assertEqual(sections(lg), {"매일": "late"})
+
+
+class Routine(unittest.TestCase):
+    # 2026-10-22 은 목요일(week:3), 2026-10-26 은 월요일(week:0)
+    def test_weekly_waits_in_upcoming_until_its_day(self):
+        lg, clock, _ = ledger()
+        lg.add("주간보고", repeat="week:0")
+        t = lg.view()["tasks"][0]
+        self.assertEqual((t["section"], t["due"]), ("upcoming", "2026-10-26"))
+        clock.go("2026-10-26T09:00:00")
+        self.assertEqual(sections(lg), {"주간보고": "routine"})
+
+    def test_weekly_added_on_its_day_is_due_today(self):
+        lg, _, _ = ledger()
+        lg.add("목요회의", repeat="week:3")
+        self.assertEqual(sections(lg), {"목요회의": "routine"})
+
+    def test_missed_weekly_stays_until_next_occurrence_then_moves_without_record(self):
+        lg, clock, _ = ledger("2026-10-26T09:00:00")
+        lg.add("주간보고", repeat="week:0")
+        clock.go("2026-10-28T09:00:00")
+        t = lg.view()["tasks"][0]
+        self.assertEqual((t["section"], t["due"], t["dday"]["text"]), ("routine", "2026-10-26", "D+2"))
+        clock.go("2026-11-03T09:00:00")
+        t = lg.view()["tasks"][0]
+        self.assertEqual((t["section"], t["due"]), ("routine", "2026-11-02"))
+        self.assertEqual(len(lg.tasks), 1)
+
+    def test_done_weekly_is_archived_and_reborn_for_next_week(self):
+        lg, clock, _ = ledger("2026-10-26T09:00:00")
+        lg.add("주간보고", repeat="week:0")
+        clock.go("2026-10-27T09:00:00")  # 하루 늦게 완료
+        lg.toggle(lg.tasks[0]["id"])
+        self.assertEqual(sections(lg), {"주간보고": "routine"})
+        clock.go("2026-10-28T09:00:00")
+        view = lg.view()["tasks"]
+        self.assertEqual([(t["section"], t["due"], t["done_at"]) for t in view], [("upcoming", "2026-11-02", None)])
+        self.assertTrue(lg.tasks[0]["archived"] and lg.tasks[0]["done_at"])
+
+    def test_done_early_counts_for_that_occurrence(self):
+        lg, clock, _ = ledger()  # 목요일에 다음 월요일 몫을 미리 함
+        lg.add("주간보고", repeat="week:0")
+        lg.toggle(lg.tasks[0]["id"])
+        clock.go("2026-10-23T09:00:00")
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-11-02")
+
+    def test_long_absence_skips_to_latest_occurrence(self):
+        lg, clock, _ = ledger("2026-10-26T09:00:00")
+        lg.add("주간보고", repeat="week:0")
+        lg.toggle(lg.tasks[0]["id"])
+        clock.go("2026-11-20T09:00:00")
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-11-16")
+
+    def test_monthly_last_day_clamps_to_short_months(self):
+        lg, clock, _ = ledger("2026-10-31T09:00:00")
+        lg.add("월말정산", repeat="month:31")
+        lg.toggle(lg.tasks[0]["id"])
+        clock.go("2026-11-01T09:00:00")
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-11-30")
+        clock.go("2027-02-28T09:00:00")
+        lg.toggle(lg.view()["tasks"][0]["id"])
+        clock.go("2027-03-01T09:00:00")
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2027-03-31")
+
+    def test_monthly_waits_for_its_date(self):
+        lg, clock, _ = ledger()
+        lg.add("임대료 확인", repeat="month:5")
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-11-05")
+        clock.go("2026-11-05T09:00:00")
+        self.assertEqual(sections(lg), {"임대료 확인": "routine"})
+
+    def test_set_repeat_moves_open_task_to_first_occurrence(self):
+        lg, _, _ = ledger()
+        lg.add("a")
+        lg.set_repeat(lg.tasks[0]["id"], "week:0")
+        self.assertEqual(lg.tasks[0]["due"], "2026-10-26")
+
+    def test_invalid_rule_is_ignored(self):
+        lg, _, _ = ledger()
+        lg.add("a", repeat="week:9")
+        self.assertIsNone(lg.tasks[0]["repeat"])
+
+    def test_old_daily_flag_is_migrated(self):
+        lg, _, _ = ledger(tasks=[{"id": "x", "text": "매일", "date": "2026-10-20", "created_at": "2026-10-20T09:00:00",
+                                  "done_at": None, "note": "", "parent": None, "due": "2026-10-20", "daily": True}])
+        self.assertEqual(lg.tasks[0]["repeat"], "day")
+        self.assertNotIn("daily", lg.tasks[0])
+        self.assertEqual(sections(lg), {"매일": "routine"})
 
 
 class Housekeeping(unittest.TestCase):

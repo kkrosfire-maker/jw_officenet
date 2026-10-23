@@ -41,6 +41,13 @@ h2 em{font-style:normal;margin-left:auto;font-size:11px;font-weight:400;color:va
 .late h2,h2.late{color:var(--late)}
 h2.late::before{background:var(--late)}
 .item.dy .cb{border-radius:50%}
+.chip.rp{color:var(--green);border-color:var(--green-tint)}
+.rkind{display:flex;gap:5px;margin-bottom:10px}
+.rkind button,.rdays button{flex:1;font:inherit;font-size:12px;padding:6px 0;border-radius:8px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
+.rkind button.on,.rdays button.on{background:var(--green);color:#fff}
+.rdays{display:flex;gap:4px}
+#rMonth{width:100%;padding:7px 9px;font:inherit;border:1px solid var(--border);border-radius:8px}
+.rhint{font-size:11px;color:var(--green-tint);margin-top:10px;line-height:1.5}
 .item{position:relative;display:flex;align-items:flex-start;gap:9px;padding:7px 4px 6px;border-bottom:1px solid var(--green)}
 .item.l{background:var(--late-bg);padding-left:6px;padding-right:6px}
 .item.sub{margin-left:18px}
@@ -100,12 +107,21 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
   <div class="date"><b id="dLabel"></b><span id="dWeek"></span><i id="dYear"></i></div>
   <div class="bar"><div id="prog"></div></div>
 </header>
-<div class="add"><input id="inp" placeholder="할 일을 적고 Enter" maxlength="200" autocomplete="off"><button class="dbtn" id="dailyBtn" title="매일 반복 (맨 위에 고정)">🔁</button><button class="dbtn" id="dueBtn" title="완료일(마감일) 지정">📅</button><button id="addBtn" title="추가">＋</button></div>
+<div class="add"><input id="inp" placeholder="할 일을 적고 Enter" maxlength="200" autocomplete="off"><button class="dbtn" id="repBtn" title="반복 루틴 (매일·매주·매월)">🔁</button><button class="dbtn" id="dueBtn" title="완료일(마감일) 지정">📅</button><button id="addBtn" title="추가">＋</button></div>
 <main id="main"></main>
 <footer><button class="pri" id="bSave">저장 (엑셀)</button><button id="bQuit">종료</button></footer>
 <div id="toast"></div>
 <dialog id="delDlg"><h3>삭제할까요?</h3><p id="delTxt" style="color:var(--ink);word-break:break-all"></p>
   <div class="dacts"><button id="delNo">취소</button><button class="pri" id="delYes" style="background:var(--late);border-color:var(--late)">삭제</button></div></dialog>
+
+<dialog id="repDlg">
+  <h3>반복 루틴</h3><p>정한 날에 맨 위 '반복 루틴'에 나타나요. 못 하면 다음 회차까지 남아 있어요.</p>
+  <div class="rkind"><button data-k="">안 함</button><button data-k="day">매일</button><button data-k="week">매주</button><button data-k="month">매월</button></div>
+  <div class="rdays" id="rWeek"></div>
+  <select id="rMonth"></select>
+  <div class="rhint" id="rHint"></div>
+  <div class="dacts"><button id="rCancel">취소</button><button class="pri" id="rOk">확인</button></div>
+</dialog>
 
 <dialog id="dlg">
   <h3>내보내기</h3><p>엑셀: 선택한 기간의 기록 · JPG: 오늘 목록</p>
@@ -143,7 +159,7 @@ $('delNo').onclick=()=>$('delDlg').close();
 $('delYes').onclick=()=>{$('delDlg').close();run('remove_many',delIds)};
 function itemEl(t){
   const late=t.section==='late', done=!!t.done_at;
-  const row=el('div','item'+(late?' l':'')+(done?' done':'')+(t.parent?' sub':'')+(t.section==='daily'?' dy':''));
+  const row=el('div','item'+(late?' l':'')+(done?' done':'')+(t.parent?' sub':'')+(t.repeat?' dy':''));
   const cb=el('button','cb',done?'✓':'');cb.title=done?'완료 취소':'완료';cb.onclick=()=>run('toggle',t.id);
   const body=el('div','body'),line=el('div','line');
   if(ui.edit===t.id){
@@ -154,7 +170,7 @@ function itemEl(t){
   }else{
     const txt=el('div','txt',t.text);txt.title='더블클릭해서 수정';txt.ondblclick=()=>{ui.edit=t.id;render()};line.appendChild(txt);
   }
-  if(t.dday&&t.section!=='daily'){
+  if(t.dday&&t.repeat!=='day'){
     const d=el('span','d '+t.dday.kind,t.dday.text);
     d.title=`완료일 ${t.due} (눌러서 변경)`;d.onclick=()=>pickDate(t.due,v=>run('set_due',t.id,v));
     line.appendChild(d);
@@ -162,7 +178,8 @@ function itemEl(t){
   body.insertBefore(line,body.firstChild);
   if(late&&!t.due)line.appendChild(el('span','chip late',`${t.late_days}일 밀림`));
   if(t.parent)line.appendChild(el('span','chip fu','↳ 후속'));
-  if(done&&!late&&t.date!==S.today){row.classList.add('has-reg');row.appendChild(el('span','reg',`${t.date.slice(5)} 등록`))}
+  if(t.repeat&&t.repeat!=='day')line.appendChild(el('span','chip rp',repText(t.repeat)));
+  if(done&&!late&&!t.repeat&&t.date!==S.today){row.classList.add('has-reg');row.appendChild(el('span','reg',`${t.date.slice(5)} 등록`))}
   if(ui.notes.has(t.id)){
     const n=el('textarea','note');n.rows=1;n.placeholder='메모 (결과·참고사항)';n.value=t.note||'';n.onchange=()=>api.set_note(t.id,n.value).then(s=>{S=s});
     n.onkeydown=e=>{if(e.key==='Escape'){n.blur();ui.closeNote(t.id)}};
@@ -179,7 +196,7 @@ function itemEl(t){
   const acts=el('div','acts');
   const btn=(cls,ic,tip,fn)=>{const b=el('button',cls,ic);b.title=tip;b.onclick=fn;acts.appendChild(b);return b};
   btn('','📅','완료일(마감일) 지정',()=>pickDate(t.due,v=>run('set_due',t.id,v)));
-  btn(t.daily?'on':'','🔁',t.daily?'매일 반복 끄기':'매일 반복 (맨 위에 고정)',()=>run('set_daily',t.id,!t.daily));
+  btn(t.repeat?'on':'','🔁',t.repeat?`반복: ${repText(t.repeat)} (눌러서 변경)`:'반복 루틴 (매일·매주·매월)',()=>pickRepeat(t.repeat,r=>run('set_repeat',t.id,r)));
   btn('','↳','후속 작업 추가',()=>ui.toggleFu(t.id));
   btn(ui.notes.has(t.id)?'on':'','✎','메모',()=>ui.toggleNote(t.id));
   btn('x','✕','삭제',()=>askDelete(t));
@@ -193,11 +210,11 @@ function render(){
   const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.due.localeCompare(b.due));
   const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>a.due.localeCompare(b.due));
   const today=S.tasks.filter(t=>t.section==='today');
-  const daily=S.tasks.filter(t=>t.section==='daily');
+  const daily=S.tasks.filter(t=>t.section==='routine');
   const doneN=today.filter(t=>t.done_at).length+daily.filter(t=>t.done_at).length, all=today.length+late.length+daily.length;
   $('prog').style.width=(all?(doneN/all*100):0)+'%';
   if(daily.length){
-    const h=el('h2','','매일 반복');h.appendChild(el('em','',`${daily.filter(t=>t.done_at).length}/${daily.length} 완료`));main.appendChild(h);
+    const h=el('h2','','반복 루틴');h.appendChild(el('em','',`${daily.filter(t=>t.done_at).length}/${daily.length} 완료`));main.appendChild(h);
     daily.forEach(t=>main.appendChild(itemEl(t)));
   }
   if(late.length){
@@ -223,11 +240,36 @@ function render(){
 async function run(fn,...a){
   try{S=await api[fn](...a);render()}catch(e){toast('저장하지 못했어요',true)}
 }
-let newDue='',newDaily=false;
+// 반복 규칙: "day" / "week:0"(월)~"week:6"(일) / "month:1"~"month:31"(31 = 말일)
+const WK='월화수목금토일';
+function repText(r){if(!r)return '';const[k,n]=r.split(':');return k==='day'?'매일':k==='week'?`매주 ${WK[n]}`:n==='31'?'매월 말일':`매월 ${n}일`}
+const rep={kind:'',wd:0,md:1,cb:null};
+for(let i=0;i<7;i++){const b=el('button','',WK[i]);b.dataset.d=i;b.onclick=()=>{rep.wd=i;repDraw()};$('rWeek').appendChild(b)}
+for(let i=1;i<=31;i++){const o=el('option','',i===31?'말일':`${i}일`);o.value=i;$('rMonth').appendChild(o)}
+$('rMonth').onchange=()=>{rep.md=+$('rMonth').value;repDraw()};
+document.querySelectorAll('.rkind button').forEach(b=>b.onclick=()=>{rep.kind=b.dataset.k;repDraw()});
+function repRule(){return rep.kind==='day'?'day':rep.kind==='week'?`week:${rep.wd}`:rep.kind==='month'?`month:${rep.md}`:null}
+function repDraw(){
+  document.querySelectorAll('.rkind button').forEach(b=>b.classList.toggle('on',b.dataset.k===rep.kind));
+  $('rWeek').style.display=rep.kind==='week'?'flex':'none';
+  $('rWeek').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.d===rep.wd));
+  $('rMonth').style.display=rep.kind==='month'?'block':'none';$('rMonth').value=rep.md;
+  const r=repRule();
+  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'매일 맨 위에 나타나요.':`${repText(r)}에 나타나요. 그 전에는 '해야 할 일'에서 기다려요.`;
+}
+function pickRepeat(cur,cb){
+  const[k,n]=(cur||'').split(':');const now=new Date();
+  rep.kind=k||'';rep.wd=k==='week'?+n:(now.getDay()+6)%7;rep.md=k==='month'?+n:now.getDate();rep.cb=cb;
+  repDraw();$('repDlg').showModal();
+}
+$('rCancel').onclick=()=>$('repDlg').close();
+$('rOk').onclick=()=>{$('repDlg').close();rep.cb&&rep.cb(repRule())};
+let newDue='',newRep=null;
+function showRep(){const b=$('repBtn');b.classList.toggle('on',!!newRep);b.textContent=newRep?'🔁 '+repText(newRep):'🔁'}
 function showDue(){const b=$('dueBtn');b.classList.toggle('set',!!newDue);b.textContent=newDue?newDue.slice(5).replace('-','/'):'📅'}
-$('dailyBtn').onclick=()=>{newDaily=!newDaily;$('dailyBtn').classList.toggle('on',newDaily);$('inp').focus()};
+$('repBtn').onclick=()=>pickRepeat(newRep,r=>{newRep=r;showRep();$('inp').focus()});
 $('dueBtn').onclick=()=>pickDate(newDue,v=>{newDue=v;showDue()});
-async function add(){const v=$('inp').value.trim();if(!v)return;$('inp').value='';const d=newDue,dy=newDaily;newDue='';showDue();await run('add',v,null,d||null,dy);newDaily=false;$('dailyBtn').classList.remove('on');$('main').scrollTop=0}
+async function add(){const v=$('inp').value.trim();if(!v)return;$('inp').value='';const d=newDue,r=newRep;newDue='';showDue();newRep=null;showRep();await run('add',v,null,d||null,r);$('main').scrollTop=0}
 $('inp').onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing)add()};
 $('addBtn').onclick=add;
 $('pin').onclick=()=>{const on=!$('pin').classList.contains('on');$('pin').classList.toggle('on',on);api.set_pin(on);toast(on?'항상 위에 표시':'고정 해제')};
