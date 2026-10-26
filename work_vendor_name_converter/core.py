@@ -20,6 +20,7 @@ TARGET_DATA_START_ROW = 10
 COL_B_수탁업체명 = 2
 COL_E_사업자번호 = 5
 COL_F_병원명 = 6
+COL_G_제약사 = 7
 COL_I_제품명 = 9
 
 EXPECTED_HEADERS = {
@@ -127,6 +128,7 @@ class MismatchItem:
     key: str  # 정규화된 사업자번호 또는 품목 원문
     hospital: str
     raw_display: str  # 사용자에게 보여줄 실패 값
+    pharma: str = ""  # G열 제약사 (미스매칭 확인 화면에 같이 보여줌)
 
 
 @dataclass
@@ -251,6 +253,7 @@ def process_target_file(target_path: str | Path, ref: ReferenceData) -> ProcessR
 
     e_off = COL_E_사업자번호 - COL_B_수탁업체명
     f_off = COL_F_병원명 - COL_B_수탁업체명
+    g_off = COL_G_제약사 - COL_B_수탁업체명
     i_off = COL_I_제품명 - COL_B_수탁업체명
 
     b_values = [row_data[0] for row_data in block]
@@ -259,6 +262,7 @@ def process_target_file(target_path: str | Path, ref: ReferenceData) -> ProcessR
     for offset, row_data in enumerate(block):
         row = TARGET_DATA_START_ROW + offset
         hospital = row_data[f_off]
+        pharma = str(row_data[g_off] or "").strip()
         if is_yb_hospital(hospital):
             product = row_data[i_off]
             key = str(product or "")
@@ -268,7 +272,10 @@ def process_target_file(target_path: str | Path, ref: ReferenceData) -> ProcessR
                 result.matched_product_count += 1
             else:
                 result.mismatches.append(
-                    MismatchItem(row=row, kind="product", key=key, hospital=str(hospital or ""), raw_display=key)
+                    MismatchItem(
+                        row=row, kind="product", key=key, hospital=str(hospital or ""), raw_display=key,
+                        pharma=pharma,
+                    )
                 )
         else:
             biz_no_raw = row_data[e_off]
@@ -281,7 +288,7 @@ def process_target_file(target_path: str | Path, ref: ReferenceData) -> ProcessR
                 result.mismatches.append(
                     MismatchItem(
                         row=row, kind="biz", key=key, hospital=str(hospital or ""),
-                        raw_display=str(biz_no_raw or ""),
+                        raw_display=str(biz_no_raw or ""), pharma=pharma,
                     )
                 )
 
@@ -326,6 +333,15 @@ class MismatchGroup:
     hospital: str  # 대표 병원명 (첫 건 기준)
     items: list = field(default_factory=list)  # list[MismatchItem], 같은 key를 공유하는 모든 행
     suggestions: list = field(default_factory=list)  # [(후보키, 담당자, 유사도), ...] 유사도 내림차순
+
+    @property
+    def pharma(self) -> str:
+        """그룹에 속한 행들의 제약사 (여러 곳이면 나온 순서대로 쉼표로 묶음)."""
+        names = []
+        for item in self.items:
+            if item.pharma and item.pharma not in names:
+                names.append(item.pharma)
+        return ", ".join(names)
 
 
 def suggest_candidates(key: str, candidates: dict, top_n: int = 3, min_ratio: float = 0.0) -> list[tuple]:

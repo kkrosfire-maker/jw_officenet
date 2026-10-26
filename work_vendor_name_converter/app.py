@@ -128,12 +128,12 @@ class App(DndTk):
         frm_tree = ttk.Frame(frm_result)
         frm_tree.pack(fill="both", expand=True, padx=8, pady=(2, 8))
 
-        self.mis_columns = ("rows", "kind", "key", "hospital", "count", "outcome", "manager")
+        self.mis_columns = ("rows", "kind", "key", "hospital", "pharma", "count", "outcome", "manager")
         self.tree_mismatch = ttk.Treeview(frm_tree, columns=self.mis_columns, show="headings", height=10)
         for col, head, width in (
-            ("rows", "행", 90), ("kind", "구분", 80), ("key", "매칭 실패 값", 180),
-            ("hospital", "병원명", 130), ("count", "건수", 50),
-            ("outcome", "처리 결과", 80), ("manager", "담당자", 100),
+            ("rows", "행", 80), ("kind", "구분", 70), ("key", "매칭 실패 값", 180),
+            ("hospital", "병원명", 130), ("pharma", "제약사", 100), ("count", "건수", 45),
+            ("outcome", "처리 결과", 90), ("manager", "담당자", 90),
         ):
             self.tree_mismatch.heading(col, text=head)
             self.tree_mismatch.column(col, width=width, anchor="w")
@@ -215,7 +215,7 @@ class App(DndTk):
             for item in mismatch_log:
                 self.tree_mismatch.insert("", "end", values=(
                     item["rows"], item["kind"], item["key"], item["hospital"],
-                    item["count"], item["outcome"], item["manager"],
+                    item["pharma"], item["count"], item["outcome"], item["manager"],
                 ))
             _restripe(self.tree_mismatch)
         else:
@@ -342,16 +342,14 @@ class App(DndTk):
         added_product = 0
         mismatch_log = []
         if groups:
-            managers = core.all_manager_names(ref)
-            for group in groups:
-                action, manager = MismatchDialog.ask(self, group, managers)
-                if action == "confirm":
+            chosen = MismatchBatchDialog.ask(self, groups, core.all_manager_names(ref))
+            for group, manager in zip(groups, chosen):
+                if manager:
                     core.resolve_mismatch_group(ref, result, group, manager)
                     if group.kind == "biz":
                         added_biz += 1
                     else:
                         added_product += 1
-                    managers = core.all_manager_names(ref)
                     outcome, outcome_manager = "기준엑셀에 추가", manager
                 else:
                     core.skip_mismatch_group(result, group)
@@ -361,6 +359,7 @@ class App(DndTk):
                     "kind": "사업자번호" if group.kind == "biz" else "제품명",
                     "key": group.key,
                     "hospital": group.hospital,
+                    "pharma": group.pharma,
                     "count": len(group.items),
                     "outcome": outcome,
                     "manager": outcome_manager,
@@ -415,82 +414,235 @@ class App(DndTk):
         )
 
 
-class MismatchDialog(tk.Toplevel):
-    """FR-5.2/5.3: 미스매칭 그룹 하나를 사용자에게 보여주고 확인/건너뛰기를 받는다."""
+class MismatchBatchDialog(tk.Toplevel):
+    """미스매칭 전체를 엑셀처럼 한 표에 쭉 보여주고, 각 줄 맨 오른쪽 드롭다운에서 담당자를 고른다.
 
-    def __init__(self, parent, group: core.MismatchGroup, managers: list[str]):
+    담당자를 고른 줄만 기준엑셀에 추가되고, 비워 둔 줄은 건너뛴다.
+    드롭다운 맨 끝의 '직접입력...'을 고르면 그 칸에 이름을 바로 타이핑할 수 있다.
+    """
+
+    SKIP = "(비우기)"
+    CUSTOM = "직접입력..."
+    GRID_LINE = "#b9d3d3"
+    # (제목, 글자 너비) - 너비를 넘는 내용은 잘리고, 마우스를 올리면 전체가 표 아래에 표시된다.
+    COLUMNS = (
+        ("행", 9), ("구분", 8), ("매칭 실패 값", 24), ("병원명", 18), ("제약사", 22),
+        ("건수", 5), ("비슷한 기존 등록 (클릭하면 적용)", 28),
+    )
+
+    def __init__(self, parent, groups: list[core.MismatchGroup], managers: list[str]):
         super().__init__(parent)
-        self.group = group
-        self.result_action = "skip"
-        self.result_manager = ""
+        self.groups = groups
+        self.managers = list(managers)
+        self.result: list[str] = [""] * len(groups)
+        self.vars: list[tk.StringVar] = []
+        self.combos: list[ttk.Combobox] = []
 
-        self.title("미스매칭 확인")
-        self.resizable(False, False)
+        self.title(f"미스매칭 확인 - {len(groups)}건")
         theme.style_toplevel(self)
         self.grab_set()
-        self.protocol("WM_DELETE_WINDOW", self._on_skip)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        kind_label = "사업자번호" if group.kind == "biz" else "제품명(윤병옥내과)"
-        rows_desc = ", ".join(str(i.row) for i in group.items[:10])
-        if len(group.items) > 10:
-            rows_desc += f" 외 {len(group.items) - 10}건"
+        ttk.Label(
+            self,
+            text="맨 오른쪽에서 담당자를 고른 줄만 기준엑셀에 추가됩니다. 비워 둔 줄은 건너뜁니다.\n"
+                 "목록에 없는 담당자는 드롭다운 맨 아래 '직접입력...'을 고르고 이름을 입력하세요.",
+            justify="left",
+        ).pack(fill="x", padx=12, pady=(10, 6))
 
-        info = (
-            f"매칭 실패 종류: {kind_label}\n"
-            f"매칭 실패 값: {group.key}\n"
-            f"병원명: {group.hospital}\n"
-            f"해당 행: {rows_desc}\n"
-            f"(총 {len(group.items)}건, 같은 값은 한 번만 확인하면 전부 반영됩니다)"
-        )
-        ttk.Label(self, text=info, justify="left", wraplength=400).pack(padx=12, pady=12, anchor="w")
+        frm_table = tk.Frame(self, bg=self.GRID_LINE, bd=0)
+        frm_table.pack(fill="both", expand=True, padx=12)
 
-        if group.suggestions:
-            frm_sug = ttk.LabelFrame(self, text="비슷한 기존 등록 (참고용 - 자동 매칭에는 쓰이지 않음)")
-            frm_sug.pack(fill="x", padx=12, pady=(0, 6))
-            for cand_key, cand_manager, ratio in group.suggestions:
-                row = ttk.Frame(frm_sug)
-                row.pack(fill="x", padx=6, pady=3)
-                text = f"'{cand_key}'  →  담당자: {cand_manager}  (유사도 {int(ratio * 100)}%)"
-                ttk.Label(row, text=text, wraplength=320, justify="left").pack(side="left", fill="x", expand=True)
-                ttk.Button(
-                    row, text="이 담당자로", width=10,
-                    command=lambda m=cand_manager: self._fill_manager(m),
-                ).pack(side="right")
+        self.header = tk.Frame(frm_table, bg=self.GRID_LINE)
+        self.header.grid(row=0, column=0, sticky="ew")
+        tk.Frame(frm_table, bg=theme.SEAFOAM).grid(row=0, column=1, sticky="nsew")  # 스크롤바 위 빈칸
 
-        frm = ttk.Frame(self)
-        frm.pack(fill="x", padx=12, pady=6)
-        ttk.Label(frm, text="담당자:").pack(side="left")
-        self.combo_manager = ttk.Combobox(frm, values=managers, width=25)
-        self.combo_manager.pack(side="left", padx=6)
+        self.canvas = tk.Canvas(frm_table, bg=theme.CREAM, highlightthickness=0, bd=0)
+        self.canvas.grid(row=1, column=0, sticky="nsew")
+        vbar = ttk.Scrollbar(frm_table, orient="vertical", command=self.canvas.yview)
+        vbar.grid(row=1, column=1, sticky="ns")
+        self.canvas.configure(yscrollcommand=vbar.set)
+        frm_table.rowconfigure(1, weight=1)
+        frm_table.columnconfigure(0, weight=1)
+
+        self.body = tk.Frame(self.canvas, bg=self.GRID_LINE)
+        self.canvas.create_window((0, 0), window=self.body, anchor="nw")
+        self.body.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+
+        self.lbl_hover = ttk.Label(self, text="", style="Muted.TLabel")
+        self._build_rows()
+        self._build_header()
+        self.lbl_hover.pack(fill="x", padx=12, pady=(4, 0))
 
         frm_btn = ttk.Frame(self)
-        frm_btn.pack(fill="x", padx=12, pady=16)
-        ttk.Button(frm_btn, text="기준엑셀에 추가", style="Accent.TButton", command=self._on_confirm).pack(
+        frm_btn.pack(fill="x", padx=12, pady=(6, 12))
+        self.lbl_count = ttk.Label(frm_btn, text="")
+        self.lbl_count.pack(side="left")
+        ttk.Button(frm_btn, text="적용", style="Accent.TButton", command=self._on_apply).pack(side="right", padx=4)
+        ttk.Button(frm_btn, text="추천 담당자로 빈칸 채우기", command=self._fill_suggestions).pack(
             side="right", padx=4
         )
-        ttk.Button(frm_btn, text="지금은 건너뛰기", command=self._on_skip).pack(side="right", padx=4)
+        self._update_count()
 
-    def _fill_manager(self, manager: str):
-        self.combo_manager.set(manager)
+        # 마우스 휠은 표 어디서 굴려도 스크롤되게 한다(드롭다운 값이 휠로 바뀌는 것도 막음).
+        self.bind_all("<MouseWheel>", self._on_wheel)
+        self.bind("<Destroy>", self._on_destroy)
 
-    def _on_confirm(self):
-        manager = self.combo_manager.get().strip()
-        if not manager:
-            messagebox.showerror("오류", "담당자를 입력하거나 선택해주세요.")
+        self.update_idletasks()
+        rows_h = min(self.body.winfo_reqheight(), 480)
+        self.canvas.configure(width=self.body.winfo_reqwidth(), height=rows_h)
+        self.update_idletasks()
+        self.minsize(self.winfo_reqwidth(), 300)
+        self.resizable(False, True)
+
+    # ---------------------------------------------------------- 표 구성
+    def _cell(self, text, row, col, bg, width):
+        lbl = tk.Label(self.body, text=text, bg=bg, fg=theme.NAVY, anchor="w", width=width, padx=4, pady=3)
+        lbl.grid(row=row, column=col, sticky="nsew", padx=(0, 1), pady=(0, 1))
+        return lbl
+
+    def _build_rows(self):
+        values = self._combo_values()
+        for r, group in enumerate(self.groups):
+            bg = theme.ROW_EVEN if r % 2 == 0 else theme.ROW_ODD
+            all_rows = ", ".join(str(i.row) for i in group.items)
+            rows_desc = ", ".join(str(i.row) for i in group.items[:3]) + (" …" if len(group.items) > 3 else "")
+            kind = "사업자번호" if group.kind == "biz" else "제품명"
+            key = group.items[0].raw_display if group.kind == "biz" else group.key
+            sug = ""
+            if group.suggestions:
+                cand_key, cand_manager, ratio = group.suggestions[0]
+                sug = f"{cand_manager} ({int(ratio * 100)}%) ← {cand_key}"
+            texts = (rows_desc, kind, key, group.hospital, group.pharma, str(len(group.items)), sug)
+            for c, (text, (head, width)) in enumerate(zip(texts, self.COLUMNS)):
+                lbl = self._cell(text, r, c, bg, width)
+                full = f"행: {all_rows}" if c == 0 else f"{head}: {text}"
+                lbl.bind("<Enter>", lambda e, t=full: self.lbl_hover.config(text=t))
+                if c == len(self.COLUMNS) - 1 and group.suggestions:
+                    lbl.config(cursor="hand2", fg=theme.TEAL)
+                    lbl.bind("<Button-1>", lambda e, i=r, m=group.suggestions[0][1]: self._set_manager(i, m))
+
+            cell = tk.Frame(self.body, bg=bg)
+            cell.grid(row=r, column=len(self.COLUMNS), sticky="nsew", padx=(0, 1), pady=(0, 1))
+            var = tk.StringVar(value="")
+            cb = ttk.Combobox(cell, textvariable=var, values=values, width=16, state="readonly")
+            cb.pack(padx=4, pady=2)
+            cb.bind("<<ComboboxSelected>>", lambda e, i=r: self._on_selected(i))
+            cb.bind("<FocusOut>", lambda e, i=r: self._on_custom_done(i))
+            cb.bind("<Return>", lambda e, i=r: self._on_custom_done(i))
+            var.trace_add("write", lambda *a: self._update_count())
+            self.vars.append(var)
+            self.combos.append(cb)
+
+    def _build_header(self):
+        """본문 각 열의 실제 픽셀 너비를 재서 머리글 칸을 똑같이 맞춘다."""
+        self.update_idletasks()
+        heads = [h for h, _ in self.COLUMNS] + ["담당자 ▼"]
+        for c, head in enumerate(heads):
+            bbox = self.body.grid_bbox(c, 0)
+            if bbox and c < len(heads) - 1:
+                self.header.columnconfigure(c, minsize=bbox[2])
+            tk.Label(self.header, text=head, bg=theme.SEAFOAM, fg=theme.NAVY, anchor="w",
+                     font=("", 9, "bold"), padx=4, pady=4, width=1).grid(
+                row=0, column=c, sticky="nsew", padx=(0, 1), pady=(0, 1))
+        self.header.columnconfigure(len(heads) - 1, weight=1)
+
+    def _combo_values(self) -> list[str]:
+        return [self.SKIP, *self.managers, self.CUSTOM]
+
+    # ---------------------------------------------------------- 담당자 선택
+    def _set_manager(self, i: int, manager: str):
+        self._add_manager(manager)
+        self.combos[i].config(state="readonly")
+        self.vars[i].set(manager)
+
+    def _on_selected(self, i: int):
+        cb, var = self.combos[i], self.vars[i]
+        choice = var.get()
+        if choice == self.SKIP:
+            cb.config(state="readonly")
+            var.set("")
+        elif choice == self.CUSTOM:
+            cb.config(state="normal")
+            var.set("")
+            cb.focus_set()
+        else:
+            cb.config(state="readonly")
+            cb.selection_clear()
+
+    def _on_custom_done(self, i: int):
+        """직접 입력한 이름은 다른 줄 드롭다운에도 바로 나오게 목록에 추가한다."""
+        cb, var = self.combos[i], self.vars[i]
+        if str(cb.cget("state")) != "normal":
             return
-        self.result_action = "confirm"
-        self.result_manager = manager
+        name = var.get().strip()
+        if name in (self.SKIP, self.CUSTOM):
+            name = ""
+        var.set(name)
+        if name:
+            self._add_manager(name)
+            cb.config(state="readonly")
+
+    def _add_manager(self, name: str):
+        if not name or name in self.managers:
+            return
+        self.managers.append(name)
+        self.managers.sort()
+        values = self._combo_values()
+        for cb in self.combos:
+            cb.config(values=values)
+
+    def _fill_suggestions(self):
+        filled = 0
+        for i, group in enumerate(self.groups):
+            if not self.vars[i].get().strip() and group.suggestions:
+                self._set_manager(i, group.suggestions[0][1])
+                filled += 1
+        if not filled:
+            messagebox.showinfo("안내", "채울 수 있는 추천 담당자가 없습니다.", parent=self)
+
+    def _update_count(self):
+        if not hasattr(self, "lbl_count"):
+            return
+        chosen = sum(1 for name in self._collect() if name)
+        total = len(self.groups)
+        self.lbl_count.config(text=f"담당자 지정 {chosen}건 / 전체 {total}건  (나머지 {total - chosen}건은 건너뜀)")
+
+    # ---------------------------------------------------------- 스크롤/종료
+    def _on_wheel(self, event):
+        self.canvas.yview_scroll(int(-event.delta / 120), "units")
+        return "break"
+
+    def _on_destroy(self, event):
+        if event.widget is self:
+            self.unbind_all("<MouseWheel>")
+
+    def _collect(self) -> list[str]:
+        out = []
+        for v in self.vars:
+            name = v.get().strip()
+            out.append("" if name in (self.SKIP, self.CUSTOM) else name)
+        return out
+
+    def _on_apply(self):
+        self.result = self._collect()
         self.destroy()
 
-    def _on_skip(self):
-        self.result_action = "skip"
+    def _on_close(self):
+        if any(self._collect()):
+            if not messagebox.askyesno(
+                "닫기", "고른 담당자를 반영하지 않고 모두 건너뛸까요?\n(반영하려면 [아니요] → [적용])", parent=self
+            ):
+                return
+        self.result = [""] * len(self.groups)
         self.destroy()
 
     @staticmethod
-    def ask(parent, group: core.MismatchGroup, managers: list[str]):
-        dlg = MismatchDialog(parent, group, managers)
+    def ask(parent, groups: list[core.MismatchGroup], managers: list[str]) -> list[str]:
+        """그룹 순서대로 담당자 이름 목록을 돌려준다 (빈 문자열 = 건너뛰기)."""
+        dlg = MismatchBatchDialog(parent, groups, managers)
         parent.wait_window(dlg)
-        return dlg.result_action, dlg.result_manager
+        return dlg.result
 
 
 class ManageMappingsDialog(tk.Toplevel):

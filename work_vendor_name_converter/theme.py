@@ -47,6 +47,7 @@ def apply(root: tk.Tk):
 
     style.configure("TEntry", fieldbackground="#ffffff", foreground=NAVY)
     style.configure("TCombobox", fieldbackground="#ffffff", foreground=NAVY)
+    style.map("TCombobox", fieldbackground=[("readonly", "#ffffff")], foreground=[("readonly", NAVY)])
     root.option_add("*TCombobox*Listbox.background", "#ffffff")
     root.option_add("*TCombobox*Listbox.foreground", NAVY)
     root.option_add("*TCombobox*Listbox.selectBackground", SEAFOAM)
