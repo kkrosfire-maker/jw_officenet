@@ -72,6 +72,7 @@ h2.late::before{background:var(--late)}
 .acts button.on{color:var(--green);background:var(--hover)}
 .acts button:hover{background:var(--hover);color:var(--green)}
 .acts .x:hover{color:var(--late);background:var(--late-bg)}
+.item.editing{flex-wrap:wrap}.item.editing .acts{position:static;flex-basis:100%;justify-content:flex-end;margin-top:3px;background:none;box-shadow:none}
 .edit,.note,.fu-in{width:100%;font:inherit;padding:4px 7px;border:1px solid var(--green);border-radius:7px;outline:none;user-select:text}
 .note{display:block;margin-top:5px;font-size:12px;resize:vertical;height:28px;min-height:28px;line-height:1.3;border-color:var(--border)}
 .note:focus{border-color:var(--green)}
@@ -163,6 +164,7 @@ function itemEl(t){
   const cb=el('button','cb',done?'✓':'');cb.title=done?'완료 취소':'완료';cb.onclick=()=>run('toggle',t.id);
   const body=el('div','body'),line=el('div','line');
   if(ui.edit===t.id){
+    row.classList.add('editing');
     const inp=el('input','edit');inp.value=t.text;line.appendChild(inp);
     let fin=false;const commit=ok=>{if(fin)return;fin=true;ui.edit=null;ok&&inp.value.trim()&&inp.value!==t.text?run('edit',t.id,inp.value):render()};
     inp.onkeydown=e=>{if(e.key==='Enter')commit(true);if(e.key==='Escape')commit(false)};
