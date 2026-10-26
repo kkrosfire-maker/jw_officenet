@@ -13,7 +13,7 @@
     {
       "id": "app1",
       "name": "제너리스 주문관리",
-      "desc": "제너리스 주문 변환 · 품목 마스터",
+      "desc": "주문 변환 · 주문기록 엑셀 · 니들/시린지 월 한도",
       "group": "업무",
       "icon": "icons/app1.png",
       "type": "exe",
@@ -45,14 +45,23 @@
     },
     {
       "id": "custom8",
-      "name": "할일_실행",
-      "desc": "",
+      "name": "오늘의 할 일",
+      "desc": "메모장",
       "group": "업무",
       "icon": "icons/custom8.png",
       "type": "exe",
       "path": "C:\\Users\\JW\\Desktop\\workspace\\work_daily_todo\\할일_실행.bat",
       "args": "",
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_daily_todo"
+    },
+    {
+      "id": "custom9",
+      "name": "CSO 뉴스",
+      "desc": "뉴스",
+      "group": "업무",
+      "icon": "icons/custom9.png",
+      "type": "url",
+      "url": "https://medicalnews-tau.vercel.app"
     },
     {
       "id": "custom7",
