@@ -296,3 +296,27 @@ def add_order_line(order_id, raw_text, item_id, quantity, requirement_text,
             (order_id, raw_text, item_id, quantity, requirement_text, spec_text,
              applied_buy, applied_sell, match_type, remark),
         )
+
+
+def delete_order(order_id: int) -> None:
+    """같은 주문을 다시 저장할 때 이전 기록을 지우고 새로 넣기 위해 쓴다."""
+    with connect() as conn:
+        conn.execute("DELETE FROM order_lines WHERE order_id=?", (order_id,))
+        conn.execute("DELETE FROM orders WHERE id=?", (order_id,))
+
+
+def order_log_rows(exclude_order_id: int | None = None):
+    """주문 기록용: 저장된 모든 주문 라인 + 주문일자 + 품목 항목(분류)."""
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT o.id AS order_id, o.order_date, i.category,
+                      COALESCE(i.order_name, l.raw_text) AS raw_text, l.quantity,
+                      l.requirement_text, l.spec_text, l.applied_buy, l.applied_sell, l.remark
+               FROM order_lines l
+               JOIN orders o ON o.id = l.order_id
+               LEFT JOIN items i ON i.id = l.item_id
+               WHERE o.id IS NOT ?
+               ORDER BY o.id, l.id""",
+            (exclude_order_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]

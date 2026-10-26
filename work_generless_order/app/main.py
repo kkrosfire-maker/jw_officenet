@@ -8,8 +8,8 @@ from tkinter import filedialog, messagebox, ttk
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import db, excel_export, grid_edit, importer, matching, theme
-from app.config import EXPORT_DIR, SOURCE_MASTER_SHEET
+from app import db, excel_export, grid_edit, importer, matching, order_log, theme
+from app.config import EXPORT_DIR, ORDER_LOG_XLSX, SOURCE_MASTER_SHEET
 from app.dialogs import (_format_margin, _margin_rate,CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
                          PriceHistoryDialog)
 from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates
@@ -36,6 +36,7 @@ class OrderTab(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, style="TFrame", padding=16)
         self.session = OrderEditSession()
+        self.saved_order_id = None  # 이 화면의 주문을 이미 저장했다면 그 주문 번호(다시 저장하면 덮어씀)
         self._build()
 
     def _build(self):
@@ -49,6 +50,19 @@ class OrderTab(ttk.Frame):
         ttk.Entry(date_row, textvariable=self.date_var, width=10).pack(side="left", padx=8)
         ttk.Label(date_row, text="품목 칸에 입력 후 Enter를 누르면 매칭됩니다.",
                   style="CardSecondary.TLabel").pack(side="left", padx=(16, 0))
+
+        # 니들·시린지 이번 달 주문량 / 한도
+        quota_row = ttk.Frame(top_card, style="Card.TFrame")
+        quota_row.pack(fill="x", pady=(10, 0))
+        self.quota_title = ttk.Label(quota_row, text="", style="Card.TLabel", font=theme.FONT_BOLD)
+        self.quota_title.pack(side="left")
+        self.quota_labels = {}
+        for cat in order_log.MONTHLY_QUOTA:
+            lbl = tk.Label(quota_row, text="", bg=theme.CARD_BG, font=theme.FONT_BOLD,
+                           padx=10, pady=3)
+            lbl.pack(side="left", padx=(12, 0))
+            self.quota_labels[cat] = lbl
+        self.date_var.trace_add("write", lambda *_: self._refresh_quota())
 
         # 그리드
         grid_card = theme.card(self)
@@ -83,8 +97,10 @@ class OrderTab(ttk.Frame):
         # 하단 액션
         action_row = ttk.Frame(self)
         action_row.pack(fill="x")
-        ttk.Button(action_row, text="저장 (마스터 DB 학습 반영)", style="Accent.TButton",
+        ttk.Button(action_row, text="저장 (주문 기록 + 학습 반영)", style="Accent.TButton",
                    command=self._save_order).pack(side="left")
+        ttk.Button(action_row, text="주문기록 열기", style="Secondary.TButton",
+                   command=self._open_order_log).pack(side="left", padx=8)
         ttk.Button(action_row, text="엑셀로 내보내기", style="Secondary.TButton",
                    command=self._export_excel).pack(side="left", padx=8)
         ttk.Button(action_row, text="선택 행 삭제", style="Secondary.TButton",
@@ -158,6 +174,37 @@ class OrderTab(ttk.Frame):
         self.tree.insert("", "end", iid=self.NEW_ROW_IID, tags=("new_row",), values=(
             "", self.session.pending_qty, "", "", "", "", "",
         ))
+        self._refresh_quota()
+
+    # ---- 니들·시린지 월 한도 ----
+    def _current_usage(self) -> dict:
+        usage = {cat: 0.0 for cat in order_log.MONTHLY_QUOTA}
+        for line in self.session.lines:
+            cat = (line.item or {}).get("category")
+            if cat in usage:
+                usage[cat] += line.quantity or 0
+        return usage
+
+    def _quota_status(self):
+        """주문일자가 속한 달 기준. 날짜를 못 읽으면 오늘 날짜의 달로 계산한다."""
+        d = order_log.parse_order_date(self.date_var.get()) or dt.date.today()
+        saved = order_log.month_usage(db.order_log_rows(exclude_order_id=self.saved_order_id),
+                                      d.year, d.month)
+        return d, order_log.quota_status(saved, self._current_usage())
+
+    def _refresh_quota(self):
+        if not hasattr(self, "quota_labels"):
+            return
+        d, status = self._quota_status()
+        self.quota_title.config(text=f"{d.month}월 주문 가능량 (지금 입력분 포함)")
+        for s in status:
+            over = s["remaining"] < 0
+            self.quota_labels[s["category"]].config(
+                text=f'{s["category"]}  {s["ordered"]:g} / {s["limit"]:,}   '
+                     + (f'{-s["remaining"]:g}개 초과' if over else f'남은 {s["remaining"]:g}개'),
+                fg=theme.DANGER if over else theme.ACCENT,
+                bg=theme.DANGER_SOFT if over else theme.ACCENT_SOFT,
+            )
 
     def _sort_by(self, col: str):
         self.session.sort(col)
@@ -186,6 +233,7 @@ class OrderTab(ttk.Frame):
             return
         self.editor.cancel_active()
         self.session = OrderEditSession()
+        self.saved_order_id = None
         theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, None, False)
         self.date_var.set(dt.date.today().strftime("%y%m%d"))
         self._refresh_grid()
@@ -268,6 +316,19 @@ class OrderTab(ttk.Frame):
             if not messagebox.askyesno("마스터 가격 업데이트", f"다음 품목의 마스터 단가를 갱신합니다:\n{preview}\n\n계속할까요?"):
                 return
 
+        _, status = self._quota_status()
+        over = [s for s in status if s["remaining"] < 0]
+        if over:
+            msg = "\n".join(f'- {s["category"]}: {s["ordered"]:g} / {s["limit"]:,} ({-s["remaining"]:g}개 초과)'
+                            for s in over)
+            if not messagebox.askyesno("월 주문 한도 초과", f"이번 달 주문 가능량을 넘습니다:\n{msg}\n\n그대로 저장할까요?"):
+                return
+
+        if self.saved_order_id is not None:
+            if not messagebox.askyesno("다시 저장", "이미 저장한 주문입니다.\n지금 내용으로 기록을 덮어쓸까요?"):
+                return
+            db.delete_order(self.saved_order_id)
+
         order_id = db.create_order(self.date_var.get().strip())
         for line in self.session.lines:
             item_id = None
@@ -280,12 +341,35 @@ class OrderTab(ttk.Frame):
                         item_id, line.buy_price, line.sell_price,
                         memo=f"주문 화면에서 수정({self.date_var.get()})",
                     )
+                    # 다시 저장할 때 같은 가격 갱신을 또 묻지 않도록 화면의 마스터 정보도 맞춘다
+                    line.item = dict(line.item, buy_price=line.buy_price, sell_price=line.sell_price)
             db.add_order_line(
                 order_id, line.origin_text, item_id, line.quantity,
                 line.requirement_text, line.spec_text, line.buy_price, line.sell_price,
                 line.match_type, line.remark,
             )
-        messagebox.showinfo("저장 완료", "마스터 DB에 학습 반영이 완료되었습니다.")
+        self.saved_order_id = order_id
+        self._refresh_quota()
+
+        try:
+            order_log.write_order_log(db.order_log_rows(), ORDER_LOG_XLSX)
+        except PermissionError:
+            messagebox.showwarning(
+                "저장 완료 (엑셀 기록 실패)",
+                "주문은 저장됐지만 주문기록 엑셀이 열려 있어 갱신하지 못했습니다.\n"
+                "엑셀을 닫고 다시 저장을 누르면 반영됩니다.",
+            )
+            return
+        messagebox.showinfo("저장 완료", f"주문 기록과 학습 반영이 완료되었습니다.\n\n기록 파일: {ORDER_LOG_XLSX}")
+
+    def _open_order_log(self):
+        if not ORDER_LOG_XLSX.exists():
+            try:
+                order_log.write_order_log(db.order_log_rows(), ORDER_LOG_XLSX)
+            except PermissionError:
+                pass
+        if ORDER_LOG_XLSX.exists():
+            os.startfile(ORDER_LOG_XLSX)
 
     def _export_excel(self):
         if not self.session.lines:
