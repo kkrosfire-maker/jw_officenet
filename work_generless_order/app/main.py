@@ -182,7 +182,8 @@ class OrderTab(ttk.Frame):
         for line in self.session.lines:
             cat = (line.item or {}).get("category")
             if cat in usage:
-                usage[cat] += order_log.to_pieces(line.quantity)  # 수량은 박스 → 낱개로
+                # 수량은 박스 → 마스터에 적힌 박스당 수량으로 낱개 환산
+                usage[cat] += order_log.to_pieces(line.quantity, line.item)
         return usage
 
     def _quota_status(self):
@@ -196,13 +197,10 @@ class OrderTab(ttk.Frame):
         if not hasattr(self, "quota_labels"):
             return
         d, status = self._quota_status()
-        self.quota_title.config(text=f"{d.month}월 주문 가능량 (지금 입력분 포함, 1박스=100개)")
+        self.quota_title.config(text=f"{d.month}월 주문 가능량 (지금 입력분 포함, 낱개 기준)")
         for s in status:
             over = s["remaining"] < 0
-            if over:
-                rest = f'{-s["remaining"]:g}개 초과({order_log.box_label(-s["remaining"])})'
-            else:
-                rest = f'남은 {s["remaining"]:g}개({order_log.box_label(s["remaining"])})'
+            rest = f'{-s["remaining"]:g}개 초과' if over else f'남은 {s["remaining"]:g}개'
             self.quota_labels[s["category"]].config(
                 text=f'{s["category"]}  {s["ordered"]:g} / {s["limit"]:,}개   {rest}',
                 fg=theme.DANGER if over else theme.ACCENT,

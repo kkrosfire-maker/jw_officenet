@@ -311,6 +311,8 @@ def order_log_rows(exclude_order_id: int | None = None):
         rows = conn.execute(
             """SELECT o.id AS order_id, o.order_date, i.category,
                       COALESCE(i.order_name, l.raw_text) AS raw_text, l.quantity,
+                      COALESCE(i.product_name, l.requirement_text) AS item_product,
+                      COALESCE(i.spec, l.spec_text) AS item_spec,
                       l.requirement_text, l.spec_text, l.applied_buy, l.applied_sell, l.remark
                FROM order_lines l
                JOIN orders o ON o.id = l.order_id

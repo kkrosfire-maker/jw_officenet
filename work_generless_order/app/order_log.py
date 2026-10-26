@@ -12,14 +12,30 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from app.config import MONTHLY_QUOTA, PIECES_PER_BOX
 
 
-def to_pieces(boxes) -> float:
-    """주문 수량(박스)을 낱개 수로 바꾼다."""
-    return (boxes or 0) * PIECES_PER_BOX
+# 마스터 제품명·규격에 적힌 박스당 수량 표기: 25/B, 100개, 100ea, 100(1박스), 100/개
+# '대박스 12개'는 큰 박스 안의 박스 수라서 제외한다.
+_BOX_QTY_RE = re.compile(r"(?<!대박스 )(?<!대박스)(?<![\d.])(\d+)\s*(?:개|ea\b|/\s*B\b|\(1박스\)|/\s*개)",
+                         re.IGNORECASE)
 
 
-def box_label(pieces: float) -> str:
-    """낱개 수를 '2박스' 처럼 박스 수로 표시."""
-    return f"{pieces / PIECES_PER_BOX:g}박스"
+def pieces_per_box(item: dict | None) -> int:
+    """마스터 품목의 박스당 낱개 수. 제품명·규격에 표기가 없으면 PIECES_PER_BOX(100)."""
+    item = item or {}
+    text = f'{item.get("product_name") or ""} {item.get("spec") or ""}'
+    for m in _BOX_QTY_RE.finditer(text):
+        n = int(m.group(1))
+        if n > 1:
+            return n
+    return PIECES_PER_BOX
+
+
+def to_pieces(boxes, item: dict | None = None) -> float:
+    """주문 수량(박스)을 그 품목의 박스당 수량으로 곱해 낱개 수로 바꾼다."""
+    return (boxes or 0) * pieces_per_box(item)
+
+
+def _row_item(row: dict) -> dict:
+    return {"product_name": row.get("item_product"), "spec": row.get("item_spec")}
 
 
 def parse_order_date(text: str | None) -> dt.date | None:
@@ -36,7 +52,8 @@ def parse_order_date(text: str | None) -> dt.date | None:
 
 
 def month_usage(rows, year: int, month: int) -> dict[str, float]:
-    """rows: [{order_date, category, quantity(박스)}, ...] → 해당 월 한도 품목별 낱개 합계."""
+    """rows: [{order_date, category, quantity(박스), item_product, item_spec}, ...]
+    → 해당 월 한도 품목별 낱개 합계."""
     usage = {cat: 0.0 for cat in MONTHLY_QUOTA}
     for row in rows:
         cat = row.get("category")
@@ -44,7 +61,7 @@ def month_usage(rows, year: int, month: int) -> dict[str, float]:
             continue
         d = parse_order_date(row.get("order_date"))
         if d and d.year == year and d.month == month:
-            usage[cat] += to_pieces(row.get("quantity"))
+            usage[cat] += to_pieces(row.get("quantity"), _row_item(row))
     return usage
 
 
@@ -60,8 +77,9 @@ def quota_status(saved: dict[str, float], current: dict[str, float]) -> list[dic
 
 # ---- 엑셀 기록 파일 ----
 FONT_NAME = "맑은 고딕"
-LOG_HEADER = ["주문일자", "항목", "품목", "수량(박스)","제품명", "규격", "매입가", "매출가", "특이사항"]
-LOG_WIDTHS = [12, 14, 26, 8, 50, 18, 11, 11, 24]
+LOG_HEADER = ["주문일자", "항목", "품목", "수량(박스)", "낱개(니들·시린지)", "제품명", "규격",
+              "매입가", "매출가", "특이사항"]
+LOG_WIDTHS = [12, 14, 26, 11, 17, 50, 18, 11, 11, 24]
 PRICE_FORMAT = "#,##0"
 THIN = Side(style="thin", color="BFBFBF")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
@@ -108,9 +126,11 @@ def write_order_log(rows, output_path: Path) -> Path:
     _write_table(
         ws, LOG_HEADER, LOG_WIDTHS,
         [(_date_label(r.get("order_date")), r.get("category") or "", r.get("raw_text") or "",
-          r.get("quantity"), r.get("requirement_text") or "", r.get("spec_text") or "",
+          r.get("quantity"),
+          to_pieces(r.get("quantity"), _row_item(r)) if r.get("category") in MONTHLY_QUOTA else None,
+          r.get("requirement_text") or "", r.get("spec_text") or "",
           r.get("applied_buy"), r.get("applied_sell"), r.get("remark") or "") for r in rows],
-        centered={1, 2, 4, 6}, price_cols={7, 8},
+        centered={1, 2, 4, 5, 7}, price_cols={8, 9},
     )
 
     # 월별 니들·시린지 합계(한도 대비)
@@ -119,7 +139,7 @@ def write_order_log(rows, output_path: Path) -> Path:
         d = parse_order_date(r.get("order_date"))
         if d and r.get("category") in MONTHLY_QUOTA:
             bucket = months.setdefault((d.year, d.month), {c: 0.0 for c in MONTHLY_QUOTA})
-            bucket[r["category"]] += to_pieces(r.get("quantity"))
+            bucket[r["category"]] += to_pieces(r.get("quantity"), _row_item(r))
     summary = wb.create_sheet("월별 한도")
     header = ["월"] + [f"{c} 주문(개, 한도 {limit:,})" for c, limit in MONTHLY_QUOTA.items()] \
         + [f"{c} 남은 개수" for c in MONTHLY_QUOTA]

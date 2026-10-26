@@ -6,7 +6,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from app.order_log import month_usage, parse_order_date, quota_status, write_order_log
+from app.order_log import month_usage, parse_order_date, pieces_per_box, quota_status, write_order_log
 
 
 class ParseOrderDateTest(unittest.TestCase):
@@ -18,12 +18,32 @@ class ParseOrderDateTest(unittest.TestCase):
         self.assertIsNone(parse_order_date(""))
 
 
+class PiecesPerBoxTest(unittest.TestCase):
+    def check(self, product, spec, expected):
+        self.assertEqual(pieces_per_box({"product_name": product, "spec": spec}), expected)
+
+    def test_reads_box_size_from_master_text(self):
+        self.check("일회용주사기/성심50CC(25/B)/50CC/18G/온더스", "50CC/18G", 25)
+        self.check("성심주사기 20cc 18g/50개/SS-S2018/청라", "50개", 50)
+        self.check("Needle/27gx13mm/100ea/DN-2713", "27gx13mm", 100)
+        self.check('D-syringe 3cc 23X1" /100(1박스)/개', "개", 100)
+
+    def test_ignores_big_box_count(self):
+        self.check("일회용주사기/50cc(25/B)정림/50cc/18G/온더스(대박스 12개)", "50cc/18G", 25)
+
+    def test_default_when_not_written(self):
+        self.check("일회용니들(Nano needle)", "33G 4mm", 100)
+        self.assertEqual(pieces_per_box(None), 100)
+
+
 class QuotaTest(unittest.TestCase):
     ROWS = [  # quantity는 박스(1박스=100개)
         {"order_date": "261001", "category": "니들", "quantity": 1},
         {"order_date": "261015", "category": "니들", "quantity": 0.5},
         {"order_date": "260930", "category": "니들", "quantity": 9},  # 지난달
-        {"order_date": "261002", "category": "시린지", "quantity": 3},
+        {"order_date": "261002", "category": "시린지", "quantity": 2},
+        {"order_date": "261003", "category": "시린지", "quantity": 4,  # 50cc 25개/박스 → 100개
+         "item_product": "일회용주사기/50cc(25/B)정림", "item_spec": "50cc/18G"},
         {"order_date": "261002", "category": "수액", "quantity": 7},  # 한도 대상 아님
         {"order_date": "261002", "category": None, "quantity": 7},
     ]
