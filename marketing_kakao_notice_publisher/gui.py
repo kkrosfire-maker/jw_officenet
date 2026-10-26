@@ -67,8 +67,13 @@ class App(tk.Tk):
         tk.Button(head, text="학습", width=8, command=self.on_learn).pack(side="right", padx=(0, 4))
         self.body = scrolledtext.ScrolledText(self, height=12, font=("맑은 고딕", 10))
         self.body.pack(fill="both", expand=True, padx=10)
-        self.meta = tk.Label(self, text="", anchor="w", fg="#555")
-        self.meta.pack(fill="x", padx=10, pady=(6, 10))
+        meta_row = tk.Frame(self)
+        meta_row.pack(fill="x", padx=10, pady=(6, 10))
+        self.count = tk.Label(meta_row, text="", anchor="e", font=("맑은 고딕", 10, "bold"))
+        self.count.pack(side="right")
+        self.meta = tk.Label(meta_row, text="", anchor="w", fg="#555")
+        self.meta.pack(side="left", fill="x", expand=True)
+        self.body.bind("<<Modified>>", self.on_body_change)
 
         tk.Label(self, text="이미지 (클릭하면 크게 보기)", anchor="w").pack(fill="x", padx=10, pady=(0, 4))
         strip = tk.Frame(self)
@@ -91,6 +96,21 @@ class App(tk.Tk):
         self.log.pack(fill="both", padx=10, pady=(0, 6))
         self.after(150, self.pump)
 
+    # --- 글자수: 300자 제한은 인사말·마무리 문구까지 합친 메시지 전체 기준
+    def msg_len(self) -> int:
+        body = self.body.get("1.0", "end").strip()
+        date = self.info["date"] if self.info else "00/00"
+        return len(kakao_biz.build_message(date, body))
+
+    def on_body_change(self, _e=None):
+        self.body.edit_modified(False)
+        if not self.body.get("1.0", "end").strip():
+            return self.count.config(text="")
+        n, lim = self.msg_len(), kakao_biz.MSG_LIMIT
+        over = n > lim
+        self.count.config(text=f"메시지 {n}/{lim}자" + (f" ({n - lim}자 초과)" if over else ""),
+                          fg="#d00000" if over else "#1a7f37")
+
     # --- 새화면 / 끝내기
     def on_reset(self):
         """입력·추출 결과·로그를 비우고 처음 상태로 돌린다."""
@@ -102,6 +122,7 @@ class App(tk.Tk):
         self.url.delete(0, "end")
         self.body.delete("1.0", "end")
         self.meta.config(text="")
+        self.count.config(text="")
         for w in self.thumb_row.winfo_children():
             w.destroy()
         self._thumbs.clear()
@@ -259,6 +280,10 @@ class App(tk.Tk):
     def on_run(self):
         body = self.body.get("1.0", "end").strip()
         date = self.info["date"]
+        n, lim = self.msg_len(), kakao_biz.MSG_LIMIT
+        if n > lim:  # 소식만 발행되고 메시지에서 멈추는 일이 없게 미리 막는다
+            return messagebox.showwarning(
+                "글자수 초과", f"메시지가 {n}자로 {lim}자를 {n - lim}자 넘습니다.\n발췌문을 줄인 뒤 다시 눌러 주세요.", parent=self)
         if not messagebox.askyesno(
             "소식 발행 확인",
             f"'{date} 공지사항' 소식을 채널에 실제로 발행합니다.\n(친구들에게 공개됩니다)\n\n계속할까요?",

@@ -1,5 +1,6 @@
 """카카오비즈니스센터 자동화: 소식 발행 + 채널 메시지 작성(발송 직전까지)."""
 import os
+import re
 
 from playwright.sync_api import BrowserContext, Page
 
@@ -32,8 +33,12 @@ def is_logged_in(page: Page) -> bool:
 def has_post(page: Page, date: str) -> bool:
     """'내 소식' 목록이 다 뜬 뒤 '{date} 공지사항' 소식이 있는지 확인한다."""
     page.goto(BASE + "posts", wait_until="domcontentloaded")
-    # 2026-10: 목록 항목의 메뉴 버튼 이름이 '소식 관리 메뉴' -> '더보기 메뉴'로 바뀜
-    page.get_by_role("button", name="더보기 메뉴").first.wait_for(timeout=20000)
+    # 목록 항목 메뉴 버튼 이름이 '소식 관리 메뉴' <-> '더보기 메뉴'로 수시로 바뀐다 (2026-10 두 번).
+    # 이름에 기대지 않도록 '...메뉴' 버튼 또는 '공지사항' 제목 중 먼저 뜨는 것을 기다린다.
+    menu = page.get_by_role("button", name=re.compile(r"메뉴$"))
+    item = page.get_by_text(re.compile(r"^\d{1,2}/\d{1,2} 공지사항$"))
+    menu.or_(item).first.wait_for(timeout=20000)
+    page.wait_for_timeout(1000)
     return page.get_by_text(f"{date} 공지사항", exact=True).count() > 0
 
 
