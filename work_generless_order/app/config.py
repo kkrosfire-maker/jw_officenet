@@ -18,8 +18,10 @@ EXPORT_DIR = DATA_DIR / "exports"
 # 저장할 때마다 전체 주문 이력으로 새로 만드는 기록 엑셀
 ORDER_LOG_XLSX = DATA_DIR / "주문기록.xlsx"
 
-# 한 달에 주문할 수 있는 수량(마스터의 '항목' 분류 기준)
+# 한 달에 주문할 수 있는 낱개 수량(마스터의 '항목' 분류 기준).
+# 주문 화면의 수량은 박스 단위라서 PIECES_PER_BOX를 곱해 낱개로 바꿔 비교한다.
 MONTHLY_QUOTA = {"니들": 400, "시린지": 1400}
+PIECES_PER_BOX = 100
 
 # 최초 실행 시 읽어들이는 기본 마스터 엑셀. 사용자가 교체하면 그 경로를
 # settings 테이블(MASTER_PATH_SETTING)에 저장해 이후부터는 그쪽을 쓴다.

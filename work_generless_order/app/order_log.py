@@ -9,7 +9,17 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
-from app.config import MONTHLY_QUOTA
+from app.config import MONTHLY_QUOTA, PIECES_PER_BOX
+
+
+def to_pieces(boxes) -> float:
+    """주문 수량(박스)을 낱개 수로 바꾼다."""
+    return (boxes or 0) * PIECES_PER_BOX
+
+
+def box_label(pieces: float) -> str:
+    """낱개 수를 '2박스' 처럼 박스 수로 표시."""
+    return f"{pieces / PIECES_PER_BOX:g}박스"
 
 
 def parse_order_date(text: str | None) -> dt.date | None:
@@ -26,7 +36,7 @@ def parse_order_date(text: str | None) -> dt.date | None:
 
 
 def month_usage(rows, year: int, month: int) -> dict[str, float]:
-    """rows: [{order_date, category, quantity}, ...] → 해당 월 한도 품목별 수량 합계."""
+    """rows: [{order_date, category, quantity(박스)}, ...] → 해당 월 한도 품목별 낱개 합계."""
     usage = {cat: 0.0 for cat in MONTHLY_QUOTA}
     for row in rows:
         cat = row.get("category")
@@ -34,7 +44,7 @@ def month_usage(rows, year: int, month: int) -> dict[str, float]:
             continue
         d = parse_order_date(row.get("order_date"))
         if d and d.year == year and d.month == month:
-            usage[cat] += row.get("quantity") or 0
+            usage[cat] += to_pieces(row.get("quantity"))
     return usage
 
 
@@ -50,7 +60,7 @@ def quota_status(saved: dict[str, float], current: dict[str, float]) -> list[dic
 
 # ---- 엑셀 기록 파일 ----
 FONT_NAME = "맑은 고딕"
-LOG_HEADER = ["주문일자", "항목", "품목", "수량", "제품명", "규격", "매입가", "매출가", "특이사항"]
+LOG_HEADER = ["주문일자", "항목", "품목", "수량(박스)","제품명", "규격", "매입가", "매출가", "특이사항"]
 LOG_WIDTHS = [12, 14, 26, 8, 50, 18, 11, 11, 24]
 PRICE_FORMAT = "#,##0"
 THIN = Side(style="thin", color="BFBFBF")
@@ -109,16 +119,16 @@ def write_order_log(rows, output_path: Path) -> Path:
         d = parse_order_date(r.get("order_date"))
         if d and r.get("category") in MONTHLY_QUOTA:
             bucket = months.setdefault((d.year, d.month), {c: 0.0 for c in MONTHLY_QUOTA})
-            bucket[r["category"]] += r.get("quantity") or 0
+            bucket[r["category"]] += to_pieces(r.get("quantity"))
     summary = wb.create_sheet("월별 한도")
-    header = ["월"] + [f"{c} (한도 {limit:,})" for c, limit in MONTHLY_QUOTA.items()] \
-        + [f"{c} 남은 수량" for c in MONTHLY_QUOTA]
+    header = ["월"] + [f"{c} 주문(개, 한도 {limit:,})" for c, limit in MONTHLY_QUOTA.items()] \
+        + [f"{c} 남은 개수" for c in MONTHLY_QUOTA]
     summary_rows = []
     for (y, m) in sorted(months, reverse=True):
         used = months[(y, m)]
         summary_rows.append([f"{y}-{m:02d}"] + [used[c] for c in MONTHLY_QUOTA]
                             + [MONTHLY_QUOTA[c] - used[c] for c in MONTHLY_QUOTA])
-    _write_table(summary, header, [10] + [16] * (len(header) - 1), summary_rows,
+    _write_table(summary, header, [10] + [22] * (len(header) - 1), summary_rows,
                  centered=set(range(1, len(header) + 1)))
 
     output_path = Path(output_path)
