@@ -70,7 +70,7 @@ class Api:
 
     def _close(self):
         w = self._window
-        if w:
+        if w and not docking.is_minimized():  # 최소화 중엔 위치가 화면 밖(-32000)이라 저장하지 않고 이전 위치를 둔다
             try:
                 with open(WIN, "w", encoding="utf-8") as f:
                     json.dump({"x": w.x, "y": w.y, "width": w.width, "height": w.height}, f)
@@ -135,7 +135,7 @@ def main():
     api = Api()
     x, y, w, h = docking.start_geometry(WIN)
     win = webview.create_window(docking.TITLE, os.path.join(HERE, "index.html"), js_api=api, x=x, y=y, width=w, height=h,
-                                min_size=(300, 420), on_top=False, background_color="#FFFFFF")
+                                min_size=docking.MIN_SIZE, on_top=False, background_color="#FFFFFF")
     api._window = win
     win.events.closing += api._close
     dock = "--dock" in sys.argv

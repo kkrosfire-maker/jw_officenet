@@ -33,6 +33,12 @@ def _frame(u, hwnd):
     return r, f
 
 
+def is_minimized():
+    u = _user32()
+    hwnd = u.FindWindowW(None, TITLE)
+    return bool(hwnd and u.IsIconic(hwnd))
+
+
 def is_open():
     return bool(_user32().FindWindowW(None, TITLE))
 
@@ -87,18 +93,42 @@ def follow_board(wait_sec):
             last = dock_next_to_board(0) or last
 
 
+MIN_SIZE = (300, 420)
+
+
+def usable(g, screen):
+    """저장된 창 위치가 쓸 만한지. 최소화 중에 저장되면 (-32000, -32000, 160x28) 처럼 화면 밖·쪼그라든 값이 남는다.
+    screen = 모든 모니터를 합친 (왼, 위, 오른, 아래). 창 윗부분이 화면 안에 100px 이상 걸쳐야 통과."""
+    x, y, w, h = g
+    left, top, right, bottom = screen
+    if w < MIN_SIZE[0] or h < MIN_SIZE[1]:
+        return False
+    return x + w - 100 >= left and x + 100 <= right and y >= top - 20 and y + 100 <= bottom
+
+
+def _virtual_screen():
+    u = ctypes.windll.user32
+    x, y = u.GetSystemMetrics(76), u.GetSystemMetrics(77)  # SM_X/YVIRTUALSCREEN
+    return x, y, x + u.GetSystemMetrics(78), y + u.GetSystemMetrics(79)
+
+
 def start_geometry(saved_path):
-    """저장된 창 위치(없으면 화면 오른쪽 끝)를 (x, y, 너비, 높이)로 돌려준다."""
+    """저장된 창 위치(없거나 화면 밖이면 화면 오른쪽 끝)를 (x, y, 너비, 높이)로 돌려준다."""
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
     try:
         with open(saved_path, encoding="utf-8") as f:
             g = json.load(f)
-        return int(g["x"]), int(g["y"]), int(g["width"]), int(g["height"])
-    except (OSError, ValueError, KeyError):
+        g = int(g["x"]), int(g["y"]), int(g["width"]), int(g["height"])
+        if usable(g, _virtual_screen()):
+            return g
+    except (OSError, ValueError, KeyError, TypeError):
         pass
     w, h = DEFAULT_SIZE
     try:
         u = ctypes.windll.user32
-        u.SetProcessDPIAware()
         sw, sh = u.GetSystemMetrics(0), u.GetSystemMetrics(1)
         return max(sw - w - 20, 0), 20, w, min(h, sh - 80)
     except Exception:
