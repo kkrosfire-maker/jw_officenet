@@ -24,7 +24,7 @@ def due_gap(task, ref_day):
 
 
 # ---- 반복 규칙 ----
-# "day" = 매일, "week:0"~"week:6" = 매주 월~일, "month:1"~"month:31" = 매월 N일(31 = 말일, 짧은 달은 마지막 날)
+# "day" = 매일(평일 월~금만, 토·일은 회차가 아니다), "week:0"~"week:6" = 매주 월~일, "month:1"~"month:31" = 매월 N일(31 = 말일, 짧은 달은 마지막 날)
 def _month_day(y, m, n):
     return date(y, m, min(n, calendar.monthrange(y, m)[1]))
 
@@ -53,6 +53,8 @@ def occ_on_or_before(rule, day):
             return c
         y, m = (day.year, day.month - 1) if day.month > 1 else (day.year - 1, 12)
         return _month_day(y, m, n)
+    while day.weekday() >= 5:  # 매일 = 평일. 주말이면 직전 금요일
+        day -= timedelta(days=1)
     return day
 
 
@@ -67,7 +69,10 @@ def occ_after(rule, day):
             return c
         y, m = (day.year, day.month + 1) if day.month < 12 else (day.year + 1, 1)
         return _month_day(y, m, n)
-    return day + timedelta(days=1)
+    day += timedelta(days=1)
+    while day.weekday() >= 5:  # 매일 = 평일. 주말은 건너뛰고 월요일
+        day += timedelta(days=1)
+    return day
 
 
 class JsonStore:

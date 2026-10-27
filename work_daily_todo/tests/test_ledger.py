@@ -96,9 +96,31 @@ class Daily(unittest.TestCase):
     def test_daily_is_pinned_section_and_never_late(self):
         lg, clock, _ = ledger()
         lg.add("매일", repeat="day")
-        clock.go("2026-10-25T09:00:00")
+        clock.go("2026-10-26T09:00:00")
         t = lg.view()["tasks"][0]
-        self.assertEqual((t["section"], t["date"]), ("routine", "2026-10-25"))
+        self.assertEqual((t["section"], t["date"]), ("routine", "2026-10-26"))
+
+    def test_daily_means_weekdays(self):
+        lg, clock, _ = ledger("2026-10-24T09:00:00")  # 토요일에 만들면 첫 회차는 월요일
+        lg.add("매일", repeat="day")
+        self.assertEqual(lg.tasks[0]["due"], "2026-10-26")
+
+    def test_done_friday_comes_back_monday_not_weekend(self):
+        lg, clock, _ = ledger("2026-10-23T09:00:00")  # 금
+        lg.add("매일", repeat="day")
+        lg.toggle(lg.tasks[0]["id"])
+        clock.go("2026-10-24T09:00:00")  # 토: 다음 회차는 월요일(D-2), 진행률에 안 잡힌다
+        t = lg.view()["tasks"][0]
+        self.assertEqual((t["due"], t["done_at"]), ("2026-10-26", None))
+        self.assertEqual(t["dday"]["text"], "D-2")
+
+    def test_open_friday_task_waits_over_weekend_then_moves_to_monday(self):
+        lg, clock, _ = ledger("2026-10-23T09:00:00")
+        lg.add("매일", repeat="day")
+        clock.go("2026-10-25T09:00:00")  # 일
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-10-23")
+        clock.go("2026-10-26T09:00:00")  # 월
+        self.assertEqual(lg.view()["tasks"][0]["due"], "2026-10-26")
 
     def test_done_yesterday_is_archived_and_reborn_unchecked(self):
         lg, clock, _ = ledger()

@@ -21,10 +21,12 @@ header{flex:none;padding:8px 14px 6px;border-bottom:2px solid var(--green);box-s
 .top small{display:block;font-size:11px;color:var(--green-tint);margin-top:1px}
 .pin{margin-left:auto;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:4px 10px;cursor:pointer}
 .pin.on{background:var(--green);color:#fff;border-color:var(--green)}
-.date{margin-top:5px;display:flex;align-items:baseline;gap:8px}
+.date{margin-top:5px;display:flex;align-items:center;gap:8px}
 .date b{font-size:26px;color:var(--green);letter-spacing:-.6px}
-.date span{font-size:14px}
-.date i{margin-left:auto;font-style:normal;font-size:12px;color:var(--green-tint)}
+.date .wk{display:flex;flex-direction:column;line-height:1.15}
+.date .wk i{font-style:normal;font-size:11px;color:var(--green-tint)}
+.date .wk span{font-size:14px}
+.date .cnt{margin-left:auto;font-size:15px;font-weight:700;color:var(--green)}
 .bar{height:6px;border-radius:99px;background:var(--hover);margin-top:2px;overflow:hidden}
 .bar div{height:100%;width:0;background:var(--green);border-radius:99px;transition:width .3s}
 .add{flex:none;display:flex;gap:6px;padding:10px 14px 0}
@@ -105,10 +107,10 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
     <div><h1>오늘의 할 일</h1><small>JW UNIUS · 하루 체크리스트</small></div>
     <button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button>
   </div>
-  <div class="date"><b id="dLabel"></b><span id="dWeek"></span><i id="dYear"></i></div>
+  <div class="date"><b id="dLabel"></b><div class="wk"><i id="dYear"></i><span id="dWeek"></span></div><span class="cnt" id="dCount" title="오늘 마감(D-0)인 일 중 완료 / 전체"></span></div>
   <div class="bar"><div id="prog"></div></div>
 </header>
-<div class="add"><input id="inp" placeholder="할 일을 적고 Enter" maxlength="200" autocomplete="off"><button class="dbtn" id="repBtn" title="반복 루틴 (매일·매주·매월)">🔁</button><button class="dbtn" id="dueBtn" title="완료일(마감일) 지정">📅</button><button id="addBtn" title="추가">＋</button></div>
+<div class="add"><input id="inp" placeholder="할 일을 적고 Enter" maxlength="200" autocomplete="off"><button class="dbtn" id="repBtn" title="반복 루틴 (매일(평일)·매주·매월)">🔁</button><button class="dbtn" id="dueBtn" title="완료일(마감일) 지정">📅</button><button id="addBtn" title="추가">＋</button></div>
 <main id="main"></main>
 <footer><button class="pri" id="bSave">저장 (엑셀)</button><button id="bQuit">종료</button></footer>
 <div id="toast"></div>
@@ -198,7 +200,7 @@ function itemEl(t){
   const acts=el('div','acts');
   const btn=(cls,ic,tip,fn)=>{const b=el('button',cls,ic);b.title=tip;b.onclick=fn;acts.appendChild(b);return b};
   btn('','📅','완료일(마감일) 지정',()=>pickDate(t.due,v=>run('set_due',t.id,v)));
-  btn(t.repeat?'on':'','🔁',t.repeat?`반복: ${repText(t.repeat)} (눌러서 변경)`:'반복 루틴 (매일·매주·매월)',()=>pickRepeat(t.repeat,r=>run('set_repeat',t.id,r)));
+  btn(t.repeat?'on':'','🔁',t.repeat?`반복: ${repText(t.repeat)} (눌러서 변경)`:'반복 루틴 (매일(평일)·매주·매월)',()=>pickRepeat(t.repeat,r=>run('set_repeat',t.id,r)));
   btn('','↳','후속 작업 추가',()=>ui.toggleFu(t.id));
   btn(ui.notes.has(t.id)?'on':'','✎','메모',()=>ui.toggleNote(t.id));
   btn('x','✕','삭제',()=>askDelete(t));
@@ -208,6 +210,7 @@ function itemEl(t){
 function render(){
   if(!S)return;
   $('dLabel').textContent=S.label;$('dWeek').textContent=S.weekday;$('dYear').textContent=S.year;
+  const d0=S.tasks.filter(t=>t.due===S.today);$('dCount').textContent=`${d0.filter(t=>t.done_at).length}/${d0.length}`;
   const main=$('main');const keep=main.scrollTop;main.innerHTML='';
   const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.due.localeCompare(b.due));
   const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>a.due.localeCompare(b.due));
@@ -260,7 +263,7 @@ function repDraw(){
   $('rWeek').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.d===rep.wd));
   $('rMonth').style.display=rep.kind==='month'?'block':'none';$('rMonth').value=rep.md;
   const r=repRule();
-  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'매일 맨 위에 나타나요.':`반복 루틴에 늘 보이고, ${repText(r)}까지 남은 날을 D-day로 알려줘요.`;
+  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'평일(월~금)마다 맨 위에 나타나요. 토·일은 쉬어요.':`반복 루틴에 늘 보이고, ${repText(r)}까지 남은 날을 D-day로 알려줘요.`;
 }
 function pickRepeat(cur,cb){
   const[k,n]=(cur||'').split(':');const now=new Date();
