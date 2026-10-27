@@ -249,6 +249,22 @@ def install_git(test: bool):
         warn("Git 설치를 확인하지 못했습니다. https://git-scm.com 에서 직접 설치해 주세요.")
 
 
+def install_sharex(test: bool):
+    if test:
+        info("(테스트 모드: 건너뜀)")
+        return
+    if any((Path(os.environ.get(v, "")) / "ShareX" / "ShareX.exe").exists()
+           for v in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA")):
+        ok("ShareX 이미 설치됨")
+        return
+    winget_install("ShareX.ShareX", "ShareX")
+    if any((Path(os.environ.get(v, "")) / "ShareX" / "ShareX.exe").exists()
+           for v in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA")):
+        ok("ShareX 설치 완료")
+    else:
+        warn("ShareX 설치를 확인하지 못했습니다. https://getsharex.com 에서 직접 설치해 주세요.")
+
+
 def install_claude(p: Paths, test: bool):
     if test:
         info("(테스트 모드: 건너뜀)")
@@ -635,7 +651,7 @@ def main():
     print(f"""
   이 프로그램이 하는 일
    - 바탕화면에 workspace 폴더 만들기 ({p.workspace})
-   - Git, Claude Code, Antigravity IDE 설치 (이미 있으면 건너뜀)
+   - Git, Claude Code, Antigravity IDE, ShareX 설치 (이미 있으면 건너뜀)
    - 설정·스킬(/c-push 등)·단축 명령(q, ㅂ, cc) 적용
    - 바탕화면 바로가기, claude.ai 즐겨찾기 추가
 """)
@@ -656,6 +672,7 @@ def main():
         ("바탕화면 바로가기 만들기", lambda: make_shortcuts(p)),
         ("claude.ai 즐겨찾기 추가", lambda: add_favorites(p, test, args.yes)),
         ("Antigravity IDE 설치·터미널 설정", lambda: install_ide(p, test)),
+        ("ShareX(화면 캡처) 설치 확인", lambda: install_sharex(test)),
         ("Antigravity IDE 바로가기 만들기", lambda: make_ide_shortcut(p) if (test or p.ide_exe.exists()) else info("(IDE 미설치: 건너뜀)")),
     ]
     for i, (title, fn) in enumerate(steps, start=1):
