@@ -10,9 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import db, excel_export, grid_edit, importer, matching, order_log, theme
 from app.config import EXPORT_DIR, ORDER_LOG_XLSX, SOURCE_MASTER_SHEET
-from app.dialogs import (_format_margin, _margin_rate,CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
-                         PriceHistoryDialog)
-from app.order import TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates
+from app.dialogs import (_format_margin, _margin_rate, CandidatePickerDialog, MasterReplaceDialog, NewItemDialog,
+                         OrderHistoryDialog, PriceHistoryDialog)
+from app.order import (TAG_DANGER, TAG_NORMAL, TAG_WARNING, OrderEditSession, find_danger_lines, find_price_updates,
+                       line_from_saved)
 
 
 try:  # 탐색기에서 파일을 끌어다 놓는 기능(없어도 나머지 기능은 그대로 동작)
@@ -50,6 +51,10 @@ class OrderTab(ttk.Frame):
         ttk.Entry(date_row, textvariable=self.date_var, width=10).pack(side="left", padx=8)
         ttk.Label(date_row, text="품목 칸에 입력 후 Enter를 누르면 매칭됩니다.",
                   style="CardSecondary.TLabel").pack(side="left", padx=(16, 0))
+        # 저장된 기록을 불러와 고치는 중이면 표시(저장하면 그 기록을 덮어씀)
+        self.editing_label = tk.Label(date_row, text="", bg=theme.CARD_BG, fg=theme.ACCENT,
+                                      font=theme.FONT_BOLD)
+        self.editing_label.pack(side="right")
 
         # 니들·시린지 이번 달 주문량 / 한도
         quota_row = ttk.Frame(top_card, style="Card.TFrame")
@@ -99,6 +104,8 @@ class OrderTab(ttk.Frame):
         action_row.pack(fill="x")
         ttk.Button(action_row, text="저장 (주문 기록 + 학습 반영)", style="Accent.TButton",
                    command=self._save_order).pack(side="left")
+        ttk.Button(action_row, text="기록 불러오기(수정)", style="Secondary.TButton",
+                   command=self._load_saved_order).pack(side="left", padx=8)
         ttk.Button(action_row, text="주문기록 열기", style="Secondary.TButton",
                    command=self._open_order_log).pack(side="left", padx=8)
         ttk.Button(action_row, text="엑셀로 내보내기", style="Secondary.TButton",
@@ -234,9 +241,49 @@ class OrderTab(ttk.Frame):
             return
         self.editor.cancel_active()
         self.session = OrderEditSession()
-        self.saved_order_id = None
+        self._set_saved_order(None)
         theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, None, False)
         self.date_var.set(dt.date.today().strftime("%y%m%d"))
+        self._refresh_grid()
+        self.tree.selection_remove(*self.tree.selection())
+
+    def _set_saved_order(self, order_id):
+        self.saved_order_id = order_id
+        self.editing_label.config(
+            text="" if order_id is None else "저장된 주문 수정 중 · 저장하면 이 기록이 바뀝니다")
+
+    # ---- 저장된 주문 불러오기(수정) ----
+    def _load_saved_order(self):
+        self.editor.cancel_active()
+        dialog = OrderHistoryDialog(self, current_order_id=self.saved_order_id)
+        self.wait_window(dialog)
+
+        if dialog.deleted:
+            if self.saved_order_id in dialog.deleted:
+                self._set_saved_order(None)  # 지운 기록이면 지금 화면은 새 주문으로 취급
+            self._refresh_quota()
+            self._rewrite_order_log(quiet=True)
+
+        order_id = dialog.result
+        if order_id is None or order_id == self.saved_order_id:
+            return
+        if self.session.lines and not messagebox.askyesno(
+            "기록 불러오기", "지금 화면에 입력한 내용은 사라집니다.\n불러올까요?"
+        ):
+            return
+        order, rows = db.get_order(order_id)
+        if order is None:
+            messagebox.showwarning("기록 불러오기", "그 주문 기록을 찾지 못했습니다.")
+            return
+
+        session = OrderEditSession()
+        for row in rows:
+            item = db.get_item(row["item_id"]) if row.get("item_id") else None
+            session.lines.append(line_from_saved(row, item))
+        self.session = session
+        self._set_saved_order(order_id)
+        theme.update_sort_headings(self.tree, self.COLUMNS, self.HEADINGS, None, False)
+        self.date_var.set(order["order_date"])
         self._refresh_grid()
         self.tree.selection_remove(*self.tree.selection())
 
@@ -325,12 +372,15 @@ class OrderTab(ttk.Frame):
             if not messagebox.askyesno("월 주문 한도 초과", f"이번 달 주문 가능량을 넘습니다:\n{msg}\n\n그대로 저장할까요?"):
                 return
 
+        order_id = None
         if self.saved_order_id is not None:
-            if not messagebox.askyesno("다시 저장", "이미 저장한 주문입니다.\n지금 내용으로 기록을 덮어쓸까요?"):
+            if not messagebox.askyesno("다시 저장", "이미 저장된 주문입니다.\n지금 내용으로 기록을 고칠까요?"):
                 return
-            db.delete_order(self.saved_order_id)
-
-        order_id = db.create_order(self.date_var.get().strip())
+            # 주문 번호는 그대로 두고 내용만 바꾼다(기록이 그새 지워졌으면 새로 만든다)
+            if db.reset_order(self.saved_order_id, self.date_var.get().strip()):
+                order_id = self.saved_order_id
+        if order_id is None:
+            order_id = db.create_order(self.date_var.get().strip())
         for line in self.session.lines:
             item_id = None
             if line.item:
@@ -349,19 +399,26 @@ class OrderTab(ttk.Frame):
                 line.requirement_text, line.spec_text, line.buy_price, line.sell_price,
                 line.match_type, line.remark,
             )
-        self.saved_order_id = order_id
+        self._set_saved_order(order_id)
         self._refresh_quota()
 
-        try:
-            order_log.write_order_log(db.order_log_rows(), ORDER_LOG_XLSX)
-        except PermissionError:
-            messagebox.showwarning(
-                "저장 완료 (엑셀 기록 실패)",
-                "주문은 저장됐지만 주문기록 엑셀이 열려 있어 갱신하지 못했습니다.\n"
-                "엑셀을 닫고 다시 저장을 누르면 반영됩니다.",
-            )
+        if not self._rewrite_order_log():
             return
         messagebox.showinfo("저장 완료", f"주문 기록과 학습 반영이 완료되었습니다.\n\n기록 파일: {ORDER_LOG_XLSX}")
+
+    def _rewrite_order_log(self, quiet: bool = False) -> bool:
+        """DB 기준으로 주문기록 엑셀을 다시 만든다. 엑셀이 열려 있어 못 쓰면 False."""
+        try:
+            order_log.write_order_log(db.order_log_rows(), ORDER_LOG_XLSX)
+            return True
+        except PermissionError:
+            messagebox.showwarning(
+                "주문기록 엑셀 갱신 실패",
+                ("기록은 반영됐지만" if quiet else "주문은 저장됐지만")
+                + " 주문기록 엑셀이 열려 있어 갱신하지 못했습니다.\n"
+                "엑셀을 닫은 뒤 다시 저장하면 반영됩니다.",
+            )
+            return False
 
     def _open_order_log(self):
         if not ORDER_LOG_XLSX.exists():

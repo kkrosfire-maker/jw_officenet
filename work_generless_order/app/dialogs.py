@@ -287,3 +287,104 @@ class MasterReplaceDialog(tk.Toplevel):
     def _cancel(self):
         self.result = None
         self.destroy()
+
+
+class OrderHistoryDialog(tk.Toplevel):
+    """저장된 주문 기록 목록. 하나를 골라 주문 화면으로 불러오거나(수정용), 잘못 남은 기록을 지운다."""
+
+    COLUMNS = ("date", "count", "needle", "syringe", "items", "saved")
+    HEADINGS = {"date": "주문일자", "count": "품목 수", "needle": "니들(개)", "syringe": "시린지(개)",
+                "items": "품목", "saved": "저장 시각"}
+    WIDTHS = {"date": 90, "count": 60, "needle": 75, "syringe": 80, "items": 420, "saved": 130}
+
+    def __init__(self, parent, current_order_id=None):
+        super().__init__(parent)
+        self.title("주문 기록 불러오기")
+        self.configure(bg=theme.APP_BG)
+        self.resizable(True, True)
+        self.transient(parent)
+        self.grab_set()
+        self.bind("<Escape>", lambda e: self.destroy())
+
+        self.result = None  # 불러올 주문 번호
+        self.deleted: set[int] = set()  # 이 창에서 지운 주문 번호들
+        self.current_order_id = current_order_id
+
+        ttk.Label(self, text="불러와서 고칠 주문을 고르세요", style="Heading.TLabel").pack(
+            anchor="w", padx=16, pady=(16, 2))
+        ttk.Label(self, text="불러온 뒤 수량·품목을 고치고 저장하면 그 기록이 고친 내용으로 바뀝니다. "
+                             "주문이 아예 안 됐다면 '기록 삭제'로 지우세요.",
+                  style="Secondary.TLabel").pack(anchor="w", padx=16, pady=(0, 8))
+
+        self.tree = ttk.Treeview(self, columns=self.COLUMNS, show="headings", height=14)
+        for col in self.COLUMNS:
+            self.tree.heading(col, text=self.HEADINGS[col])
+            self.tree.column(col, width=self.WIDTHS[col], anchor="w" if col == "items" else "center")
+        self.tree.pack(fill="both", expand=True, padx=16, pady=(0, 8))
+        self.tree.tag_configure("current", background=theme.ACCENT_SOFT)
+        self.tree.bind("<Double-1>", lambda e: self._load())
+        self.tree.bind("<Return>", lambda e: self._load())
+        self.tree.bind("<Delete>", lambda e: self._delete())
+
+        btn_row = ttk.Frame(self)
+        btn_row.pack(fill="x", padx=16, pady=(0, 16))
+        ttk.Button(btn_row, text="기록 삭제", style="Secondary.TButton",
+                   command=self._delete).pack(side="left")
+        ttk.Button(btn_row, text="닫기", style="Secondary.TButton",
+                   command=self.destroy).pack(side="right")
+        ttk.Button(btn_row, text="불러오기", style="Accent.TButton",
+                   command=self._load).pack(side="right", padx=8)
+
+        self._render()
+        theme.autosize(self, min_w=920, min_h=420)
+        self.tree.focus_set()
+
+    def _render(self):
+        from app import order_log  # 순환 참조 피하려고 여기서 가져온다
+
+        self.tree.delete(*self.tree.get_children())
+        summaries = order_log.order_summaries(db.order_log_rows())
+        orders = db.list_orders()
+        for o in orders:
+            s = summaries.get(o["id"], {"names": []})
+            names = s["names"]
+            items = ", ".join(names[:4]) + (f" 외 {len(names) - 4}개" if len(names) > 4 else "")
+            d = order_log.parse_order_date(o["order_date"])
+            self.tree.insert("", "end", iid=str(o["id"]),
+                             tags=("current",) if o["id"] == self.current_order_id else (),
+                             values=(
+                d.isoformat() if d else o["order_date"], o["line_count"],
+                f'{s.get("니들", 0):g}' if s.get("니들") else "-",
+                f'{s.get("시린지", 0):g}' if s.get("시린지") else "-",
+                items, (o["created_at"] or "").replace("T", " ")[:16],
+            ))
+        if orders:
+            first = str(orders[0]["id"])
+            self.tree.selection_set(first)
+            self.tree.focus(first)
+
+    def _selected(self):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showinfo("안내", "주문을 선택해주세요.", parent=self)
+            return None
+        return int(sel[0])
+
+    def _load(self):
+        order_id = self._selected()
+        if order_id is None:
+            return
+        self.result = order_id
+        self.destroy()
+
+    def _delete(self):
+        order_id = self._selected()
+        if order_id is None:
+            return
+        date = self.tree.set(str(order_id), "date")
+        if not messagebox.askyesno("기록 삭제", f"{date} 주문 기록을 지울까요?\n"
+                                                "이번 달 주문 가능량에서도 빠집니다.", parent=self):
+            return
+        db.delete_order(order_id)
+        self.deleted.add(order_id)
+        self._render()

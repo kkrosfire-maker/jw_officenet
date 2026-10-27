@@ -77,6 +77,26 @@ class OrderLine:
         }
 
 
+def line_from_saved(row: dict, master_item: dict | None) -> OrderLine:
+    """저장된 주문 라인(order_lines 행)을 화면에서 다시 고칠 수 있는 OrderLine으로 되살린다.
+
+    가격은 그때 적용한 값을 그대로 쓴다. 그 뒤 마스터 단가가 바뀌었더라도, 고치지 않은 줄 때문에
+    다시 저장할 때 마스터를 옛 가격으로 되돌리자고 묻지 않도록 비교 기준도 적용 가격으로 맞춘다.
+    """
+    buy = row.get("applied_buy") or 0
+    sell = row.get("applied_sell") or 0
+    item = dict(master_item, buy_price=buy, sell_price=sell) if master_item else None
+    line = OrderLine(
+        raw_text=(master_item or {}).get("order_name") or row.get("raw_text") or "",
+        item=item, quantity=row.get("quantity") or 0,
+        requirement_text=row.get("requirement_text") or "", spec_text=row.get("spec_text") or "",
+        buy_price=buy, sell_price=sell, match_type=row.get("match_type") or "수동",
+        remark=row.get("remark") or "",
+    )
+    line.origin_text = row.get("raw_text") or line.raw_text
+    return line
+
+
 def find_danger_lines(lines: list[OrderLine]) -> list[OrderLine]:
     """역마진(매입가 > 매출가) 라인을 찾는다."""
     return [line for line in lines if line.is_margin_danger()]

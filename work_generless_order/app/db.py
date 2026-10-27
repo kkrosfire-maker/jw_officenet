@@ -298,8 +298,40 @@ def add_order_line(order_id, raw_text, item_id, quantity, requirement_text,
         )
 
 
+def list_orders():
+    """기록 불러오기 목록용: 저장된 주문 [{id, order_date, created_at, line_count}] (최근 저장순)."""
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT o.id, o.order_date, o.created_at, COUNT(l.id) AS line_count
+               FROM orders o LEFT JOIN order_lines l ON l.order_id = o.id
+               GROUP BY o.id ORDER BY o.id DESC"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_order(order_id: int):
+    """저장된 주문 하나 → (주문 dict, [라인 dict...]) — 라인은 저장 순서대로. 없으면 (None, [])."""
+    with connect() as conn:
+        order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        lines = conn.execute(
+            "SELECT * FROM order_lines WHERE order_id=? ORDER BY id", (order_id,)
+        ).fetchall()
+    return (dict(order) if order else None), [dict(l) for l in lines]
+
+
+def reset_order(order_id: int, order_date: str) -> bool:
+    """불러온 주문을 고쳐 저장할 때: 주문 번호는 그대로 두고 날짜를 바꾸고 라인을 비운다.
+    그 주문이 이미 지워졌으면 False."""
+    with connect() as conn:
+        cur = conn.execute("UPDATE orders SET order_date=? WHERE id=?", (order_date, order_id))
+        if cur.rowcount == 0:
+            return False
+        conn.execute("DELETE FROM order_lines WHERE order_id=?", (order_id,))
+        return True
+
+
 def delete_order(order_id: int) -> None:
-    """같은 주문을 다시 저장할 때 이전 기록을 지우고 새로 넣기 위해 쓴다."""
+    """잘못 남은 주문 기록(주문이 아예 안 된 경우 등)을 통째로 지운다."""
     with connect() as conn:
         conn.execute("DELETE FROM order_lines WHERE order_id=?", (order_id,))
         conn.execute("DELETE FROM orders WHERE id=?", (order_id,))

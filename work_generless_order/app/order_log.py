@@ -65,6 +65,18 @@ def month_usage(rows, year: int, month: int) -> dict[str, float]:
     return usage
 
 
+def order_summaries(rows) -> dict[int, dict]:
+    """기록 불러오기 목록용: 주문 번호별 {"names": [품목...], 한도 품목: 낱개 합계}."""
+    result: dict[int, dict] = {}
+    for row in rows:
+        s = result.setdefault(row.get("order_id"), {"names": [], **{c: 0.0 for c in MONTHLY_QUOTA}})
+        s["names"].append(row.get("raw_text") or "")
+        cat = row.get("category")
+        if cat in MONTHLY_QUOTA:
+            s[cat] += to_pieces(row.get("quantity"), _row_item(row))
+    return result
+
+
 def quota_status(saved: dict[str, float], current: dict[str, float]) -> list[dict]:
     """한도 품목별 [{category, ordered, limit, remaining}] — ordered는 저장된 주문 + 지금 입력 중인 주문."""
     result = []
