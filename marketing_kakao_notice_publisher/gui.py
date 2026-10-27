@@ -166,6 +166,15 @@ class App(tk.Tk):
                     self.attributes("-topmost", True)
                     self.attributes("-topmost", False)
                     messagebox.showinfo("완료", val, parent=self)
+                elif kind == "ask":
+                    style, title, msg, clip, ev, box = val
+                    if clip:
+                        self.clipboard_clear()
+                        self.clipboard_append(clip)
+                    self.lift()
+                    ask = messagebox.askyesno if style == "yesno" else messagebox.askokcancel
+                    box["ok"] = ask(title, msg, parent=self)
+                    ev.set()
                 elif kind == "enable":
                     self.btn_extract.config(state="normal")
                     self.btn_run.config(state="normal" if self.info else "disabled")
@@ -293,45 +302,101 @@ class App(tk.Tk):
         self.btn_run.config(state="disabled")
         threading.Thread(target=self._run, args=(date, body, list(self.image_paths)), daemon=True).start()
 
+    # --- 작업 스레드 -> 사용자에게 묻기 (대화상자는 메인 스레드에서 띄운다)
+    def ask(self, style: str, title: str, msg: str, clip: str | None = None) -> bool:
+        ev, box = threading.Event(), {}
+        self.q.put(("ask", (style, title, msg, clip, ev, box)))
+        ev.wait()
+        return bool(box.get("ok"))
+
+    def guard(self, name, how, err, clip):
+        """자동 진행이 막힌 단계를 사용자가 브라우저에서 직접 하도록 안내하고, 끝나면 이어간다."""
+        self.say(f"[막힘] '{name}' 단계를 자동으로 못 했습니다: {first_line(err)}")
+        self.say(f"   화면 기록 저장: {kakao_biz.DEBUG_DIR}")
+        ok = self.ask("okcancel", "직접 처리 필요",
+                      f"카카오 화면이 바뀌어 '{name}' 단계를 자동으로 못 했습니다.\n\n"
+                      f"브라우저에서 직접 해 주세요:\n{how}\n\n"
+                      "다 하셨으면 [확인] → 다음 단계부터 다시 자동으로 진행합니다.\n"
+                      "그만두려면 [취소].", clip)
+        if not ok:
+            raise RuntimeError(f"'{name}' 단계에서 중단했습니다.")
+        self.say(f"   → '{name}' 직접 처리 완료, 이어서 진행합니다.")
+
+    def _publish(self, page, date, body, paths, guard):
+        """소식이 없으면 발행한다. guard 가 있으면(보이는 창) 막힌 단계는 사용자에게 맡긴다."""
+        self.say("소식 발행 확인 중...")
+        try:
+            exists = kakao_biz.has_post(page, date)
+        except Exception as e:
+            kakao_biz.save_debug(page, "소식 목록 확인", e)
+            if guard is None:
+                raise
+            self.say(f"[막힘] 소식 목록을 자동으로 확인하지 못했습니다: {first_line(e)}")
+            exists = self.ask("yesno", "소식 목록 확인",
+                              f"브라우저에서 '내 소식' 목록을 봐 주세요.\n\n'{date} 공지사항' 소식이 이미 있나요?\n\n"
+                              "[예] 있음 → 발행 건너뜀\n[아니오] 없음 → 발행 진행")
+        if exists:
+            self.say(f"이미 '{date} 공지사항' 소식이 있어 발행을 건너뜁니다.")
+            return
+        self.say("소식 발행 중...")
+        kakao_biz.write_post(page, date, body, paths, submit=True, guard=guard)
+        self.say("소식 발행 완료")
+
     def _run(self, date, body, paths):
         from playwright.sync_api import sync_playwright
 
+        def visible_page():
+            c = kakao_biz.open_context(p, headless=False)
+            return c, (c.pages[0] if c.pages else c.new_page())
+
         try:
             with sync_playwright() as p:
-                # 소식 발행은 숨김(headless)으로 처리. 로그인이 풀렸을 때만 보이는 창으로 전환.
+                # 소식 발행은 숨김(headless)으로 처리. 로그인이 풀렸거나 막히면 보이는 창으로 전환.
                 ctx = kakao_biz.open_context(p, headless=True)
                 page = ctx.pages[0] if ctx.pages else ctx.new_page()
                 visible = False
                 if not kakao_biz.is_logged_in(page):
                     ctx.close()
+                    ctx, page = visible_page()
                     visible = True
-                    ctx = kakao_biz.open_context(p, headless=False)
-                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
                     self.say("로그인이 필요합니다. 열린 창에서 로그인해 주세요. (최대 5분 대기)")
                     page.goto("https://business.kakao.com/")
                     page.wait_for_url("**/space/**", timeout=300000)
-                self.say("소식 발행 확인 중...")
-                if kakao_biz.has_post(page, date):
-                    self.say(f"이미 '{date} 공지사항' 소식이 있어 발행을 건너뜁니다.")
+                if visible:
+                    self._publish(page, date, body, paths, guard=self.guard)
                 else:
-                    self.say("소식 발행 중...")
-                    kakao_biz.write_post(page, date, body, paths, submit=True)
-                    self.say("소식 발행 완료")
+                    try:
+                        self._publish(page, date, body, paths, guard=None)
+                    except Exception as e:
+                        # 숨김 창에선 사용자가 손댈 수 없으니 보이는 창으로 다시 연다.
+                        # 이미 등록까지 됐을 수 있으므로 _publish 가 목록부터 다시 확인한다(중복 발행 방지).
+                        self.say(f"[막힘] 소식 발행 중 문제: {first_line(e)}")
+                        self.say(f"   화면 기록 저장: {kakao_biz.DEBUG_DIR}")
+                        self.say("   보이는 창으로 다시 열어 이어서 진행합니다...")
+                        ctx.close()
+                        ctx, page = visible_page()
+                        visible = True
+                        self._publish(page, date, body, paths, guard=self.guard)
                 # 발송 전 직접 확인해야 하므로 메시지 작성부터는 보이는 창으로 연다.
                 if not visible:
                     ctx.close()
-                    ctx = kakao_biz.open_context(p, headless=False)
-                    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                    ctx, page = visible_page()
                 self.say("메시지 작성 중...")
-                kakao_biz.write_message(page, date, body)
+                kakao_biz.write_message(page, date, body, guard=self.guard)
                 self.say("✔ 메시지 작성 완료. 브라우저에서 내용을 확인하고 '다음'으로 진행해 발송하세요.")
                 self.say("   (창을 닫으면 종료됩니다)")
                 self.q.put(("done", "완료되었습니다.\n\n열려 있는 브라우저에서 내용을 확인하고\n'다음'으로 진행해 발송해 주세요."))
                 ctx.wait_for_event("close", timeout=0)
         except Exception as e:
-            self.say(f"[오류] {e}")
+            self.say(f"[오류] {first_line(e)}")
+            self.say(f"   화면 기록 폴더: {kakao_biz.DEBUG_DIR}")
         finally:
             self.q.put(("enable", None))
+
+
+def first_line(e: Exception) -> str:
+    """Playwright 오류는 호출 로그가 길게 붙으므로 첫 줄만 보여 준다 (전체는 debug 폴더에)."""
+    return (str(e).strip().splitlines() or [type(e).__name__])[0]
 
 
 def selftest() -> None:

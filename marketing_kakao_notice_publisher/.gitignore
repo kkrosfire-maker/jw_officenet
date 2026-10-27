@@ -8,3 +8,4 @@ dist/
 selftest.txt
 learned_rules.json
 corrections.jsonl
+debug/
