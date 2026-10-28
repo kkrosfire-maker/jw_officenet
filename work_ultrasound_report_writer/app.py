@@ -699,7 +699,7 @@ class ReportApp(tk.Tk):
         self._entry_row(box, "등록번호", "reg_no")
         self._entry_row(box, "성명", "patient_name")
         self._entry_row(box, "생년월일 또는 나이", "birth_or_age")
-        self._radio_row(box, "성별", "sex", ["남", "여"])
+        self._radio_row(box, "성별", "sex", ["남", "여"], default="남")
 
     def _build_exam_section(self, root):
         box = self._section(root, "2", "검사정보")
@@ -824,7 +824,13 @@ class ReportApp(tk.Tk):
                        highlightcolor=FIELD_FOCUS, font=self.font_body, padx=4, pady=2)
         text.pack(fill="x", padx=4, pady=1)
         self.vars["conclusion"] = text
-        self._reset_hooks.append(lambda t=text: t.delete("1.0", "end"))
+
+        def reset_conclusion(t=text):
+            t.delete("1.0", "end")
+            t.insert("1.0", "BPH")
+
+        reset_conclusion()
+        self._reset_hooks.append(reset_conclusion)
 
     def _text_box(self, parent, key, height=3, label=None):
         if label:
@@ -848,7 +854,7 @@ class ReportApp(tk.Tk):
         self._entry_row(box, "등록번호", "kd_reg_no")
         self._entry_row(box, "성명", "kd_patient_name")
         self._entry_row(box, "생년월일 또는 나이", "kd_birth_or_age")
-        self._radio_row(box, "성별", "kd_sex", ["남", "여"])
+        self._radio_row(box, "성별", "kd_sex", ["남", "여"], default="남")
 
     def _build_kidney_exam_section(self, root):
         box = self._section(root, "2", "검사정보")
@@ -912,7 +918,7 @@ class ReportApp(tk.Tk):
         self._entry_row(box, "등록번호", "sc_reg_no")
         self._entry_row(box, "성명", "sc_patient_name")
         self._entry_row(box, "생년월일 또는 나이", "sc_birth_or_age")
-        self._radio_row(box, "성별", "sc_sex", ["남", "여"])
+        self._radio_row(box, "성별", "sc_sex", ["남", "여"], default="남")
 
     def _build_scrotal_exam_section(self, root):
         box = self._section(root, "2", "검사정보")
@@ -989,11 +995,15 @@ class ReportApp(tk.Tk):
     def on_new(self):
         if not messagebox.askyesno("새로 작성", "입력한 내용을 모두 지우고 새로 작성하시겠습니까?"):
             return
+        self._reset_all()
+
+    def _reset_all(self):
         for hook in self._reset_hooks:
             try:
                 hook()
             except tk.TclError:
                 pass
+        self._show_form("전립선")
 
     # ---------- data collection ----------
 
@@ -1075,6 +1085,7 @@ class ReportApp(tk.Tk):
             return
 
         messagebox.showinfo("저장 완료", f"Word 파일이 저장되었습니다.\n{docx_path}")
+        self._reset_all()
 
     def on_save_hwp(self):
         cfg = self._FORM_CONFIG[self.current_form]
@@ -1103,6 +1114,7 @@ class ReportApp(tk.Tk):
             self.config(cursor="")
 
         messagebox.showinfo("저장 완료", f"한글 파일이 저장되었습니다.\n{hwp_path}")
+        self._reset_all()
 
     def on_save_jpg(self):
         cfg = self._FORM_CONFIG[self.current_form]
@@ -1131,6 +1143,7 @@ class ReportApp(tk.Tk):
 
         names = "\n".join(written)
         messagebox.showinfo("저장 완료", f"JPG 파일이 저장되었습니다.\n{names}")
+        self._reset_all()
 
 
 if __name__ == "__main__":
