@@ -25,7 +25,8 @@ MSG_LIMIT = 300  # 이미지 첨부 시 내용 제한
 
 def open_context(p, headless=False) -> BrowserContext:
     return p.chromium.launch_persistent_context(
-        PROFILE, channel="chrome", headless=headless, viewport={"width": 1400, "height": 1000}
+        PROFILE, channel="chrome", headless=headless, viewport={"width": 1400, "height": 1000},
+        chromium_sandbox=True,  # 기본값이면 --no-sandbox가 붙어 경고 배너가 뜬다
     )
 
 
