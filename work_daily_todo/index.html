@@ -98,6 +98,17 @@ dialog label{display:block;font-size:12px;color:var(--green-tint);margin-top:8px
 dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px solid var(--border);border-radius:8px}
 .dacts{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
 .dacts .pri{background:var(--green);color:#fff}
+
+.grip{flex:none;width:12px;margin:2px -4px 0 -6px;cursor:grab;color:var(--border);font-size:13px;line-height:18px;text-align:center;user-select:none;opacity:0}
+.item:hover .grip{opacity:1}
+.item.dragging{opacity:.4}
+.item.over-top{box-shadow:0 -2px 0 var(--green)}.item.over-bot{box-shadow:0 2px 0 var(--green)}
+.pick{flex:none;width:18px;height:18px;margin-top:1px;accent-color:var(--green);cursor:pointer}
+#selBar{display:none;flex:none;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--border);background:var(--hover);font-size:13px}
+#selBar.on{display:flex}
+#selBar span{margin-right:auto;color:var(--green)}
+#selBar button{font:inherit;font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
+#selBar .pri{background:var(--green);color:#fff}
 </style>
 </head>
 <body>
@@ -112,7 +123,8 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
 </header>
 <div class="add"><input id="inp" placeholder="할 일을 적고 Enter" maxlength="200" autocomplete="off"><button class="dbtn" id="repBtn" title="반복 루틴 (매일(평일)·매주·매월)">🔁</button><button class="dbtn" id="dueBtn" title="완료일(마감일) 지정">📅</button><button id="addBtn" title="추가">＋</button></div>
 <main id="main"></main>
-<footer><button class="pri" id="bSave">저장 (엑셀)</button><button id="bQuit">종료</button></footer>
+<div id="selBar"><span id="selCnt"></span><button id="selAll">전체 선택</button><button id="selNo">취소</button><button class="pri" id="selGo">JPG 저장</button></div>
+<footer><button class="pri" id="bSave">저장 (엑셀)</button><button id="bJpg">JPG</button><button id="bQuit">종료</button></footer>
 <div id="toast"></div>
 <dialog id="delDlg"><h3>삭제할까요?</h3><p id="delTxt" style="color:var(--ink);word-break:break-all"></p>
   <div class="dacts"><button id="delNo">취소</button><button class="pri" id="delYes" style="background:var(--late);border-color:var(--late)">삭제</button></div></dialog>
@@ -127,18 +139,18 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
 </dialog>
 
 <dialog id="dlg">
-  <h3>내보내기</h3><p>엑셀: 선택한 기간의 기록 · JPG: 오늘 목록</p>
+  <h3>내보내기</h3><p>엑셀: 선택한 기간의 기록 · JPG: 고른 항목</p>
   <div class="quick"><button data-r="today">오늘</button><button data-r="week">이번 주</button><button data-r="month">이번 달</button><button data-r="all">전체</button></div>
   <label>시작일<input type="date" id="eS"></label>
   <label>종료일<input type="date" id="eE"></label>
-  <div class="dacts"><button id="eImg" title="오늘 목록을 이미지로" style="margin-right:auto">JPG 이미지</button><button id="eCancel">취소</button><button class="pri" id="eGo">저장</button></div>
+  <div class="dacts"><button id="eImg" title="항목을 골라 이미지로" style="margin-right:auto">JPG 이미지</button><button id="eCancel">취소</button><button class="pri" id="eGo">저장</button></div>
 </dialog>
 
 <script>
 const $=id=>document.getElementById(id);
 let S=null, api=null;
 // 항목별 편집 상태(제목 수정 중·열린 메모·후속 입력)는 전부 여기 한 곳에 둔다
-const ui={notes:new Set(),fu:null,edit:null,focus:null,
+const ui={notes:new Set(),fu:null,edit:null,focus:null,sel:null,drag:null,
   openNote(id){this.notes.add(id);this.focus=id;render()},
   toggleNote(id){this.notes.has(id)?this.notes.delete(id):(this.notes.add(id),this.focus=id);render()},
   closeNote(id){this.notes.delete(id);render()},
@@ -160,8 +172,21 @@ function askDelete(t){delIds=[t.id];$('delTxt').textContent=t.text;$('delDlg').s
 function askClearAll(){delIds=S.tasks.map(t=>t.id);$('delTxt').textContent=`화면에 보이는 할 일 ${delIds.length}건을 모두 지워요.`;$('delDlg').showModal()}
 $('delNo').onclick=()=>$('delDlg').close();
 $('delYes').onclick=()=>{$('delDlg').close();run('remove_many',delIds)};
+let shown=[];  // 화면에 그려진 순서대로 쌓는 항목 id (JPG 내보내기 순서)
+const rowOf=id=>document.querySelector(`.item[data-id="${id}"]`);
+const clearOver=()=>document.querySelectorAll('.over-top,.over-bot').forEach(r=>r.classList.remove('over-top','over-bot'));
+const isAfter=(e,row)=>{const r=row.getBoundingClientRect();return e.clientY>r.top+r.height/2};
+function dropOn(dragRow,target,after){
+  clearOver();
+  const sec=target.dataset.sec;
+  // 같은 구역의 맨 위 항목(후속 작업 제외)을 지금 화면 순서로 모은 뒤 끌어온 것을 새 자리에 끼운다
+  const ids=[...document.querySelectorAll(`.item[data-sec="${sec}"]:not(.sub)`)].map(r=>r.dataset.id).filter(i=>i!==dragRow.dataset.id);
+  ids.splice(ids.indexOf(target.dataset.id)+(after?1:0),0,dragRow.dataset.id);
+  run('reorder',ids);
+}
 function itemEl(t){
   const late=t.section==='late', done=!!t.done_at;
+  shown.push(t.id);
   const row=el('div','item'+(late?' l':'')+(done?' done':'')+(t.parent?' sub':'')+(t.repeat?' dy':''));
   const cb=el('button','cb',done?'✓':'');cb.title=done?'완료 취소':'완료';cb.onclick=()=>run('toggle',t.id);
   const body=el('div','body'),line=el('div','line');
@@ -204,6 +229,29 @@ function itemEl(t){
   btn('','↳','후속 작업 추가',()=>ui.toggleFu(t.id));
   btn(ui.notes.has(t.id)?'on':'','✎','메모',()=>ui.toggleNote(t.id));
   btn('x','✕','삭제',()=>askDelete(t));
+  row.dataset.id=t.id;row.dataset.sec=t.section;
+  if(ui.sel){
+    const pk=el('input','pick');pk.type='checkbox';pk.checked=ui.sel.has(t.id);
+    pk.onchange=()=>{pk.checked?ui.sel.add(t.id):ui.sel.delete(t.id);selDraw()};
+    row.onclick=e=>{if(e.target!==pk&&!e.target.closest('textarea,input')){pk.checked=!pk.checked;pk.onchange()}};
+    row.append(pk,body);return row;
+  }
+  const canDrag=!t.parent;
+  if(canDrag){
+    const g=el('span','grip','⋮⋮');g.title='끌어서 순서 바꾸기';
+    g.onmousedown=()=>{row.draggable=true};
+    row.ondragstart=e=>{ui.drag=t.id;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',t.id)};
+    row.ondragend=()=>{row.draggable=false;row.classList.remove('dragging');ui.drag=null;clearOver()};
+    row.ondragover=e=>{
+      const d=ui.drag&&rowOf(ui.drag);if(!d||d.dataset.sec!==row.dataset.sec||d===row)return;
+      e.preventDefault();clearOver();row.classList.add(isAfter(e,row)?'over-bot':'over-top');
+    };
+    row.ondrop=e=>{
+      const d=ui.drag&&rowOf(ui.drag);if(!d||d.dataset.sec!==row.dataset.sec||d===row)return;
+      e.preventDefault();dropOn(d,row,isAfter(e,row));
+    };
+    row.append(g,cb,body,acts);return row;
+  }
   row.append(cb,body,acts);return row;
 }
 
@@ -212,12 +260,14 @@ function render(){
   $('dLabel').textContent=S.label;$('dWeek').textContent=S.weekday;$('dYear').textContent=S.year;
   const d0=S.tasks.filter(t=>t.due===S.today);$('dCount').textContent=`${d0.filter(t=>t.done_at).length}/${d0.length}`;
   const main=$('main');const keep=main.scrollTop;main.innerHTML='';
-  const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>a.due.localeCompare(b.due));
-  const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>a.due.localeCompare(b.due));
-  const today=S.tasks.filter(t=>t.section==='today');
+  const ord=(a,b)=>(a.order??1e9)-(b.order??1e9);
+  shown=[];
+  const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>ord(a,b)||a.due.localeCompare(b.due));
+  const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>ord(a,b)||a.due.localeCompare(b.due));
+  const today=S.tasks.filter(t=>t.section==='today').sort(ord);
   // 반복 루틴: 매일 → 매주 → 매월, 같은 종류 안에서는 가나다순
   const KO={day:0,week:1,month:2},kindOf=t=>KO[t.repeat.split(':')[0]]??3;
-  const daily=S.tasks.filter(t=>t.section==='routine').sort((a,b)=>kindOf(a)-kindOf(b)||a.text.localeCompare(b.text,'ko'));
+  const daily=S.tasks.filter(t=>t.section==='routine').sort((a,b)=>ord(a,b)||kindOf(a)-kindOf(b)||a.text.localeCompare(b.text,'ko'));
   const dueR=daily.filter(t=>t.done_at||t.due<=S.today);  // 완료 개수·진행률은 회차가 온 루틴만 센다
   const doneN=today.filter(t=>t.done_at).length+dueR.filter(t=>t.done_at).length, all=today.length+late.length+dueR.length;
   $('prog').style.width=(all?(doneN/all*100):0)+'%';
@@ -243,6 +293,7 @@ function render(){
   }
   if(S.tasks.length){const c=el('div','clear');const sp=el('span','','전체삭제');sp.onclick=askClearAll;c.appendChild(sp);main.appendChild(c)}
   main.scrollTop=keep;
+  selDraw();
 }
 
 async function run(fn,...a){
@@ -283,6 +334,23 @@ $('addBtn').onclick=add;
 $('pin').onclick=()=>{const on=!$('pin').classList.contains('on');$('pin').classList.toggle('on',on);api.set_pin(on);toast(on?'항상 위에 표시':'고정 해제')};
 $('bQuit').onclick=()=>api.quit();
 
+// JPG 내보내기: 항목을 골라서 저장
+function selDraw(){
+  $('selBar').classList.toggle('on',!!ui.sel);
+  if(!ui.sel)return;
+  $('selCnt').textContent=`${ui.sel.size}/${shown.length}건 선택`;
+  $('selGo').disabled=!ui.sel.size;
+}
+function selStart(){if(!shown.length)return toast('저장할 할 일이 없어요',true);ui.sel=new Set(shown);render()}
+$('bJpg').onclick=selStart;
+$('selAll').onclick=()=>{ui.sel=ui.sel.size===shown.length?new Set():new Set(shown);render()};
+$('selNo').onclick=()=>{ui.sel=null;render()};
+$('selGo').onclick=async()=>{
+  const ids=shown.filter(i=>ui.sel.has(i));
+  const r=await api.export_image(ids);
+  if(r.ok){ui.sel=null;render();toast(`선택한 ${r.count}건을 JPG로 저장했어요`)}else if(!r.cancel)toast(r.error||'저장 실패',true);
+};
+
 // 엑셀 저장
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function setRange(r){
@@ -294,11 +362,7 @@ function setRange(r){
 document.querySelectorAll('.quick button').forEach(b=>b.onclick=()=>setRange(b.dataset.r));
 $('bSave').onclick=()=>{setRange('month');$('dlg').showModal()};
 $('eCancel').onclick=()=>$('dlg').close();
-$('eImg').onclick=async()=>{
-  $('dlg').close();
-  const r=await api.export_image();
-  if(r.ok)toast(`오늘 목록 ${r.count}건을 JPG로 저장했어요`);else if(!r.cancel)toast(r.error||'저장 실패',true);
-};
+$('eImg').onclick=()=>{$('dlg').close();selStart()};
 $('eGo').onclick=async()=>{
   const s=$('eS').value,e=$('eE').value;
   if(s&&e&&s>e)return toast('시작일이 종료일보다 늦어요',true);

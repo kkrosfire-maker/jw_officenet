@@ -185,6 +185,14 @@ class Ledger:
                     t["date"] = t["due"] = self.today()  # 반복을 끄면 오늘 할 일로 남긴다
             self._save()
 
+    def reorder(self, ids):
+        """한 구역 안에서 끌어서 바꾼 순서(ids, 위에서 아래)를 `order` 로 적는다. 순서를 적지 않은 새 일은 그 뒤에 온다."""
+        for i, tid in enumerate(ids):
+            t = self._find(tid)
+            if t:
+                t["order"] = i
+        self._save()
+
     def remove_many(self, ids):
         ids = set(ids)
         self.tasks = [t for t in self.tasks if t["id"] not in ids]

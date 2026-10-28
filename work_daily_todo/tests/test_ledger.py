@@ -71,6 +71,17 @@ class Sections(unittest.TestCase):
         self.assertEqual(lg.tasks, [])
 
 
+class Reorder(unittest.TestCase):
+    def test_reorder_writes_order_and_survives_view(self):
+        lg, _, _ = ledger()
+        for x in "abc":
+            lg.add(x)
+        ids = [t["id"] for t in lg.tasks]
+        lg.reorder([ids[2], ids[0], ids[1]])
+        got = sorted(lg.view()["tasks"], key=lambda t: t["order"])
+        self.assertEqual([t["text"] for t in got], ["c", "a", "b"])
+
+
 class Dday(unittest.TestCase):
     def test_text(self):
         self.assertEqual([dday_text(g) for g in (2, 0, -3)], ["D+2", "D-0", "D-3"])

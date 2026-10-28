@@ -60,6 +60,9 @@ class Api:
     def set_repeat(self, tid, rule):
         return self._do(self._ledger.set_repeat, tid, rule)
 
+    def reorder(self, ids):
+        return self._do(self._ledger.reorder, ids)
+
     def set_pin(self, on):
         return docking.set_pin(on)
 
@@ -92,9 +95,12 @@ class Api:
         except OSError:
             pass
 
-    def export_image(self):
-        """오늘 화면의 목록을 JPG 이미지로 저장한다(목록은 그대로 둔다)."""
+    def export_image(self, ids=None):
+        """화면의 목록(ids 를 주면 그 항목만, 그 순서대로)을 JPG 이미지로 저장한다(목록은 그대로 둔다)."""
         st = self._ledger.view()
+        if ids is not None:
+            by_id = {t["id"]: t for t in st["tasks"]}
+            st["tasks"] = [by_id[i] for i in ids if i in by_id]
         if not st["tasks"]:
             return {"ok": False, "error": "저장할 할 일이 없어요."}
         d = date.today()
