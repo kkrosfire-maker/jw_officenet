@@ -811,10 +811,6 @@ label.vat-check-label input[type="checkbox"] {
       </div>
       <div class="form-group">
         <label>납부 현황</label>
-        <label class="prepaid-check-label" id="prepaid-wrap">
-          <input type="checkbox" id="f-prepaid" onchange="onPrepaidChange()">
-          선납완료 &mdash; 전 계약기간 납부 완료
-        </label>
         <div id="month-pay-grid" class="month-pay-grid"></div>
       </div>
       <div class="form-group">
@@ -844,7 +840,7 @@ label.vat-check-label input[type="checkbox"] {
         </div>
       </div>
       <div id="prorated-service-wrap" style="display:none;margin-bottom:8px;padding:10px 14px;background:#fff8e1;border:1.5px solid #ffe082;border-radius:8px;">
-        <div style="font-size:15px;color:#e65100;font-weight:700;margin-bottom:4px;">&#128197; 일할계산</div>
+        <div style="font-size:15px;color:#e65100;font-weight:700;margin-bottom:4px;">&#128197; 입주일할계산</div>
         <div id="prorated-detail-line" style="font-size:15px;color:#888;margin-bottom:3px;"></div>
         <div id="prorated-result" style="font-size:15px;font-weight:800;color:#bf360c;margin-bottom:4px;"></div>
         <div id="daily-service-msg" style="display:none;font-size:15px;font-weight:800;color:#2e7d32;">이번달은 서비스 기간입니다.</div>
@@ -852,6 +848,11 @@ label.vat-check-label input[type="checkbox"] {
           <input type="checkbox" id="f-service" onchange="onServiceChange()">
           서비스 기간 (이번달 요금 없음)
         </label>
+      </div>
+      <div id="prorated-exit-wrap" style="display:none;margin-bottom:8px;padding:10px 14px;background:#e3f2fd;border:1.5px solid #90caf9;border-radius:8px;">
+        <div style="font-size:15px;color:#1565c0;font-weight:700;margin-bottom:4px;">&#128197; 퇴거일할계산</div>
+        <div id="prorated-exit-detail-line" style="font-size:15px;color:#888;margin-bottom:3px;"></div>
+        <div id="prorated-exit-result" style="font-size:15px;font-weight:800;color:#0d47a1;"></div>
       </div>
       <div class="form-group">
         <label>특이사항</label>

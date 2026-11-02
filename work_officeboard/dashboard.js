@@ -119,7 +119,7 @@ class PaymentGrid {
       lbl.querySelector('input').addEventListener('change', e => {
         this._state[m] = e.target.checked;
         lbl.classList.toggle('is-paid', e.target.checked);
-        if (!e.target.checked) {
+        if (!e.target.checked && this.prepaidId) {
           document.getElementById(this.prepaidId).checked = false;
           document.getElementById(this.wrapId).classList.remove('active');
         }
@@ -130,7 +130,7 @@ class PaymentGrid {
 }
 
 const residentGrid = new PaymentGrid({
-  gridId: 'month-pay-grid', prepaidId: 'f-prepaid', wrapId: 'prepaid-wrap', cbClass: 'month-pay-checkbox',
+  gridId: 'month-pay-grid', cbClass: 'month-pay-checkbox',
 });
 const vaGrid = new PaymentGrid({
   gridId: 'va-month-pay-grid', prepaidId: 'va-prepaid', wrapId: 'va-prepaid-wrap', cbClass: 'va-month-pay-cb',
@@ -188,7 +188,22 @@ function _applyServiceState() {
   }
 }
 
+function _updateExitRent() {
+  var xWrap = document.getElementById('prorated-exit-wrap');
+  var startVal = document.getElementById('f-start').value;
+  var endVal   = document.getElementById('f-end').value;
+  var monthly  = parseInt(document.getElementById('f-rent').value.replace(/,/g, '').trim(), 10);
+  var result   = (endVal && monthly) ? proratedRentExit(monthly, startVal, endVal) : null;
+  if (!result) { xWrap.style.display = 'none'; return; }
+  document.getElementById('prorated-exit-result').textContent = fmtWon(result.amount) + '원';
+  document.getElementById('prorated-exit-detail-line').textContent =
+    result.month + '월 1일~' + result.day + '일 (' +
+    result.daysUsed + '일, ' + result.daysInMonth + '일 기준)';
+  xWrap.style.display = '';
+}
+
 function _updateDailyRent() {
+  _updateExitRent();
   var sWrap   = document.getElementById('prorated-service-wrap');
   var startVal = document.getElementById('f-start').value;
   if (!startVal) { sWrap.style.display = 'none'; return; }
@@ -255,8 +270,6 @@ function _roomToForm(roomId, d) {
     document.getElementById('f-rent').value = '';
   }
 
-  document.getElementById('f-prepaid').checked = !!(d.prepaid);
-  document.getElementById('prepaid-wrap').classList.toggle('active', !!(d.prepaid));
   residentGrid.load(d, _gridMonths(d.start));
 
   var tag  = daysLeft(d.end);
@@ -307,10 +320,9 @@ function _formToRoom(prev) {
     })(),
     memo:         document.getElementById('f-memo').value.trim(),
     memo2:        document.getElementById('f-memo2').value.trim(),
-    prepaid:      document.getElementById('f-prepaid').checked,
-    prepaidAt:    document.getElementById('f-prepaid').checked
-      ? (prev.prepaidAt || currentMonth)
-      : null,
+    // 선납 체크박스는 제거됨. 기존 선납 데이터는 모든 월이 납부 상태일 때만 유지
+    prepaid:      !!prev.prepaid && Object.values(residentGrid._state).every(Boolean),
+    prepaidAt:    (!!prev.prepaid && Object.values(residentGrid._state).every(Boolean)) ? (prev.prepaidAt || currentMonth) : null,
     dailyService: document.getElementById('f-service').checked,
   }, residentGrid.getValues());
 }
@@ -341,7 +353,7 @@ function onStartChange() {
 }
 
 // 계약 만료일 변경 → 그리드는 시작월 기준이므로 변화 없음 (호환성 유지)
-function onEndChange() {}
+function onEndChange() { _updateDailyRent(); }
 
 // [오늘] 버튼 — 계약 시작일에 오늘 날짜 자동 입력, 계약 만료일은 리셋
 function setFStartToday() {
@@ -412,13 +424,6 @@ function onDepositPaidChange() {
   if (!document.getElementById('f-deposit-paid').checked) return;
   var startVal = document.getElementById('f-start').value;
   if (startVal) _populateDepositMonthSelect(startVal, startVal.slice(0, 7));
-}
-
-// 선납완료 체크
-function onPrepaidChange() {
-  var prepaid = document.getElementById('f-prepaid').checked;
-  document.getElementById('prepaid-wrap').classList.toggle('active', prepaid);
-  residentGrid.setAll(prepaid);
 }
 
 // 서비스 기간 체크

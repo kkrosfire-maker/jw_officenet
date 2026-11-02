@@ -197,6 +197,25 @@ function proratedRent(monthlyRent, startDateStr) {
   };
 }
 
+// 퇴거 일할계산 — 계약 만료일이 속한 마지막 달의 1일~만료일까지 요금.
+// 만료일이 말일이면 마지막 달도 온전한 한 달이라 null. 시작월과 같은 달에 끝나면(단기) null.
+function proratedRentExit(monthlyRent, startDateStr, endDateStr) {
+  if (!endDateStr) return null;
+  var endDate = new Date(endDateStr + 'T00:00:00');
+  var day = endDate.getDate();
+  var month = endDate.getMonth();
+  var daysInMonth = new Date(endDate.getFullYear(), month + 1, 0).getDate();
+  if (day === daysInMonth) return null;
+  if (startDateStr) {
+    var s = new Date(startDateStr + 'T00:00:00');
+    if (s.getFullYear() === endDate.getFullYear() && s.getMonth() === month) return null;
+  }
+  return {
+    month: month + 1, day, daysInMonth, daysUsed: day,
+    amount: Math.floor(Math.round(monthlyRent / daysInMonth * day) / 100) * 100,
+  };
+}
+
 function inferContractMonths(d) {
   if (d && d.contractMonths) return d.contractMonths;
   return 12;
