@@ -1,0 +1,19 @@
+{
+  "is_virtual": [
+    {"id": "V001",   "record": {"contractType": "비상주"}, "expected": true},
+    {"id": "V050",   "record": {},                         "expected": true},
+    {"id": "V050",   "record": null,                       "expected": true},
+    {"id": "A018-2", "record": {"contractType": "비상주"}, "expected": true},
+    {"id": "A018",   "record": {"contractType": "입주"},   "expected": false},
+    {"id": "A018",   "record": {},                         "expected": false},
+    {"id": "A018",   "record": null,                       "expected": false}
+  ],
+  "is_paid": [
+    {"record": {"prepaid": true},          "month": "2026-06", "expected": true},
+    {"record": {"paid_2026-06": true},     "month": "2026-06", "expected": true},
+    {"record": {"paid_2026-05": true},     "month": "2026-06", "expected": false},
+    {"record": {"paid_2026-06": false},    "month": "2026-06", "expected": false},
+    {"record": {},                         "month": "2026-06", "expected": false},
+    {"record": null,                       "month": "2026-06", "expected": false}
+  ]
+}

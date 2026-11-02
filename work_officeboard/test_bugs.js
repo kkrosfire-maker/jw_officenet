@@ -154,6 +154,18 @@ console.log('\n[후보2] paymentStatusInfo가 statusClass()와 일관되게 매�
   });
 }
 
+// ── Python(contract_record.py)과 같은 답을 내는지: 공유 표 record_rules_cases.json ──
+console.log('\n[공유 표] isVirtual / isPaid — Python과 동일 규칙');
+{
+  const cases = JSON.parse(fs.readFileSync('record_rules_cases.json', 'utf8'));
+  cases.is_virtual.forEach(c => {
+    assert(isVirtual(c.id, c.record) === c.expected, `isVirtual(${c.id}, ${JSON.stringify(c.record)}) → ${c.expected}`);
+  });
+  cases.is_paid.forEach(c => {
+    assert(isPaid(c.record, c.month) === c.expected, `isPaid(${JSON.stringify(c.record)}, ${c.month}) → ${c.expected}`);
+  });
+}
+
 // ── 결과 ──
 console.log(`\n결과: PASS ${pass} / FAIL ${fail}`);
 process.exit(fail > 0 ? 1 : 0);

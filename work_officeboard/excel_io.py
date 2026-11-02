@@ -1,11 +1,13 @@
 """엑셀 파싱/내보내기 로직. Flask 라우트와 완전히 분리."""
-import re
 from datetime import date, datetime
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
 from contract_calendar import reconstruct_prepaid
+from contract_record import (
+    INVOICE_PREFIX, PAID_PREFIX, is_paid, is_virtual, months_with_prefix,
+)
 
 
 def _to_date_str(val) -> str:
@@ -70,7 +72,7 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
                 discount = 0.0
 
             contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
-            if re.match(r'^V\d+$', room_id):
+            if is_virtual(room_id, {'contractType': contract_type}):
                 contract_type = '비상주'
 
             entry = {
@@ -130,23 +132,13 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
 
     def get_paid_months(room_ids):
         """해당 시트 호실들의 모든 paid_* 월을 수집해 정렬 반환."""
-        months = set()
-        for r in room_ids:
-            d = data.get(r, {})
-            for k in d:
-                if k.startswith('paid_'):
-                    months.add(k[5:])
+        months = months_with_prefix((data.get(r, {}) for r in room_ids), PAID_PREFIX)
         months.add(month)
         return sorted(months)
 
     def get_invoice_months(room_ids):
         """해당 시트 호실들의 모든 invoice_* 월을 수집해 정렬 반환."""
-        months = set()
-        for r in room_ids:
-            d = data.get(r, {})
-            for k in d:
-                if k.startswith('invoice_'):
-                    months.add(k[8:])
+        months = months_with_prefix((data.get(r, {}) for r in room_ids), INVOICE_PREFIX)
         months.add(month)
         return sorted(months)
 
@@ -167,14 +159,16 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
         for row_idx, room_id in enumerate(sorted(room_ids), 2):
             d = data[room_id]
             occupied = bool(d.get('name') or d.get('tenantName'))
-            discount_pct = int(float(d.get('discount', 0)) * 100)
-            discount_str = f'{discount_pct}%' if discount_pct else '표준가'
+            if d.get('discount') == 'custom':  # 할인율 "직접입력" 모드 — 숫자가 아니라 문자열로 저장됨
+                discount_str = '직접입력'
+            else:
+                discount_pct = int(float(d.get('discount', 0)) * 100)
+                discount_str = f'{discount_pct}%' if discount_pct else '표준가'
 
             pay_vals = []
             for m in paid_months:
                 if occupied:
-                    pk = 'paid_' + m
-                    pay_vals.append('완납' if (d.get('prepaid') or d.get(pk)) else '미납')
+                    pay_vals.append('완납' if is_paid(d, m) else '미납')
                 else:
                     pay_vals.append('')
 
@@ -203,8 +197,8 @@ def build_workbook(data: dict, month: str) -> openpyxl.Workbook:
             width = max(len(str(cell.value or '')) for cell in col)
             ws.column_dimensions[col[0].column_letter].width = width + 4
 
-    resident_ids = [r for r in data if data[r].get('contractType') != '비상주']
-    virtual_ids  = [r for r in data if data[r].get('contractType') == '비상주']
+    resident_ids = [r for r in data if not is_virtual(r, data[r])]
+    virtual_ids  = [r for r in data if is_virtual(r, data[r])]
 
     wb = openpyxl.Workbook()
     ws1 = wb.active
