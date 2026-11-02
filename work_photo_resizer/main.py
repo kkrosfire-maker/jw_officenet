@@ -440,6 +440,7 @@ class App(TkinterDnD.Tk):
         self._learn_lbl.bind("<Button-3>", self._learn_menu)
         _sep(tb)
         tk.Button(tb, text="변환파일 저장",       command=self._save,             **B).pack(side="left", padx=4)
+        tk.Button(tb, text="변환파일 전체 저장",   command=self._save_all,         **B).pack(side="left", padx=4)
         tk.Button(tb, text="클립보드 복사",        command=self._copy_to_clipboard,**B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 폴더 열기",   command=self._open_output_folder,**B).pack(side="left", padx=4)
         _sep(tb)
