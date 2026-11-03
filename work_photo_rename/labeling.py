@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from annotate import rect_corners
+from names import clean_pharma   # noqa: F401  (끝 번호 제거 규칙은 names 모듈)
 
 TARGET_W = 2500
 BAND_H = 245
@@ -36,14 +37,6 @@ def load_font(size: int):
                     pass
             return f
     return ImageFont.load_default()
-
-
-_SUFFIX_NUM = re.compile(r"\s*(?:\(\d+\)|\d+)\s*$")
-
-
-def clean_pharma(name: str) -> str:
-    """분류용으로 붙였던 끝 번호('명문제약 (2)', '명문제약2')를 떼어 낸다 ('(주)이든파마'는 그대로)."""
-    return _SUFFIX_NUM.sub("", name or "").strip()
 
 
 def build_label(hospital: str, month: str, pharma: str) -> str:

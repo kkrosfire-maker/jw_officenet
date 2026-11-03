@@ -18,10 +18,11 @@ import labeling
 import period_check
 from file_list_controller import FileListController
 from imageio_utils import read_image, unique_path
-from master_excel import MasterExcel, clean_names, create_work_file, memo_key, merge_into_base, set_notes
+from ledger import Ledger, clean_names
+from names import memo_key, norm
 from notes_panel import NotesPanel, PANEL_W as NOTES_W
 from rect_canvas import RectCanvas
-from suggest_entry import SuggestEntry, norm
+from suggest_entry import SuggestEntry
 from thumb_panel import ThumbPanel
 from undo_stack import HistoryController
 
@@ -101,24 +102,18 @@ class App(TkinterDnD.Tk):
 
         self._cfg = _load_config()
         self._out_dir = Path(self._cfg["out_dir"]) if self._cfg.get("out_dir") else None
-        self._master = None
+        self._ledger = Ledger(BASE_EXCEL)     # 기본파일 이력 + 이번 달 작업 엑셀 (엑셀 규칙은 모두 여기)
+        self._xl_fail = []
         self._cv_img = None
         self._cv_result = None
         self._tk_res = None
         self._current_path = None
         self._state = {}              # path -> {"hospital","pharma","rects"}
-        self._marked = {}             # path -> 엑셀에 이미 반영한 (병원, 월, 제약사)
         self._periods = {}          # path -> OCR 결과 (None=못 읽음) ; 키 없음=아직 안 읽음
         self._ocr_q = queue.Queue()
         self._memos = self._load_memos()
-        self._base_master = None
         self._notes_job = None
         self._ocr_pharma = {}         # path -> 사진에서 읽은 제약사 글자
-        self._xl_jobs = queue.Queue()  # 엑셀 반영 작업 (백그라운드 1개 스레드가 순서대로 처리)
-        self._xl_res = queue.Queue()
-        self._xl_pending = 0
-        self._xl_fail = []
-        threading.Thread(target=self._xl_worker, daemon=True).start()
         self._apply_job = None
 
         self._build_ui()
@@ -233,14 +228,12 @@ class App(TkinterDnD.Tk):
 
         self._notes = NotesPanel(body, on_edit=self._on_note_edit, width=NOTES_W)
         self._notes.panel.pack(side="right", fill="y", padx=(4, 0))
-        self._pw = tk.PanedWindow(body, orient="horizontal", sashwidth=8, sashrelief="raised", bg="#555",
+        self._pw = tk.PanedWindow(body, orient="horizontal", sashwidth=8, sashrelief="flat", bg="#242424",
                                   bd=0, opaqueresize=True)       # 가운데 바를 끌어 좌우 창 크기 조절
         self._pw.pack(side="left", fill="both", expand=True)
 
         left = tk.Frame(self._pw, bg="#242424")
         self._pw.add(left, minsize=260, stretch="always")
-        tk.Label(left, text="박스: 드래그 이동·크기·회전 / 방향키 이동 / Shift+방향키 크기 / Alt+←→ 회전 / Ctrl 병행 미세 / Ctrl+클릭·영역 드래그 다중선택",
-                 bg="#242424", fg="#888", font=("Segoe UI", 9)).pack(anchor="w")
         wrap = tk.Frame(left, bg="#242424")
         wrap.pack(fill="both", expand=True)
         self._canvas = RectCanvas(wrap, width=CANVAS_W, height=CANVAS_H,
@@ -251,8 +244,6 @@ class App(TkinterDnD.Tk):
 
         right = tk.Frame(self._pw, bg="#242424")
         self._pw.add(right, minsize=260, stretch="always")
-        tk.Label(right, text="결과 미리보기 (가로 2500px)", bg="#242424", fg="#888",
-                 font=("Segoe UI", 9)).pack(anchor="w")
         self._res_canvas = tk.Canvas(right, bg="#1a1a1a", width=CANVAS_W, height=CANVAS_H,
                                      highlightthickness=1, highlightbackground="#3a3a3a")
         self._res_canvas.pack(fill="both", expand=True)
@@ -268,31 +259,28 @@ class App(TkinterDnD.Tk):
         """JPG 저장 폴더의 이번 달 작업 엑셀: 통계입력_yymm.xlsx"""
         return self._out_dir / f"통계입력_{datetime.date.today():%y%m}.xlsx" if self._out_dir else None
 
+    @property
+    def _master(self):
+        """병원·제약사 이력 (기본파일 + 이번 달 작업본). 아직 못 읽었으면 None."""
+        return self._ledger.master
+
     def _reload_source(self):
-        """드롭다운 후보의 기준: 이번 달 작업 엑셀이 있으면 그것(새로 추가한 제약사 포함), 없으면 기본파일."""
-        work = self._work_excel()
-        self._load_excel(str(BASE_EXCEL), quiet=True)
-        if work and work.exists() and self._base_master:
-            try:
-                self._apply_master(self._base_master.merged_with(MasterExcel(str(work))), work.name)
-            except Exception:
-                pass
-
-    def _load_excel(self, path, quiet=False):
+        """드롭다운 후보의 기준을 다시 읽는다: 기본파일 전체 이력 + 이번 달 작업 엑셀(새로 추가한 제약사 포함)."""
         try:
-            self._base_master = MasterExcel(path)
-        except Exception as e:
-            if not quiet:
-                messagebox.showerror("오류", f"엑셀을 읽을 수 없습니다: {e}")
+            self._ledger.load()
+        except Exception:
             return
-        self._apply_master(self._base_master, Path(path).name)
+        self._ledger.set_work_path(self._work_excel())
+        self._apply_master()
 
-    def _apply_master(self, master, name):
-        """후보(병원·제약사)와 특이사항 패널을 이 엑셀 내용으로 갱신. 병원·제약사 이력은 기본파일 전체 기준."""
-        self._master = master
+    def _apply_master(self):
+        """후보(병원·제약사)와 특이사항 패널을 현재 이력으로 갱신."""
+        master = self._ledger.master
+        work = self._ledger.work
         self._hospital_cb.set_candidates(master.hospitals())
         self._refresh_pharma_candidates()
-        self._excel_lbl.config(text=f"엑셀: {name}  (병원 {len(master.hospitals())}곳)")
+        self._excel_lbl.config(text=f"엑셀: {work.name if work and work.exists() else BASE_EXCEL.name}"
+                                    f"  (병원 {len(master.hospitals())}곳)")
         self._refresh_notes()
 
     # ── 특이사항 메모 ────────────────────────────────────────────────────
@@ -325,16 +313,14 @@ class App(TkinterDnD.Tk):
         except Exception as e:
             messagebox.showwarning("메모", f"메모 저장 실패: {e}")
             return
-        work = self._work_excel()
-        if work and work.exists():
-            self._xl_pending += 1
-            self._xl_jobs.put(("note", work, hospital, pharma, text))
+        self._ledger.set_work_path(self._work_excel())
+        self._ledger.set_note(hospital, pharma, text)
         self._st.config(text=f"메모 저장: {hospital} / {pharma}")
 
     def _complete_stats(self):
         """통계완료: 이번 달 작업 엑셀(JPG폴더/통계입력_yymm.xlsx)의 입력완료 내용을 기본파일에 반영."""
         work = self._work_excel()
-        if self._xl_pending:
+        if self._ledger.pending:
             messagebox.showinfo("알림", "엑셀에 반영 중인 저장 건이 있습니다. 잠시 후 다시 눌러주세요.")
             return
         if not work or not work.exists():
@@ -344,8 +330,9 @@ class App(TkinterDnD.Tk):
                                    f"{work.name} 의 입력완료 내용을\n{BASE_EXCEL.name} 에 반영할까요?\n"
                                    "(기본파일은 백업 폴더에 복사본을 남기고 수정합니다)"):
             return
+        self._ledger.set_work_path(work)
         try:
-            upd, add = merge_into_base(str(work), str(BASE_EXCEL))
+            upd, add = self._ledger.complete()
         except PermissionError:
             messagebox.showerror("엑셀", "엑셀 파일이 열려 있습니다. 닫고 다시 눌러주세요.")
             return
@@ -363,14 +350,14 @@ class App(TkinterDnD.Tk):
         hospital = self._hospital_var.get().strip()
         if hospital in set(self._master.hospitals()):
             pref = self._cfg.get("recent_pharma", {})
-            mine = self._master.dedupe(self._master.hospital_pharmas(hospital, self._month_var.get()), pref,
+            mine = self._master.names.dedupe(self._master.hospital_pharmas(hospital, self._month_var.get()), pref,
                                        sort=True)
             mine_norms = {norm(p) for p in mine}
             self._pharma_cb.set_candidates(
-                mine, self._master.dedupe(self._master.all_pharmas(), pref, drop_norms=mine_norms, sort=True))
+                mine, self._master.names.dedupe(self._master.all_pharmas(), pref, drop_norms=mine_norms, sort=True))
         else:
             self._pharma_cb.set_candidates(
-                self._master.dedupe(self._master.all_pharmas(), self._cfg.get("recent_pharma", {}), sort=True))
+                self._master.names.dedupe(self._master.all_pharmas(), self._cfg.get("recent_pharma", {}), sort=True))
 
     def _apply_ocr_pharma(self, path):
         """사진에서 읽은 제약사 글자와 비슷한 제약사를 찾아, 비어 있으면 일단 넣어 둔다 (틀리면 직접 수정)."""
@@ -693,79 +680,31 @@ class App(TkinterDnD.Tk):
         return out, self._update_excel(path, hospital, pharma)
 
     def _update_excel(self, path, hospital, pharma):
-        """저장한 사진을 마스터 엑셀에 반영. 같은 사진을 같은 이름으로 다시 저장할 땐 중복 반영하지 않는다."""
+        """저장한 사진을 장부에 반영하도록 맡긴다 (백그라운드). 같은 사진을 같은 이름으로 다시 저장하면 중복 반영하지 않는다."""
         if not self._master:
             return "엑셀 미연결"
-        key = (hospital, self._month_var.get(), pharma)
-        if self._marked.get(path) == key:
+        month = self._month_var.get()
+        self._ledger.set_work_path(self._work_excel())
+        if not self._ledger.record_done(path, hospital, month, year_for(int(month[:-1])), pharma,
+                                        f"{datetime.date.today().month}월"):
             return "엑셀: 이미 반영됨"
-        month, year = self._month_var.get(), year_for(int(self._month_var.get()[:-1]))
-        work = self._work_excel()
-        self._marked[path] = key
-        self._xl_pending += 1
-        mgr = next((r["manager"] for r in (self._master.rows if self._master else []) if r["hospital"] == hospital
-                    and r["manager"]), None)
-        self._xl_jobs.put((path, key, work, hospital, month, year, f"{datetime.date.today().month}월", mgr))
         return "엑셀 반영 중…"
 
-    def _xl_worker(self):
-        """엑셀 열기·수정·저장(약 1초)을 화면이 멈추지 않게 백그라운드에서 한 건씩 처리한다."""
-        while True:
-            job = self._xl_jobs.get()
-            if job[0] == "note":                            # 특이사항 수정 -> 작업 엑셀 J열
-                _, work, hospital, pharma, text = job
-                try:
-                    set_notes(str(work), hospital, pharma, text)
-                    self._xl_res.put(("noted", None, None, work, None, None, None))
-                except Exception as e:
-                    self._xl_res.put(("err", None, None, work, f"메모를 엑셀에 쓰지 못함: {e}"))
-                finally:
-                    self._xl_jobs.task_done()
-                continue
-            path, key, work, hospital, month, year, input_month, mgr = job
-            try:
-                if not work.exists():
-                    work.parent.mkdir(parents=True, exist_ok=True)
-                    create_work_file(str(BASE_EXCEL), str(work), input_month)   # 이번 달 정산분(입력월)만 담아 시작
-                kind, row = MasterExcel(str(work)).mark_done(hospital, month, year, key[2], input_month=input_month,
-                                                              manager_hint=mgr)
-                master = MasterExcel(str(work))             # 이번 달 작업본 (기본파일 이력과 합쳐 후보에 반영)
-                self._xl_res.put(("ok", path, key, work, kind, row, master))
-            except PermissionError:
-                self._xl_res.put(("err", path, key, work, f"{work.name} 이(가) 열려 있습니다. 닫고 다시 저장하세요."))
-            except Exception as e:
-                self._xl_res.put(("err", path, key, work, str(e)))
-            finally:
-                self._xl_jobs.task_done()
-
     def _poll_excel(self):
-        try:
-            while True:
-                res = self._xl_res.get_nowait()
-                self._xl_pending -= 1
-                if res[0] == "noted":
-                    continue
-                if res[0] == "ok":
-                    _, path, key, work, kind, row, master = res
-                    self._apply_master(self._base_master.merged_with(master) if self._base_master else master,
-                                       work.name)
-                    self._st.config(text=f"엑셀 반영 완료: {work.name} {row}행 "
-                                         + ("입력완료로 변경" if kind == "updated" else "새 행 추가")
-                                         + (f"  (남은 {self._xl_pending}건)" if self._xl_pending else ""))
-                else:
-                    _, path, key, work, msg = res
-                    if path is not None and self._marked.get(path) == key:
-                        del self._marked[path]               # 다시 저장하면 다시 반영되게
-                    self._xl_fail.append(msg)
-        except queue.Empty:
-            pass
-        if self._xl_fail and self._xl_pending <= 0:
+        for ev in self._ledger.poll():
+            if ev.kind == "done":
+                self._apply_master()
+                left = self._ledger.pending
+                self._st.config(text=f"엑셀 반영 완료: {ev.message}" + (f"  (남은 {left}건)" if left else ""))
+            elif ev.kind == "error":
+                self._xl_fail.append(ev.message)
+        if self._xl_fail and self._ledger.pending <= 0:
             msg, self._xl_fail = self._xl_fail[0], []
             messagebox.showwarning("엑셀", f"엑셀 반영 실패: {msg}")
 
     def _on_close(self):
         self._notes.flush()
-        self._xl_jobs.join()                 # 엑셀 저장 도중에 창을 닫아 파일이 깨지는 일이 없게 기다린다
+        self._ledger.wait()                  # 엑셀 저장 도중에 창을 닫아 파일이 깨지는 일이 없게 기다린다
         self.destroy()
 
     def _choose_out_dir(self):

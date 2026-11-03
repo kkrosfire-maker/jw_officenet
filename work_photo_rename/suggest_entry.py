@@ -5,14 +5,9 @@
 - 후보에 없는 글자는 그대로 남아 직접 입력으로 쓸 수 있다.
 (ttk.Combobox는 목록을 바꿔치기하면 선택한 항목과 다른 값이 들어가는 문제가 있어 직접 만들었다.)
 """
-import re
 import tkinter as tk
 
-_STRIP = re.compile(r"\(주\)|㈜|주식회사|[^0-9A-Za-z가-힣]")
-
-
-def norm(text: str) -> str:
-    return _STRIP.sub("", (text or "")).lower()
+from names import norm
 
 
 class SuggestEntry(tk.Frame):

@@ -6,10 +6,11 @@
 """
 import tkinter as tk
 
-from suggest_entry import norm
+from names import norm
 
 PANEL_W = 230
-BG, ROW_BG, ROW_ON = "#1e1e1e", "#252525", "#1e4a7a"
+BG, ROW_BG, ROW_ON = "#33363a", "#43474c", "#2f6aa8"      # 어두운 화면 속에서도 구분되게 밝은 회색
+TEXT_BG = "#565b61"
 
 
 class NotesPanel:
@@ -20,11 +21,11 @@ class NotesPanel:
 
         self.panel = tk.Frame(parent, bg=BG, width=width)
         self.panel.pack_propagate(False)
-        self.hdr = tk.Label(self.panel, text="특이사항", bg=BG, fg="#aaa", font=("Segoe UI", 9, "bold"),
+        self.hdr = tk.Label(self.panel, text="특이사항", bg=BG, fg="#e6e6e6", font=("Segoe UI", 9, "bold"),
                             anchor="w", padx=6, pady=4)
         self.hdr.pack(fill="x")
         tk.Label(self.panel, text="병원을 고르면 제약사별 메모가 나옵니다.\n칸 밖을 누르면 저장됩니다.",
-                 bg=BG, fg="#666", font=("Segoe UI", 8), justify="left", anchor="w", padx=6).pack(fill="x")
+                 bg=BG, fg="#a8adb3", font=("Segoe UI", 8), justify="left", anchor="w", padx=6).pack(fill="x")
         inner = tk.Frame(self.panel, bg=BG)
         inner.pack(fill="both", expand=True)
         self.canvas = tk.Canvas(inner, bg=BG, highlightthickness=0, bd=0)
@@ -67,16 +68,18 @@ class NotesPanel:
         fr.pack(fill="x", padx=2, pady=2)
         top = tk.Frame(fr, bg=ROW_BG)
         top.pack(fill="x")
-        name = tk.Label(top, text=g["pharma"], bg=ROW_BG, fg="#ddd", font=("Malgun Gothic", 9, "bold"),
+        name = tk.Label(top, text=g["pharma"], bg=ROW_BG, fg="#f2f2f2", font=("Malgun Gothic", 9, "bold"),
                         anchor="w")
         name.pack(side="left")
         tag = tk.Label(top, text=f"  {g['tag']}" if g.get("tag") else "", bg=ROW_BG, fg="#d9a441",
                        font=("Malgun Gothic", 8), anchor="w")
         tag.pack(side="left")
-        txt = tk.Text(fr, height=3, wrap="word", bg="#2b2b2b", fg="white", insertbackground="white",
-                      relief="flat", font=("Malgun Gothic", 9), padx=4, pady=3, undo=True)
+        txt = tk.Text(fr, height=1, wrap="word", bg=TEXT_BG, fg="white", insertbackground="white",
+                      relief="flat", font=("Malgun Gothic", 9), padx=4, pady=2, undo=True)
         txt.pack(fill="x", pady=(2, 0))
         txt.insert("1.0", g.get("note", ""))
+        txt.bind("<KeyRelease>", lambda e, t=txt: self._fit(t), add="+")        # 내용만큼만 줄을 늘린다
+        txt.bind("<Configure>", lambda e, t=txt: self._fit(t), add="+")         # 폭이 바뀌면 줄바꿈도 다시 계산
         row = {"norm": norm(g["pharma"]), "frame": fr, "text": txt, "original": g.get("note", ""),
                "pharma": g["pharma"], "labels": (top, name, tag)}
         self._rows.append(row)
@@ -84,6 +87,19 @@ class NotesPanel:
         txt.bind("<Control-Return>", lambda e, r=row: (self._commit(r), "break")[1])
         for w in (fr, top, name, tag):
             w.bind("<MouseWheel>", self._on_wheel)
+
+    @staticmethod
+    def _fit(txt):
+        """내용이 없으면 한 줄, 있으면 (줄바꿈 포함) 그 내용이 차지하는 줄 수만큼만 높이를 맞춘다."""
+        try:
+            n = txt.count("1.0", "end-1c", "update", "displaylines")      # update: 줄바꿈 계산을 먼저 끝낸 뒤 센다
+            n = n[0] if isinstance(n, (tuple, list)) else n
+            lines = int(n or 0) + 1                      # count 는 두 위치 사이에서 넘어간 줄 수라 실제 줄 수보다 1 작다
+            if int(txt.cget("height")) != lines:
+                txt.config(height=lines)
+                txt.after_idle(lambda: NotesPanel._fit(txt))      # 높이가 바뀌면 줄바꿈이 달라질 수 있어 한 번 더
+        except tk.TclError:
+            pass
 
     def flush(self):
         """아직 저장 안 된 입력이 있으면 모두 저장 (창 닫기·저장 직전 호출)."""
