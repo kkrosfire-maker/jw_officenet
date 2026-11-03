@@ -18,7 +18,8 @@ import labeling
 import period_check
 from file_list_controller import FileListController
 from imageio_utils import read_image, unique_path
-from master_excel import MasterExcel, clean_names, merge_into_base
+from master_excel import MasterExcel, clean_names, create_work_file, memo_key, merge_into_base, set_notes
+from notes_panel import NotesPanel, PANEL_W as NOTES_W
 from rect_canvas import RectCanvas
 from suggest_entry import SuggestEntry, norm
 from thumb_panel import ThumbPanel
@@ -33,6 +34,8 @@ BASE_EXCEL = APP_DIR / "기본파일.xlsx"        # 기본(마스터) 엑셀 (ex
 CONFIG = Path(os.environ.get("PHOTO_RENAME_CONFIG")
               or Path(os.environ.get("APPDATA") or Path.home()) / "photo_rename" / "config.json")
 MONTHS = [f"{i}월" for i in range(1, 13)]
+MEMO_FILE = CONFIG.parent / "특이사항메모.json"   # 병원·제약사별 메모(월이 바뀌어도 이어서 보인다, 설정과 같은 폴더)
+INPUT_TYPES = (tk.Entry, tk.Spinbox, ttk.Entry, ttk.Combobox, tk.Text)   # 글자 입력 중엔 단축키(방향키·Delete·Ctrl+Z) 무시
 
 
 def _load_config():
@@ -61,9 +64,6 @@ def year_for(month: int):
     return t.year if month <= t.month else t.year - 1
 
 
-class App(TkinterDnD.Tk):
-    def __init__(self):
-        super().__init__()
 def _crisp_taskbar_icon(win, ico):
     """tkinter iconbitmap은 32/16px만 등록해 작업표시줄(24px)에서 흐려진다.
     ICO에서 작업표시줄 크기 프레임을 직접 읽어 창에 등록한다."""
@@ -86,6 +86,9 @@ def _crisp_taskbar_icon(win, ico):
         pass
 
 
+class App(TkinterDnD.Tk):
+    def __init__(self):
+        super().__init__()
         self.title("통계 사진 문구 삽입")
         self.geometry("1480x860")
         self.configure(bg="#242424")
@@ -107,6 +110,9 @@ def _crisp_taskbar_icon(win, ico):
         self._marked = {}             # path -> 엑셀에 이미 반영한 (병원, 월, 제약사)
         self._periods = {}          # path -> OCR 결과 (None=못 읽음) ; 키 없음=아직 안 읽음
         self._ocr_q = queue.Queue()
+        self._memos = self._load_memos()
+        self._base_master = None
+        self._notes_job = None
         self._ocr_pharma = {}         # path -> 사진에서 읽은 제약사 글자
         self._xl_jobs = queue.Queue()  # 엑셀 반영 작업 (백그라운드 1개 스레드가 순서대로 처리)
         self._xl_res = queue.Queue()
@@ -128,8 +134,8 @@ def _crisp_taskbar_icon(win, ico):
             self._thumb_panel, on_load=self._load_image, on_empty=self._on_files_empty,
             nav=self._nav, nav_label=self._nav_lbl, status=lambda t: self._st.config(text=t),
             on_removed=self._note_removed)
-        self._canvas.bind_keyboard(self, skip_types=(tk.Entry, tk.Spinbox, ttk.Entry, ttk.Combobox))
-        self._history.bind_keys(self, ignore_types=(tk.Entry, tk.Spinbox, ttk.Entry, ttk.Combobox),
+        self._canvas.bind_keyboard(self, skip_types=INPUT_TYPES)
+        self._history.bind_keys(self, ignore_types=INPUT_TYPES,
                                 status_fn=self._history_status)
 
         for w in (self, self._canvas, self._res_canvas):
@@ -225,10 +231,15 @@ def _crisp_taskbar_icon(win, ico):
             body, on_select=self._on_thumb_select, on_delete=lambda i: self._files.remove(i),
             on_delete_selected=lambda: self._files.remove_selected(), checkbox_default=False)
 
-        left = tk.Frame(body, bg="#242424")
-        left.pack(side="left", fill="both", expand=True, padx=(0, 3))
-        tk.Label(left, text="박스: 드래그 이동 / 변·모서리 드래그 크기 / 모서리 바깥 회전 / 방향키 이동 / "
-                            "Shift+방향키 크기 / Alt+←→ 회전 / Ctrl 병행 시 미세 조정(회전은 5°)",
+        self._notes = NotesPanel(body, on_edit=self._on_note_edit, width=NOTES_W)
+        self._notes.panel.pack(side="right", fill="y", padx=(4, 0))
+        self._pw = tk.PanedWindow(body, orient="horizontal", sashwidth=8, sashrelief="raised", bg="#555",
+                                  bd=0, opaqueresize=True)       # 가운데 바를 끌어 좌우 창 크기 조절
+        self._pw.pack(side="left", fill="both", expand=True)
+
+        left = tk.Frame(self._pw, bg="#242424")
+        self._pw.add(left, minsize=260, stretch="always")
+        tk.Label(left, text="박스: 드래그 이동·크기·회전 / 방향키 이동 / Shift+방향키 크기 / Alt+←→ 회전 / Ctrl 병행 미세 / Ctrl+클릭·영역 드래그 다중선택",
                  bg="#242424", fg="#888", font=("Segoe UI", 9)).pack(anchor="w")
         wrap = tk.Frame(left, bg="#242424")
         wrap.pack(fill="both", expand=True)
@@ -238,8 +249,8 @@ def _crisp_taskbar_icon(win, ico):
         self._warn = tk.Label(wrap, text="통계기간확인", fg="#ff2222", bg="#1a1a1a",
                               font=("Malgun Gothic", 16, "bold"), padx=8, pady=2)
 
-        right = tk.Frame(body, bg="#242424")
-        right.pack(side="right", fill="both", expand=True, padx=(3, 0))
+        right = tk.Frame(self._pw, bg="#242424")
+        self._pw.add(right, minsize=260, stretch="always")
         tk.Label(right, text="결과 미리보기 (가로 2500px)", bg="#242424", fg="#888",
                  font=("Segoe UI", 9)).pack(anchor="w")
         self._res_canvas = tk.Canvas(right, bg="#1a1a1a", width=CANVAS_W, height=CANVAS_H,
@@ -260,18 +271,65 @@ def _crisp_taskbar_icon(win, ico):
     def _reload_source(self):
         """드롭다운 후보의 기준: 이번 달 작업 엑셀이 있으면 그것(새로 추가한 제약사 포함), 없으면 기본파일."""
         work = self._work_excel()
-        self._load_excel(str(work) if work and work.exists() else str(BASE_EXCEL), quiet=True)
+        self._load_excel(str(BASE_EXCEL), quiet=True)
+        if work and work.exists() and self._base_master:
+            try:
+                self._apply_master(self._base_master.merged_with(MasterExcel(str(work))), work.name)
+            except Exception:
+                pass
 
     def _load_excel(self, path, quiet=False):
         try:
-            self._master = MasterExcel(path)
+            self._base_master = MasterExcel(path)
         except Exception as e:
             if not quiet:
                 messagebox.showerror("오류", f"엑셀을 읽을 수 없습니다: {e}")
             return
-        self._hospital_cb.set_candidates(self._master.hospitals())
+        self._apply_master(self._base_master, Path(path).name)
+
+    def _apply_master(self, master, name):
+        """후보(병원·제약사)와 특이사항 패널을 이 엑셀 내용으로 갱신. 병원·제약사 이력은 기본파일 전체 기준."""
+        self._master = master
+        self._hospital_cb.set_candidates(master.hospitals())
         self._refresh_pharma_candidates()
-        self._excel_lbl.config(text=f"엑셀: {Path(path).name}  (병원 {len(self._master.hospitals())}곳)")
+        self._excel_lbl.config(text=f"엑셀: {name}  (병원 {len(master.hospitals())}곳)")
+        self._refresh_notes()
+
+    # ── 특이사항 메모 ────────────────────────────────────────────────────
+
+    @staticmethod
+    def _load_memos():
+        try:
+            return json.loads(MEMO_FILE.read_text(encoding="utf-8-sig"))
+        except Exception:
+            return {}
+
+    def _refresh_notes(self):
+        h = self._hospital_var.get().strip()
+        if not self._master or h not in set(self._master.hospitals()):
+            self._notes.set_data(h if h else "", [], "")
+            return
+        self._notes.set_data(h, self._master.notes_for(h, self._memos, self._month_var.get()),
+                             self._pharma_var.get())
+
+    def _schedule_notes(self):
+        if self._notes_job:
+            self.after_cancel(self._notes_job)
+        self._notes_job = self.after(300, self._refresh_notes)
+
+    def _on_note_edit(self, hospital, pharma, text):
+        """메모를 고치면 ① 메모 파일에 저장(월이 바뀌어도 유지) ② 이번 달 작업 엑셀의 특이사항 열에도 반영."""
+        self._memos[memo_key(hospital, pharma)] = text
+        try:
+            MEMO_FILE.write_text(json.dumps(self._memos, ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception as e:
+            messagebox.showwarning("메모", f"메모 저장 실패: {e}")
+            return
+        work = self._work_excel()
+        if work and work.exists():
+            self._xl_pending += 1
+            self._xl_jobs.put(("note", work, hospital, pharma, text))
+        self._st.config(text=f"메모 저장: {hospital} / {pharma}")
 
     def _complete_stats(self):
         """통계완료: 이번 달 작업 엑셀(JPG폴더/통계입력_yymm.xlsx)의 입력완료 내용을 기본파일에 반영."""
@@ -410,7 +468,7 @@ def _crisp_taskbar_icon(win, ico):
         """Delete: 박스가 선택돼 있으면 박스 삭제 / 화면(캔버스)에 포커스가 있으면 아무것도 안 지움 /
         파일 목록 쪽에 포커스가 있을 때만 파일을 목록에서 뺀다."""
         f = self.focus_get()
-        if isinstance(f, (tk.Entry, tk.Spinbox, ttk.Entry, ttk.Combobox)):
+        if isinstance(f, INPUT_TYPES):
             return
         if self._canvas.selected_indices():
             n = len(self._canvas.selected_indices())
@@ -494,6 +552,7 @@ def _crisp_taskbar_icon(win, ico):
 
     def _on_month_change(self, event=None):
         self._refresh_pharma_candidates()
+        self._refresh_notes()
         self._update_warn()
         self._schedule_apply()
 
@@ -501,6 +560,9 @@ def _crisp_taskbar_icon(win, ico):
         if self._master and self._hospital_var.get().strip() != getattr(self, "_cand_for", None):
             self._cand_for = self._hospital_var.get().strip()
             self._refresh_pharma_candidates()
+            self._schedule_notes()
+        else:
+            self._notes.highlight(self._pharma_var.get())
         self._schedule_apply()
 
     def _label(self):
@@ -641,19 +703,33 @@ def _crisp_taskbar_icon(win, ico):
         work = self._work_excel()
         self._marked[path] = key
         self._xl_pending += 1
-        self._xl_jobs.put((path, key, work, hospital, month, year, f"{datetime.date.today().month}월"))
+        mgr = next((r["manager"] for r in (self._master.rows if self._master else []) if r["hospital"] == hospital
+                    and r["manager"]), None)
+        self._xl_jobs.put((path, key, work, hospital, month, year, f"{datetime.date.today().month}월", mgr))
         return "엑셀 반영 중…"
 
     def _xl_worker(self):
         """엑셀 열기·수정·저장(약 1초)을 화면이 멈추지 않게 백그라운드에서 한 건씩 처리한다."""
         while True:
-            path, key, work, hospital, month, year, input_month = self._xl_jobs.get()
+            job = self._xl_jobs.get()
+            if job[0] == "note":                            # 특이사항 수정 -> 작업 엑셀 J열
+                _, work, hospital, pharma, text = job
+                try:
+                    set_notes(str(work), hospital, pharma, text)
+                    self._xl_res.put(("noted", None, None, work, None, None, None))
+                except Exception as e:
+                    self._xl_res.put(("err", None, None, work, f"메모를 엑셀에 쓰지 못함: {e}"))
+                finally:
+                    self._xl_jobs.task_done()
+                continue
+            path, key, work, hospital, month, year, input_month, mgr = job
             try:
                 if not work.exists():
                     work.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(BASE_EXCEL, work)          # 이번 달 작업본 = 기본파일 복사본에서 시작
-                kind, row = MasterExcel(str(work)).mark_done(hospital, month, year, key[2], input_month=input_month)
-                master = MasterExcel(str(work))             # 이후 목록은 이 작업본 기준
+                    create_work_file(str(BASE_EXCEL), str(work), input_month)   # 이번 달 정산분(입력월)만 담아 시작
+                kind, row = MasterExcel(str(work)).mark_done(hospital, month, year, key[2], input_month=input_month,
+                                                              manager_hint=mgr)
+                master = MasterExcel(str(work))             # 이번 달 작업본 (기본파일 이력과 합쳐 후보에 반영)
                 self._xl_res.put(("ok", path, key, work, kind, row, master))
             except PermissionError:
                 self._xl_res.put(("err", path, key, work, f"{work.name} 이(가) 열려 있습니다. 닫고 다시 저장하세요."))
@@ -667,18 +743,18 @@ def _crisp_taskbar_icon(win, ico):
             while True:
                 res = self._xl_res.get_nowait()
                 self._xl_pending -= 1
+                if res[0] == "noted":
+                    continue
                 if res[0] == "ok":
                     _, path, key, work, kind, row, master = res
-                    self._master = master
-                    self._hospital_cb.set_candidates(master.hospitals())
-                    self._refresh_pharma_candidates()
-                    self._excel_lbl.config(text=f"엑셀: {work.name}  (병원 {len(master.hospitals())}곳)")
+                    self._apply_master(self._base_master.merged_with(master) if self._base_master else master,
+                                       work.name)
                     self._st.config(text=f"엑셀 반영 완료: {work.name} {row}행 "
                                          + ("입력완료로 변경" if kind == "updated" else "새 행 추가")
                                          + (f"  (남은 {self._xl_pending}건)" if self._xl_pending else ""))
                 else:
                     _, path, key, work, msg = res
-                    if self._marked.get(path) == key:
+                    if path is not None and self._marked.get(path) == key:
                         del self._marked[path]               # 다시 저장하면 다시 반영되게
                     self._xl_fail.append(msg)
         except queue.Empty:
@@ -688,6 +764,7 @@ def _crisp_taskbar_icon(win, ico):
             messagebox.showwarning("엑셀", f"엑셀 반영 실패: {msg}")
 
     def _on_close(self):
+        self._notes.flush()
         self._xl_jobs.join()                 # 엑셀 저장 도중에 창을 닫아 파일이 깨지는 일이 없게 기다린다
         self.destroy()
 

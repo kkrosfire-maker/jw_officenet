@@ -9,6 +9,74 @@ from labeling import clean_pharma
 from suggest_entry import norm
 
 
+def memo_key(hospital, pharma):
+    return f"{hospital.strip()}|{norm(pharma)}"
+
+
+def create_work_file(base_path, work_path, input_month, header_only=False):
+    """기본파일에서 '이번 달 정산분(입력월 = input_month, 가장 최근 연도)'만 담은 작업 엑셀을 만든다.
+    나머지 달 데이터는 빼서 이번 달 입력분만 보이게 한다 (서식·수식·상태 드롭다운 유지)."""
+    from copy import copy
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = openpyxl.load_workbook(base_path)
+    ws = wb["통계입력확인"] if "통계입력확인" in wb.sheetnames else wb.active
+    rows = [r for r in range(2, ws.max_row + 1)
+            if ws.cell(r, 4).value and str(ws.cell(r, 6).value or "").strip() == input_month]
+    years = [ws.cell(r, 1).value for r in rows if isinstance(ws.cell(r, 1).value, int)]
+    if years:
+        ymax = max(years)
+        rows = [r for r in rows if ws.cell(r, 1).value == ymax]
+    if header_only:
+        rows = []
+    ncol = ws.max_column
+    for i, r in enumerate(rows, start=2):               # 위로 당겨 쓰기 (i <= r 이라 안전)
+        if i == r:
+            continue
+        for c in range(1, ncol + 1):
+            s, d = ws.cell(r, c), ws.cell(i, c)
+            d.value = s.value
+            if s.has_style:
+                d._style = copy(s._style)
+    first_extra = len(rows) + 2
+    if ws.max_row >= first_extra:
+        ws.delete_rows(first_extra, ws.max_row - first_extra + 1)
+    for i in range(2, len(rows) + 2):                   # 통합 수식 행번호 맞춤
+        if isinstance(ws.cell(i, 8).value, str) and ws.cell(i, 8).value.startswith("=CONCATENATE"):
+            ws.cell(i, 8).value = f'=CONCATENATE(D{i}," ",E{i}," ",G{i})'
+    status_formula = None
+    for dv in ws.data_validations.dataValidation:
+        if dv.type == "list" and dv.formula1 and "입력완료" in dv.formula1:
+            status_formula = dv.formula1
+            break
+    ws.data_validations.dataValidation = []
+    if status_formula:
+        dv = DataValidation(type="list", formula1=status_formula, allow_blank=True)
+        dv.add("C2:C2000")
+        ws.add_data_validation(dv)
+    ws.auto_filter.ref = f"A1:{ws.cell(1, ncol).column_letter}{max(2, len(rows) + 1)}"
+    wb.calculation.fullCalcOnLoad = True
+    wb.save(work_path)
+    wb.close()
+    return len(rows)
+
+
+def set_notes(work_path, hospital, pharma, text):
+    """작업 엑셀에서 그 병원·제약사 행(이번 달 정산분)의 특이사항(J열)을 text로 바꾼다. 바꾼 행 수 반환."""
+    wb = openpyxl.load_workbook(work_path)
+    ws = wb["통계입력확인"] if "통계입력확인" in wb.sheetnames else wb.active
+    n = 0
+    for r in range(2, ws.max_row + 1):
+        if (str(ws.cell(r, 4).value or "").strip() == hospital
+                and norm(clean_pharma(str(ws.cell(r, 7).value or ""))) == norm(pharma)):
+            ws.cell(r, 10).value = text or None
+            n += 1
+    if n:
+        wb.save(work_path)
+    wb.close()
+    return n
+
+
 def _insert_row_after(ws, after_row):
     """after_row 바로 아래에 빈 행을 끼워 넣고 그 행 번호를 돌려준다.
     openpyxl의 insert_rows는 수식을 고쳐 주지 않으므로 H열(CONCATENATE) 수식을 행 번호에 맞게 다시 쓰고,
@@ -41,6 +109,7 @@ class MasterExcel:
         i_year, i_mgr = col.get("연도", 0), col.get("담당자명", 1)
         i_host, i_rx = col.get("거래처명", 3), col.get("처방월", 4)
         i_ph = col.get("제약사명", 6)
+        i_in, i_note = col.get("입력월", 5), col.get("특이사항", 9)
         self.rows = []
         self.latest = {}              # 정규화한 이름 -> 엑셀에서 가장 최근(연도·아래쪽 행) 표기
         for r in rows:
@@ -50,8 +119,13 @@ class MasterExcel:
                 "year": r[i_year], "manager": r[i_mgr], "status": r[2] if len(r) > 2 else None,
                 "hospital": str(r[i_host]).strip(), "rx_month": str(r[i_rx] or "").strip(),
                 "pharma": clean_pharma(str(r[i_ph])),
+                "input_month": str(r[i_in] or "").strip() if len(r) > i_in else "",
+                "note": str(r[i_note]).strip() if len(r) > i_note and r[i_note] else "",
             })
         wb.close()
+        self._index()
+
+    def _index(self):
         best = {}
         for i, r in enumerate(self.rows):
             k = norm(r["pharma"])
@@ -59,6 +133,37 @@ class MasterExcel:
             if k and (k not in best or rank >= best[k][0]):
                 best[k] = (rank, r["pharma"])
         self.latest = {k: v[1] for k, v in best.items()}
+
+    def merged_with(self, other):
+        """이 엑셀(기본파일 이력)에 다른 엑셀(이번 달 작업본)의 행을 더한 새 객체. 새로 생긴 병원·제약사가 후보에 들어온다."""
+        import copy
+        m = copy.copy(self)
+        m.rows = list(self.rows) + list(other.rows)
+        m._index()
+        return m
+
+    def notes_for(self, hospital, memos=None, month=None):
+        """그 병원의 제약사별 특이사항. [{pharma, note, tag}] 를 제약사명 가나다순(괄호·(주) 무시)으로.
+        note = 사용자가 프로그램에서 고친 메모(memos) > 엑셀 특이사항 열의 가장 최근 값(이전 달 것을 이월해서 보여줌).
+        tag = 이전 달 기록을 이월해 보여줄 때 '9월 기록' 같은 출처."""
+        memos = memos or {}
+        groups = {}
+        for r in self.rows:
+            if r["hospital"] != hospital:
+                continue
+            g = groups.setdefault(norm(r["pharma"]), {"pharma": r["pharma"], "note": "", "tag": ""})
+            g["pharma"] = r["pharma"]
+            if r["note"]:
+                g["note"] = r["note"]
+                g["tag"] = "" if (month and r["rx_month"] == month) else f"{r['rx_month']} 기록"
+        out = []
+        for k, g in groups.items():
+            key = memo_key(hospital, g["pharma"])
+            if key in memos:
+                g["note"], g["tag"] = memos[key], ""
+            out.append(g)
+        out.sort(key=lambda g: norm(g["pharma"]))
+        return out
 
     def match_pharma(self, raw, hospital=None, prefer=None, threshold=0.6):
         """사진에서 읽은 글자(raw)와 가장 비슷한 제약사 표기를 (이름, 점수)로. 비슷한 게 없으면 (None, 0).
@@ -96,7 +201,7 @@ class MasterExcel:
             out.sort(key=norm)
         return out
 
-    def mark_done(self, hospital, month, year, pharma, input_month=None):
+    def mark_done(self, hospital, month, year, pharma, input_month=None, manager_hint=None):
         """저장한 사진 1장을 엑셀에 반영한다.
         해당 병원·처방월·제약사의 '아직 입력완료가 아닌' 첫 행의 상태를 '입력완료'로 바꾸고,
         그런 행이 없으면(새 제약사 / 같은 제약사 추가 사진) 새 행을 맨 아래에 추가한다.
@@ -109,7 +214,7 @@ class MasterExcel:
         last = 1
         free = None                                     # 일치하지만 아직 입력완료 아닌 첫 행
         last_same = None                                # 같은 병원·월·제약사의 마지막 행
-        manager = None
+        manager = manager_hint
         for r in range(2, ws.max_row + 1):
             host = ws.cell(r, 4).value
             if not host:
@@ -255,6 +360,19 @@ def merge_into_base(work_path: str, base_path: str):
             for c in (1, 2, 3, 4, 5, 6, 7, 10):
                 bws.cell(n, c).value = wws.cell(r, c).value
             added += 1
+    # 특이사항(J열): 작업본에서 고친 메모를 기본파일의 같은 병원·월·제약사 마지막 행에 반영
+    latest_row = {}
+    for r in range(2, bws.max_row + 1):
+        if bws.cell(r, 4).value:
+            latest_row[key(bws, r)] = r
+    notes = {}
+    for r in range(2, wws.max_row + 1):
+        if wws.cell(r, 4).value and wws.cell(r, 10).value:
+            notes[key(wws, r)] = str(wws.cell(r, 10).value).strip()
+    for k, text in notes.items():
+        b = latest_row.get(k)
+        if b and str(bws.cell(b, 10).value or "").strip() != text:
+            bws.cell(b, 10).value = text
     bwb.calculation.fullCalcOnLoad = True
     bwb.save(base_path)
     wwb.close()
