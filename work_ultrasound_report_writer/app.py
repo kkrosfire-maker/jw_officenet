@@ -226,12 +226,36 @@ class DatePicker(tk.Toplevel):
                 ).grid(row=r, column=c, padx=1, pady=1)
 
 
+def _crisp_taskbar_icon(win, ico):
+    """tkinter iconbitmap은 32/16px만 등록해 작업표시줄(24px)에서 흐려진다.
+    ICO에서 작업표시줄 크기 프레임을 직접 읽어 창에 등록한다."""
+    try:
+        import ctypes
+        win.update_idletasks()
+        u = ctypes.windll.user32
+        u.LoadImageW.restype = ctypes.c_void_p
+        u.GetParent.restype = ctypes.c_void_p
+        u.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+        hwnd = u.GetParent(win.winfo_id()) or win.winfo_id()
+        scale = max(1.0, win.winfo_fpixels("1i") / 96)
+        big = u.LoadImageW(None, str(ico), 1, round(24 * scale), round(24 * scale), 0x10)
+        small = u.LoadImageW(None, str(ico), 1, 16, 16, 0x10)
+        if big:
+            u.SendMessageW(hwnd, 0x80, 1, big)
+        if small:
+            u.SendMessageW(hwnd, 0x80, 0, small)
+    except Exception:
+        pass
+
+
 class ReportApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("경직장 전립선·정낭 초음파 판독지 작성기")
         try:
-            self.iconbitmap(fill_report.resource_path("정원로고.ico"))
+            _ico = fill_report.resource_path("정원로고.ico")
+            self.iconbitmap(_ico)
+            _crisp_taskbar_icon(self, _ico)
         except tk.TclError:
             pass
         try:

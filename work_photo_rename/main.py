@@ -64,11 +64,35 @@ def year_for(month: int):
 class App(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
+def _crisp_taskbar_icon(win, ico):
+    """tkinter iconbitmap은 32/16px만 등록해 작업표시줄(24px)에서 흐려진다.
+    ICO에서 작업표시줄 크기 프레임을 직접 읽어 창에 등록한다."""
+    try:
+        import ctypes
+        win.update_idletasks()
+        u = ctypes.windll.user32
+        u.LoadImageW.restype = ctypes.c_void_p
+        u.GetParent.restype = ctypes.c_void_p
+        u.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+        hwnd = u.GetParent(win.winfo_id()) or win.winfo_id()
+        scale = max(1.0, win.winfo_fpixels("1i") / 96)
+        big = u.LoadImageW(None, str(ico), 1, round(24 * scale), round(24 * scale), 0x10)
+        small = u.LoadImageW(None, str(ico), 1, 16, 16, 0x10)
+        if big:
+            u.SendMessageW(hwnd, 0x80, 1, big)
+        if small:
+            u.SendMessageW(hwnd, 0x80, 0, small)
+    except Exception:
+        pass
+
+
         self.title("통계 사진 문구 삽입")
         self.geometry("1480x860")
         self.configure(bg="#242424")
         try:
-            self.iconbitmap(str(Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "app.ico"))
+            _ico = str(Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "app.ico")
+            self.iconbitmap(_ico)
+            _crisp_taskbar_icon(self, _ico)
         except Exception:
             pass
 
