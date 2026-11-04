@@ -264,6 +264,17 @@ class Housekeeping(unittest.TestCase):
         self.assertEqual(lg.view()["tasks"], [])
         self.assertEqual(len(lg.tasks), 1)
 
+    def test_archive_leaves_done_routine_so_it_is_reborn_next_day(self):
+        lg, clock, _ = ledger()
+        lg.add("매일", repeat="day")
+        lg.toggle(lg.tasks[0]["id"])
+        lg.archive([lg.tasks[0]["id"]])  # 엑셀 내보내기
+        self.assertFalse(lg.tasks[0].get("archived"))
+        clock.go("2026-10-23T09:00:00")
+        view = lg.view()["tasks"]
+        self.assertEqual(len(view), 1)
+        self.assertIsNone(view[0]["done_at"])
+
     def test_every_change_is_saved(self):
         lg, _, store = ledger()
         before = store.saves

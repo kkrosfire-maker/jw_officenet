@@ -205,7 +205,7 @@ class Ledger:
         """엑셀에 담은 완료 항목을 목록에서 치운다(기록은 남아 다음 엑셀에도 들어간다)."""
         ids = set(ids)
         for t in self.tasks:
-            if t["id"] in ids:
+            if t["id"] in ids and not t.get("repeat"):  # 반복 루틴은 건드리지 않는다: 보관하면 다음 회차가 되살아나지 않는다(_roll_routines 가 알아서 기록으로 넘긴다)
                 t["archived"] = True
         self._save()
 
