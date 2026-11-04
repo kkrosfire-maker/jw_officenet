@@ -62,6 +62,19 @@ class FileListController:
         self._update_nav()
         self._panel.rebuild(self.files, self.index)
 
+    def insert_after(self, idx: int, path):
+        """idx 바로 아래에 path 를 끼워 넣고 그 파일로 이동한다 (이름순 정렬을 하지 않는다)."""
+        if not self.files or not (0 <= idx < len(self.files)) or path in self.files:
+            return
+        self.files.insert(idx + 1, path)
+        self.index = idx + 1
+        if self._nav and len(self.files) > 1:
+            self._nav.pack(side="right", padx=8)
+        self._on_load(path)
+        self._update_nav()
+        self._panel.rebuild(self.files, self.index)
+        self._panel.scroll_to(self.index)
+
     def select(self, idx: int):
         """썸네일 클릭 또는 ◀▶ 로 파일 이동 — 저장 없이 전환."""
         if not self.files or not (0 <= idx < len(self.files)):

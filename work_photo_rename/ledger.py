@@ -24,6 +24,8 @@ from names import NameBook, clean_pharma, memo_key, norm   # noqa: F401  (memo_k
 
 SHEET = "통계입력확인"
 DONE = "입력완료"
+NOSETTLE = "정산불가"
+FINISHED = (DONE, NOSETTLE)        # 처리가 끝난 줄로 치는 상태들
 
 
 # ── 시트 구조 ────────────────────────────────────────────────────────────
@@ -102,6 +104,11 @@ def insert_row_after(ws, sc, after_row):
 class MasterExcel:
     """엑셀을 읽기 전용으로 읽어 병원·제약사 이력을 제공한다. self.rows 는 엑셀 순서(아래쪽이 최근)."""
 
+    hidden = frozenset()      # 병원별로 목록에서 지운 제약사의 memo_key 들 (엑셀 기록은 그대로, 후보·특이사항에서만 뺀다)
+
+    def _is_hidden(self, hospital, pharma):
+        return memo_key(hospital, pharma) in self.hidden
+
     def __init__(self, path: str):
         self.path = path
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -150,16 +157,19 @@ class MasterExcel:
 
     def hospital_pharmas(self, hospital: str, month: str = None):
         """그 병원에서 (어느 달이든) 처방이 나온 적 있는 제약사. 해당 월 항목을 맨 앞에, 나머지는 빈도순."""
-        cnt = Counter(r["pharma"] for r in self.rows if r["hospital"] == hospital)
+        cnt = Counter(r["pharma"] for r in self.rows
+                      if r["hospital"] == hospital and not self._is_hidden(hospital, r["pharma"]))
         cur = list(dict.fromkeys(r["pharma"] for r in self.rows
-                                 if r["hospital"] == hospital and r["rx_month"] == month))
+                                 if r["hospital"] == hospital and r["rx_month"] == month
+                                 and not self._is_hidden(hospital, r["pharma"])))
         return cur + [p for p, _ in cnt.most_common() if p not in cur]
 
     def pharmas_for(self, hospital: str, month: str, year=None):
         """해당 병원·처방월에 엑셀에 올라 있는 제약사 (엑셀 순서 유지)."""
         return list(dict.fromkeys(
             r["pharma"] for r in self.rows
-            if r["hospital"] == hospital and r["rx_month"] == month and (year is None or r["year"] == year)))
+            if r["hospital"] == hospital and r["rx_month"] == month and (year is None or r["year"] == year)
+            and not self._is_hidden(hospital, r["pharma"])))
 
     def notes_for(self, hospital, memos=None, month=None):
         """그 병원의 제약사별 특이사항 [{pharma, note, tag}] 을 가나다순으로.
@@ -167,7 +177,7 @@ class MasterExcel:
         memos = memos or {}
         groups = {}
         for r in self.rows:
-            if r["hospital"] != hospital:
+            if r["hospital"] != hospital or self._is_hidden(hospital, r["pharma"]):
                 continue
             g = groups.setdefault(norm(r["pharma"]), {"pharma": r["pharma"], "note": "", "tag": ""})
             g["pharma"] = r["pharma"]
@@ -216,9 +226,9 @@ class MasterExcel:
 
 # ── 쓰기 ─────────────────────────────────────────────────────────────────
 
-def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hint=None):
-    """저장한 사진 1장을 엑셀 파일(path)에 반영한다.
-    해당 병원·처방월·제약사의 '아직 입력완료가 아닌' 첫 줄을 입력완료로 바꾸고,
+def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hint=None, status=DONE):
+    """저장한 사진 1장을 엑셀 파일(path)에 반영한다. status는 '입력완료'(기본) 또는 '정산불가'.
+    해당 병원·처방월·제약사의 '아직 입력완료/정산불가가 아닌' 첫 줄을 status로 바꾸고,
     없으면(새 제약사 / 같은 제약사 추가 사진) 같은 건의 마지막 줄 바로 아래에, 그런 줄도 없으면 맨 아래에 새 줄을 넣는다.
     반환: ("updated"|"added", 줄 번호)."""
     wb = openpyxl.load_workbook(path)                    # 수식·데이터검증 유지를 위해 read_only 아님
@@ -236,16 +246,16 @@ def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hin
         if (_text(ws, r, sc.rx_month) == month and ws.cell(r, sc.year).value == year
                 and norm(clean_pharma(_text(ws, r, sc.pharma))) == norm(pharma)):
             last_same = r
-            if free is None and ws.cell(r, sc.status).value != DONE:
+            if free is None and ws.cell(r, sc.status).value not in FINISHED:
                 free = r
     if free is not None:
-        ws.cell(free, sc.status).value = DONE
+        ws.cell(free, sc.status).value = status
         if not ws.cell(free, sc.input_month).value and input_month:
             ws.cell(free, sc.input_month).value = input_month
         result = ("updated", free)
     else:
         n = insert_row_after(ws, sc, last_same or last)
-        for col, val in ((sc.year, year), (sc.manager, manager), (sc.status, DONE), (sc.hospital, hospital),
+        for col, val in ((sc.year, year), (sc.manager, manager), (sc.status, status), (sc.hospital, hospital),
                          (sc.rx_month, month), (sc.input_month, input_month), (sc.pharma, pharma)):
             ws.cell(n, col).value = val                  # 제약사명 끝에 번호는 붙이지 않는다 (줄 수 = 건수)
         result = ("added", n)
@@ -343,22 +353,23 @@ def merge_into_base(work_path: str, base_path: str):
             brows[row_key(bws, bs_sc, r)].append(r)
     wrows = defaultdict(list)                  # 건 -> 작업본의 입력완료 줄들
     for r in range(2, wws.max_row + 1):
-        if wws.cell(r, ws_sc.hospital).value and wws.cell(r, ws_sc.status).value == DONE:
+        if wws.cell(r, ws_sc.hospital).value and wws.cell(r, ws_sc.status).value in FINISHED:
             wrows[row_key(wws, ws_sc, r)].append(r)
 
     updated = added = 0
     for k, wlist in wrows.items():
         rows = brows.get(k, [])
-        need = len(wlist) - sum(1 for b in rows if bws.cell(b, bs_sc.status).value == DONE)
-        for b in [b for b in rows if bws.cell(b, bs_sc.status).value != DONE]:
-            if need <= 0:
+        need = len(wlist) - sum(1 for b in rows if bws.cell(b, bs_sc.status).value in FINISHED)
+        todo = wlist[len(wlist) - need:] if need > 0 else []      # 기본파일에 아직 없는 작업본 줄들
+        for b in [b for b in rows if bws.cell(b, bs_sc.status).value not in FINISHED]:
+            if not todo:
                 break
-            bws.cell(b, bs_sc.status).value = DONE
+            w = todo.pop(0)
+            bws.cell(b, bs_sc.status).value = wws.cell(w, ws_sc.status).value
             if not bws.cell(b, bs_sc.input_month).value:
                 bws.cell(b, bs_sc.input_month).value = wws.cell(wlist[0], ws_sc.input_month).value
             updated += 1
-            need -= 1
-        for r in wlist[len(wlist) - need:] if need > 0 else []:
+        for r in todo:
             n = insert_row_after(bws, bs_sc, max(rows) if rows else last)
             for kk, lst in brows.items():      # 끼워 넣은 만큼 뒤 줄 번호 밀기
                 brows[kk] = [x + 1 if x >= n else x for x in lst]
@@ -431,12 +442,15 @@ class Ledger:
         self._jobs = queue.Queue()
         self._events = queue.Queue()
         self._marked = {}                      # 사진 -> 이미 반영한 (병원, 월, 제약사)
+        self.hidden = set()                    # 병원별로 목록에서 지운 제약사 (memo_key) — 새로 저장하면 다시 나타난다
         self.pending = 0
         threading.Thread(target=self._run, daemon=True).start()
 
     # 이력
     @property
     def master(self):
+        if self._master is not None:
+            self._master.hidden = self.hidden            # 항상 최신 '지운 목록'을 따르게 한다
         return self._master
 
     def load(self):
@@ -459,9 +473,10 @@ class Ledger:
                 pass
 
     # 쓰기 (백그라운드)
-    def record_done(self, photo, hospital, month, year, pharma, input_month):
-        """사진 한 장을 입력완료로 반영하도록 맡긴다. 이미 같은 내용으로 반영했으면 False."""
-        key = (hospital, month, pharma)
+    def record_done(self, photo, hospital, month, year, pharma, input_month, status=DONE):
+        """사진 한 장을 입력완료(또는 정산불가)로 반영하도록 맡긴다. 이미 같은 내용으로 반영했으면 False."""
+        key = (hospital, month, pharma, status)
+        self.hidden.discard(memo_key(hospital, pharma))      # 지웠던 제약사도 새로 저장하면 다시 목록에 나타난다
         if self._marked.get(photo) == key:
             return False
         self._marked[photo] = key
@@ -489,7 +504,7 @@ class Ledger:
                     result, work_master = payload
                     self._master = (self._base_master.merged_with(work_master) if self._base_master else work_master)
                     out.append(LedgerEvent("done", f"{self.work.name if self.work else ''} {result[1]}행 "
-                                                   + ("입력완료로 변경" if result[0] == "updated" else "새 행 추가")))
+                                                   + (f"{key[3]}로 변경" if result[0] == "updated" else f"{key[3]} 새 행 추가")))
                 elif kind == "note":
                     out.append(LedgerEvent("note", ""))
                 else:
@@ -522,11 +537,11 @@ class Ledger:
                     set_notes(str(work), *key)
                     self._events.put(("note", None, None, None))
                 else:
-                    hospital, month, pharma = key
+                    hospital, month, pharma, status = key
                     if not work.exists():
                         work.parent.mkdir(parents=True, exist_ok=True)
                         create_work_file(str(self.base), str(work), input_month)   # 이번 달 정산분만 담아 시작
-                    result = mark_done(str(work), hospital, month, year, pharma, input_month, mgr)
+                    result = mark_done(str(work), hospital, month, year, pharma, input_month, mgr, status)
                     self._events.put(("done", photo, key, (result, MasterExcel(str(work)))))
             except PermissionError:
                 self._events.put(("error", photo, key, f"{Path(work).name} 이(가) 열려 있습니다. 닫고 다시 저장하세요."))

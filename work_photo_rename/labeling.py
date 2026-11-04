@@ -82,11 +82,24 @@ def add_label_band(img, text):
     return cv2.cvtColor(np.array(canvas), cv2.COLOR_RGB2BGR)
 
 
-def render(img, text, rects=None):
-    """원본 BGR 이미지 → 최종 결과(가로 2500px, 박스+문구 띠)."""
+def add_center_stamp(img, text, size=FONT_SIZE * 2, color=(255, 0, 0)):
+    """사진 한가운데에 빨간 글씨를 찍는다 (기본 크기 = 하단 문구의 2배). color는 RGB."""
+    h, w = img.shape[:2]
+    font = load_font(size)
+    box = font.getbbox(text)
+    tw, th = box[2] - box[0], box[3] - box[1]
+    pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    ImageDraw.Draw(pil).text(((w - tw) // 2 - box[0], (h - th) // 2 - box[1]), text, font=font, fill=color)
+    return cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
+
+
+def render(img, text, rects=None, stamp=None):
+    """원본 BGR 이미지 → 최종 결과(가로 2500px, 박스 + 가운데 도장(선택) + 문구 띠)."""
     out, s = resize_to_width(img)
     if rects:
         draw_boxes(out, rects, s)
+    if stamp:
+        out = add_center_stamp(out, stamp)
     return add_label_band(out, text)
 
 

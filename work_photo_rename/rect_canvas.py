@@ -26,6 +26,8 @@ RESIZE_HIT = HANDLE_R * 4
 ROTATE_HIT = RESIZE_HIT + 20
 MIN_HALF   = 8
 EDGE_HIT   = 6
+ZOOM_MIN, ZOOM_MAX = 0.3, 15.0     # 휠 확대/축소 범위 (창에 맞춘 크기 = 1.0)
+ZOOM_STEP  = 1.2
 
 
 class RectCanvas(tk.Canvas):
@@ -41,6 +43,10 @@ class RectCanvas(tk.Canvas):
         self._scale  = 1.0
         self._ox = self._oy = 0
         self._resize_job = None
+        self._base_scale = 1.0       # 창에 맞춘 배율 (확대 1.0일 때의 배율)
+        self._zoom       = 1.0
+        self._pan_x = self._pan_y = 0.0
+        self._pan_anchor = None
 
         self._rects        = []
         self._selected_idx = None    # 대표 선택(마지막으로 고른 박스)
@@ -59,11 +65,22 @@ class RectCanvas(tk.Canvas):
         self.bind("<B1-Motion>",       self._on_motion)
         self.bind("<ButtonRelease-1>", self._on_release)
         self.bind("<Motion>",          self._on_hover)
+        self.bind("<MouseWheel>",      self._on_wheel)
+        for b in (2, 3):                                   # 가운데/오른쪽 버튼 드래그 = 화면 이동
+            self.bind(f"<Button-{b}>",        self._pan_start)
+            self.bind(f"<B{b}-Motion>",       self._pan_motion)
+            self.bind(f"<ButtonRelease-{b}>", self._pan_end)
 
     # ── 공개 API: 이미지 / 전체 초기화 ────────────────────────────────────
 
     def show(self, cv_img):
         self._cv_img = cv_img
+        self._zoom, self._pan_x, self._pan_y = 1.0, 0.0, 0.0     # 새 사진은 처음 배율로
+        self._render()
+
+    def reset_view(self):
+        """확대/축소·이동을 원래(창에 맞춤) 상태로 되돌린다. 박스는 건드리지 않는다."""
+        self._zoom, self._pan_x, self._pan_y = 1.0, 0.0, 0.0
         self._render()
 
     def clear(self):
@@ -74,6 +91,7 @@ class RectCanvas(tk.Canvas):
         self._selected_idx = None
         self._sel = set()
         self._drag_mode = None
+        self._zoom, self._pan_x, self._pan_y = 1.0, 0.0, 0.0
         self.delete("all")
 
     # ── 공개 API: 테두리 목록 ────────────────────────────────────────────
@@ -325,16 +343,57 @@ class RectCanvas(tk.Canvas):
             return
 
         h, w = self._cv_img.shape[:2]
-        self._scale = min((cw - 4) / w, (ch - 4) / h)
-        nw, nh = max(1, int(w * self._scale)), max(1, int(h * self._scale))
-        self._ox = max(0, (cw - nw) // 2)
-        self._oy = max(0, (ch - nh) // 2)
+        self._base_scale = min((cw - 4) / w, (ch - 4) / h)
+        eff = self._base_scale * self._zoom
+        self._scale = eff
+        nw, nh = w * eff, h * eff
+        self._ox = int((cw - nw) // 2 + self._pan_x)
+        self._oy = int((ch - nh) // 2 + self._pan_y)
 
-        resized = cv2.resize(self._cv_img, (nw, nh), interpolation=cv2.INTER_AREA)
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        self._tk_img = ImageTk.PhotoImage(Image.fromarray(rgb))
-        self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+        # 화면에 보이는 부분만 잘라서 그린다 (크게 확대해도 빠르게)
+        x0 = max(0, int(math.floor(-self._ox / eff)))
+        y0 = max(0, int(math.floor(-self._oy / eff)))
+        x1 = min(w, int(math.ceil((cw - self._ox) / eff)))
+        y1 = min(h, int(math.ceil((ch - self._oy) / eff)))
+        if x1 > x0 and y1 > y0:
+            crop = self._cv_img[y0:y1, x0:x1]
+            cw2, ch2 = max(1, round((x1 - x0) * eff)), max(1, round((y1 - y0) * eff))
+            interp = cv2.INTER_AREA if eff < 1 else cv2.INTER_LINEAR
+            rgb = cv2.cvtColor(cv2.resize(crop, (cw2, ch2), interpolation=interp), cv2.COLOR_BGR2RGB)
+            self._tk_img = ImageTk.PhotoImage(Image.fromarray(rgb))
+            self.create_image(self._ox + round(x0 * eff), self._oy + round(y0 * eff),
+                              anchor="nw", image=self._tk_img)
         self._render_overlay()
+
+    # ── 확대/축소 (휠) · 이동 (가운데/오른쪽 버튼 드래그) ──────────────────
+
+    def _on_wheel(self, event):
+        if self._cv_img is None or self._drag_mode:
+            return
+        ix, iy = self._to_image(event.x, event.y)            # 마우스 아래 지점을 고정한 채 확대/축소
+        old = self._zoom
+        self._zoom = max(ZOOM_MIN, min(ZOOM_MAX, self._zoom * (ZOOM_STEP if event.delta > 0 else 1 / ZOOM_STEP)))
+        if self._zoom == old:
+            return
+        cw, ch = max(self.winfo_width(), 200), max(self.winfo_height(), 200)
+        h, w = self._cv_img.shape[:2]
+        eff = self._base_scale * self._zoom
+        self._pan_x = event.x - ix * eff - (cw - w * eff) // 2
+        self._pan_y = event.y - iy * eff - (ch - h * eff) // 2
+        self._render()
+
+    def _pan_start(self, event):
+        self._pan_anchor = (event.x - self._pan_x, event.y - self._pan_y)
+
+    def _pan_motion(self, event):
+        if self._pan_anchor is None or self._cv_img is None:
+            return
+        self._pan_x = event.x - self._pan_anchor[0]
+        self._pan_y = event.y - self._pan_anchor[1]
+        self._render()
+
+    def _pan_end(self, event):
+        self._pan_anchor = None
 
     def _render_overlay(self):
         self.delete("rect_overlay")

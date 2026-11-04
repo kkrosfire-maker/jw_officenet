@@ -14,8 +14,9 @@ TEXT_BG = "#565b61"
 
 
 class NotesPanel:
-    def __init__(self, parent, *, on_edit, width=PANEL_W):
+    def __init__(self, parent, *, on_edit, on_delete=None, width=PANEL_W):
         self._on_edit = on_edit
+        self._on_delete = on_delete
         self._hospital = ""
         self._rows = []                     # {norm, frame, text, original, pharma}
 
@@ -68,6 +69,9 @@ class NotesPanel:
         fr.pack(fill="x", padx=2, pady=2)
         top = tk.Frame(fr, bg=ROW_BG)
         top.pack(fill="x")
+        close = tk.Label(top, text="✕", bg=ROW_BG, fg="#b8bdc3", font=("Segoe UI", 9, "bold"), cursor="hand2",
+                         padx=4)
+        close.pack(side="right")
         name = tk.Label(top, text=g["pharma"], bg=ROW_BG, fg="#f2f2f2", font=("Malgun Gothic", 9, "bold"),
                         anchor="w")
         name.pack(side="left")
@@ -81,11 +85,14 @@ class NotesPanel:
         txt.bind("<KeyRelease>", lambda e, t=txt: self._fit(t), add="+")        # 내용만큼만 줄을 늘린다
         txt.bind("<Configure>", lambda e, t=txt: self._fit(t), add="+")         # 폭이 바뀌면 줄바꿈도 다시 계산
         row = {"norm": norm(g["pharma"]), "frame": fr, "text": txt, "original": g.get("note", ""),
-               "pharma": g["pharma"], "labels": (top, name, tag)}
+               "pharma": g["pharma"], "labels": (top, name, tag, close)}
         self._rows.append(row)
+        close.bind("<Button-1>", lambda e, r=row: self._delete(r))
+        close.bind("<Enter>", lambda e, c=close: c.config(fg="#ff6b6b"))
+        close.bind("<Leave>", lambda e, c=close: c.config(fg="#b8bdc3"))
         txt.bind("<FocusOut>", lambda e, r=row: self._commit(r))
         txt.bind("<Control-Return>", lambda e, r=row: (self._commit(r), "break")[1])
-        for w in (fr, top, name, tag):
+        for w in (fr, top, name, tag, close):
             w.bind("<MouseWheel>", self._on_wheel)
 
     @staticmethod
@@ -101,9 +108,17 @@ class NotesPanel:
         except tk.TclError:
             pass
 
+    def _delete(self, row):
+        """✕ 를 누르면 호출자에게 물어보고(on_delete가 True를 돌려주면) 이 칸을 바로 없앤다."""
+        if self._on_delete and not self._on_delete(self._hospital, row["pharma"]):
+            return
+        row["frame"].destroy()
+        if row in self._rows:
+            self._rows.remove(row)
+
     def flush(self):
         """아직 저장 안 된 입력이 있으면 모두 저장 (창 닫기·저장 직전 호출)."""
-        for r in self._rows:
+        for r in list(self._rows):
             self._commit(r)
 
     def _commit(self, row):

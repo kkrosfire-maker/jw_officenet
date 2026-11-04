@@ -200,6 +200,19 @@ class MergeTest(LedgerTestCase):
         ledger.merge_into_base(str(work), str(self.base))
         self.assertEqual(sheet(self.base).cell(4, 10).value, "11월 메모")
 
+    def test_nosettle_is_marked_and_merged(self):
+        work = self.dir / "work.xlsx"
+        ledger.create_work_file(str(self.base), str(work), "11월")
+        self.assertEqual(ledger.mark_done(str(work), "다솜의원", "10월", 2026, "명문제약", "11월",
+                                          status=ledger.NOSETTLE), ("updated", 3))
+        self.assertEqual(sheet(work).cell(3, 3).value, "정산불가")
+        # 정산불가 줄은 끝난 줄이라 다음 사진이 덮어쓰지 않는다
+        self.assertEqual(ledger.mark_done(str(work), "다솜의원", "10월", 2026, "명문제약", "11월")[0], "added")
+        self.assertEqual(ledger.merge_into_base(str(work), str(self.base)), (1, 1))
+        self.assertEqual(sheet(self.base).cell(3, 3).value, "정산불가")
+        self.assertEqual(sheet(self.base).cell(4, 3).value, "입력완료")
+        self.assertEqual(ledger.merge_into_base(str(work), str(self.base)), (0, 0))
+
     def test_merge_makes_daily_backup(self):
         work = self._work_with_saves(1)
         ledger.merge_into_base(str(work), str(self.base))
@@ -252,7 +265,7 @@ class LedgerFacadeTest(LedgerTestCase):
         lg = Ledger(self.base)
         self.ledgers.append(lg)
         lg.load()
-        lg.set_work_path(self.dir / "out" / "통계입력_2611.xlsx")
+        lg.set_work_path(self.dir / "out" / "1.통계입력_2611.xlsx")
         return lg
 
     def test_record_done_creates_work_file_and_updates_history(self):
@@ -263,6 +276,25 @@ class LedgerFacadeTest(LedgerTestCase):
         self.assertTrue(lg.work.exists())
         self.assertIn("신규제약", lg.master.all_pharmas())          # 새 제약사가 후보에 들어옴
         self.assertEqual(sheet(self.base).max_row, 7)               # 기본파일은 그대로
+
+    def test_hidden_pharma_leaves_lists_and_returns_when_saved_again(self):
+        lg = self._ledger()
+        names = lambda: [g["pharma"] for g in lg.master.notes_for("다솜의원")]
+        self.assertIn("명문제약", names())
+        lg.hidden.add(ledger.memo_key("다솜의원", "명문제약"))
+        self.assertNotIn("명문제약", names())                                        # 특이사항에서 빠짐
+        self.assertNotIn("명문제약", lg.master.hospital_pharmas("다솜의원"))           # 입력 후보에서도 빠짐
+        self.assertIn("명문제약", lg.master.all_pharmas())                           # 엑셀 기록·전체 후보는 그대로
+        self.assertIn("명문제약", [g["pharma"] for g in lg.master.notes_for("가온의원")] + ["명문제약"])
+        lg.record_done("a.png", "다솜의원", "10월", 2026, "명문제약", "11월")        # 다시 저장하면 복귀
+        self._wait(lg)
+        self.assertIn("명문제약", names())
+
+    def test_new_pharma_appears_in_notes_after_save(self):
+        lg = self._ledger()
+        lg.record_done("a.png", "다솜의원", "10월", 2026, "신규제약", "11월")
+        self._wait(lg)
+        self.assertIn("신규제약", [g["pharma"] for g in lg.master.notes_for("다솜의원")])
 
     def test_same_photo_same_name_not_recorded_twice(self):
         lg = self._ledger()

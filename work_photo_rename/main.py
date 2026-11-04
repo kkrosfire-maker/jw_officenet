@@ -5,6 +5,7 @@ import os
 import queue
 import shutil
 import sys
+import tempfile
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -15,12 +16,14 @@ from PIL import Image, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
 import labeling
+import ledger
 import period_check
 from file_list_controller import FileListController
-from imageio_utils import read_image, unique_path
+from imageio_utils import make_copy, read_image, unique_path
 from ledger import Ledger, clean_names
 from names import memo_key, norm
 from notes_panel import NotesPanel, PANEL_W as NOTES_W
+from photos import PhotoBook
 from rect_canvas import RectCanvas
 from suggest_entry import SuggestEntry
 from thumb_panel import ThumbPanel
@@ -103,17 +106,17 @@ class App(TkinterDnD.Tk):
         self._cfg = _load_config()
         self._out_dir = Path(self._cfg["out_dir"]) if self._cfg.get("out_dir") else None
         self._ledger = Ledger(BASE_EXCEL)     # 기본파일 이력 + 이번 달 작업 엑셀 (엑셀 규칙은 모두 여기)
+        self._ledger.hidden = set(self._cfg.get("hidden_pharma", []))
         self._xl_fail = []
+        self._copy_dir = Path(tempfile.gettempdir()) / f"사진문구넣기_원본복사_{os.getpid()}"
         self._cv_img = None
         self._cv_result = None
         self._tk_res = None
         self._current_path = None
-        self._state = {}              # path -> {"hospital","pharma","rects"}
-        self._periods = {}          # path -> OCR 결과 (None=못 읽음) ; 키 없음=아직 안 읽음
+        self._photos = PhotoBook()    # 사진별 작업 기록 (병원·제약사·박스·통계기간·읽은 제약사)
         self._ocr_q = queue.Queue()
         self._memos = self._load_memos()
         self._notes_job = None
-        self._ocr_pharma = {}         # path -> 사진에서 읽은 제약사 글자
         self._apply_job = None
 
         self._build_ui()
@@ -208,11 +211,15 @@ class App(TkinterDnD.Tk):
         form2.pack(fill="x")
         tk.Button(form2, text="저장 (JPG)", command=self._save_current, **B).pack(side="left", padx=10)
         tk.Button(form2, text="전체 저장", command=self._save_all, **B).pack(side="left", padx=4)
+        tk.Button(form2, text="원본 복사", command=self._copy_original, **B).pack(side="left", padx=4)
+        tk.Button(form2, text="정산불가", command=lambda: self._save_current(ledger.NOSETTLE),
+                  **B).pack(side="left", padx=4)
         tk.Button(form2, text="↶ 실행 취소", command=lambda: self._history_status("undo", self._history.undo()),
                   **B).pack(side="left", padx=(14, 4))
         tk.Button(form2, text="↷ 다시 실행", command=lambda: self._history_status("redo", self._history.redo()),
                   **B).pack(side="left", padx=4)
         tk.Button(form2, text="박스 전체 지우기", command=self._clear_all_rects, **B).pack(side="left", padx=4)
+        tk.Button(form2, text="원래대로", command=lambda: self._canvas.reset_view(), **B).pack(side="left", padx=4)
         tk.Button(form2, text="통계완료(업데이트)", command=self._complete_stats, **B).pack(side="left", padx=(14, 4))
         tk.Button(form2, text="저장 폴더 지정", command=self._choose_out_dir, **B).pack(side="left", padx=(14, 4))
         self._out_lbl = tk.Label(form2, text="", bg="#2e2e2e", fg="#aaa", font=("Segoe UI", 9))
@@ -224,9 +231,10 @@ class App(TkinterDnD.Tk):
         body.pack(fill="both", expand=True, padx=6, pady=6)
         self._thumb_panel = ThumbPanel(
             body, on_select=self._on_thumb_select, on_delete=lambda i: self._files.remove(i),
-            on_delete_selected=lambda: self._files.remove_selected(), checkbox_default=False)
+            on_delete_selected=lambda: self._files.remove_selected(), checkbox_default=False,
+            extra_menu_items=[("원본 복사", lambda i: self._copy_original(i))])
 
-        self._notes = NotesPanel(body, on_edit=self._on_note_edit, width=NOTES_W)
+        self._notes = NotesPanel(body, on_edit=self._on_note_edit, on_delete=self._on_pharma_delete, width=NOTES_W)
         self._notes.panel.pack(side="right", fill="y", padx=(4, 0))
         self._pw = tk.PanedWindow(body, orient="horizontal", sashwidth=8, sashrelief="flat", bg="#242424",
                                   bd=0, opaqueresize=True)       # 가운데 바를 끌어 좌우 창 크기 조절
@@ -256,8 +264,17 @@ class App(TkinterDnD.Tk):
     # ── 기준 엑셀 ────────────────────────────────────────────────────────
 
     def _work_excel(self):
-        """JPG 저장 폴더의 이번 달 작업 엑셀: 통계입력_yymm.xlsx"""
-        return self._out_dir / f"통계입력_{datetime.date.today():%y%m}.xlsx" if self._out_dir else None
+        """JPG 저장 폴더의 이번 달 작업 엑셀: 1.통계입력_yymm.xlsx (예전 이름 통계입력_yymm.xlsx 가 있으면 새 이름으로 바꿔 이어 쓴다)"""
+        if not self._out_dir:
+            return None
+        ym = f"{datetime.date.today():%y%m}"
+        new, old = self._out_dir / f"1.통계입력_{ym}.xlsx", self._out_dir / f"통계입력_{ym}.xlsx"
+        if old.exists() and not new.exists():
+            try:
+                old.rename(new)
+            except OSError:
+                return old                      # 열려 있어 못 바꾸면 이번에는 예전 이름 그대로 쓴다
+        return new
 
     @property
     def _master(self):
@@ -317,14 +334,26 @@ class App(TkinterDnD.Tk):
         self._ledger.set_note(hospital, pharma, text)
         self._st.config(text=f"메모 저장: {hospital} / {pharma}")
 
+    def _on_pharma_delete(self, hospital, pharma):
+        """특이사항의 ✕: 이 병원의 제약사 목록(특이사항·입력 후보)에서 뺀다. 엑셀 기록은 지우지 않고, 새로 저장하면 다시 나타난다."""
+        if not messagebox.askyesno("제약사 삭제", f"'{pharma}' 을(를) {hospital} 의 제약사 목록에서 삭제할까요?\n"
+                                   "(엑셀 기록은 그대로이고, 나중에 이 제약사로 저장하면 다시 나타납니다)"):
+            return False
+        self._ledger.hidden.add(memo_key(hospital, pharma))
+        self._cfg["hidden_pharma"] = sorted(self._ledger.hidden)
+        _save_config(self._cfg)
+        self._refresh_pharma_candidates()
+        self._st.config(text=f"목록에서 삭제: {hospital} / {pharma}")
+        return True
+
     def _complete_stats(self):
-        """통계완료: 이번 달 작업 엑셀(JPG폴더/통계입력_yymm.xlsx)의 입력완료 내용을 기본파일에 반영."""
+        """통계완료: 이번 달 작업 엑셀(JPG폴더/1.통계입력_yymm.xlsx)의 입력완료 내용을 기본파일에 반영."""
         work = self._work_excel()
         if self._ledger.pending:
             messagebox.showinfo("알림", "엑셀에 반영 중인 저장 건이 있습니다. 잠시 후 다시 눌러주세요.")
             return
         if not work or not work.exists():
-            messagebox.showinfo("알림", "반영할 통계입력 엑셀이 없습니다.\n(JPG 저장 폴더에 통계입력_yymm.xlsx 필요)")
+            messagebox.showinfo("알림", "반영할 통계입력 엑셀이 없습니다.\n(JPG 저장 폴더에 1.통계입력_yymm.xlsx 필요)")
             return
         if not messagebox.askyesno("통계완료(업데이트)",
                                    f"{work.name} 의 입력완료 내용을\n{BASE_EXCEL.name} 에 반영할까요?\n"
@@ -361,8 +390,10 @@ class App(TkinterDnD.Tk):
 
     def _apply_ocr_pharma(self, path):
         """사진에서 읽은 제약사 글자와 비슷한 제약사를 찾아, 비어 있으면 일단 넣어 둔다 (틀리면 직접 수정)."""
-        raw = self._ocr_pharma.get(path)
-        if not raw or path != self._current_path or not self._master or self._pharma_var.get().strip():
+        if not path or path != self._current_path or not self._master or self._pharma_var.get().strip():
+            return
+        raw = self._photos.get(path).ocr_pharma
+        if not raw:
             return
         name, score = self._master.match_pharma(raw, self._hospital_var.get().strip(),
                                                 self._cfg.get("recent_pharma", {}))
@@ -373,15 +404,7 @@ class App(TkinterDnD.Tk):
     def _checked_pharma_norms(self):
         """현재 병원에서 이미 체크된(작업 끝낸) 사진들의 제약사 이름(정규화) — 드롭다운 ✓ 표시용."""
         self._remember()
-        h = norm(self._hospital_var.get())
-        if not h:
-            return set()
-        out = set()
-        for p in self._thumb_panel.checked_paths:
-            st = self._state.get(p)
-            if st and norm(st["hospital"]) == h and st["pharma"].strip():
-                out.add(norm(st["pharma"]))
-        return out
+        return self._photos.pharma_norms_done(self._hospital_var.get(), self._thumb_panel.checked_paths)
 
     def _on_hospital_pick(self, value=None):
         self._refresh_pharma_candidates()
@@ -397,15 +420,13 @@ class App(TkinterDnD.Tk):
 
     def _remember(self):
         if self._current_path:
-            self._state[self._current_path] = {
-                "hospital": self._hospital_var.get(), "pharma": self._pharma_var.get(),
-                "rects": self._canvas.get_rects()}
+            self._photos.record(self._current_path, self._hospital_var.get(), self._pharma_var.get(),
+                                self._canvas.get_rects())
 
     def _load_image(self, path):
         prev = self._current_path
         self._remember()
-        st0 = self._state.get(prev) if prev else None
-        if prev and prev != path and st0 and st0["hospital"].strip() and st0["pharma"].strip():
+        if prev and prev != path and self._photos.is_ready(prev):
             self._thumb_panel.set_checked(prev, True)      # 병원·제약사명을 넣고 다음 그림으로 넘어가면 자동 체크
         img = read_image(path)
         if img is None:
@@ -413,11 +434,12 @@ class App(TkinterDnD.Tk):
             return
         self._current_path, self._cv_img = path, img
         self._history.clear()
-        st = self._state.get(path, {"hospital": "", "pharma": "", "rects": []})
-        self._hospital_var.set(st["hospital"])
-        self._pharma_var.set(st["pharma"])
+        ph = self._photos.get(path)
+        first_open = not ph.opened
+        self._hospital_var.set(ph.hospital)
+        self._pharma_var.set(ph.pharma)
         guessed = ""
-        if path not in self._state and self._master:       # 처음 여는 사진: 파일명에서 병원명 추측
+        if first_open and self._master:                    # 처음 여는 사진: 파일명에서 병원명 추측
             h, p = self._master.guess_from_filename(path)
             if h:
                 self._hospital_var.set(h)
@@ -428,11 +450,11 @@ class App(TkinterDnD.Tk):
                     self._on_hospital_pick()
                 guessed = f"파일명에서 병원명 입력: {h}" + (f" / {p}" if p else "")
         self._canvas.show(img)
-        self._canvas.set_rects(st["rects"])
+        self._canvas.set_rects(ph.rects)
         self._refresh_pharma_candidates()
         self._apply_ocr_pharma(path)
         self._update_warn()
-        if path not in self._periods:
+        if not ph.period_read:
             threading.Thread(target=self._ocr_worker, args=(path, img), daemon=True).start()
         self._schedule_apply(now=True)
         if guessed:
@@ -505,11 +527,11 @@ class App(TkinterDnD.Tk):
             while True:
                 kind, path, val = self._ocr_q.get_nowait()
                 if kind == "period":
-                    self._periods[path] = val
+                    self._photos.set_period(path, val)
                     if path == self._current_path:
                         self._update_warn()
                 else:
-                    self._ocr_pharma[path] = val
+                    self._photos.set_ocr_pharma(path, val)
                     self._apply_ocr_pharma(path)
         except queue.Empty:
             pass
@@ -523,10 +545,11 @@ class App(TkinterDnD.Tk):
     def _update_warn(self):
         """좌측 화면 우측상단에 빨간 '통계기간확인'. OCR 전에는 숨기고, 못 읽거나 다르면 표시."""
         p = self._current_path
-        if not p or p not in self._periods:
+        status = self._photos.period_status(p, *self._selected_ym()) if p else None
+        if status is None:
             self._warn.place_forget()
             return
-        ok, why = period_check.check_period(self._periods[p], *self._selected_ym())
+        ok, why = status
         if ok:
             self._warn.place_forget()
             self._st.config(text=f"통계기간 확인됨: {why}")
@@ -666,27 +689,32 @@ class App(TkinterDnD.Tk):
 
     # ── 저장 ─────────────────────────────────────────────────────────────
 
-    def _save_one(self, path, img, hospital, pharma, rects):
+    def _save_one(self, path, img, hospital, pharma, rects, status=ledger.DONE):
         label = labeling.build_label(hospital, self._month_var.get(), pharma)
         if norm(pharma):                      # 최근에 쓴 표기를 기억 -> 비슷한 이름 후보 중 이것만 보인다
             self._cfg.setdefault("recent_pharma", {})[norm(pharma)] = pharma.strip()
             _save_config(self._cfg)
-        result = labeling.render(img, label, rects)
+        stamp = ledger.NOSETTLE if status == ledger.NOSETTLE else None    # 정산불가는 사진 가운데 빨간 글씨
+        result = labeling.render(img, label, rects, stamp)
         out_dir = self._out_dir
         out_dir.mkdir(parents=True, exist_ok=True)
         out = labeling.numbered_path(out_dir, labeling.safe_filename(label), ".jpg")
         if not labeling.save_jpg(result, out):
             raise OSError("JPG 인코딩 실패")
-        return out, self._update_excel(path, hospital, pharma)
+        return out, self._update_excel(path, hospital, pharma, status)
 
-    def _update_excel(self, path, hospital, pharma):
+    def _update_excel(self, path, hospital, pharma, status=ledger.DONE):
         """저장한 사진을 장부에 반영하도록 맡긴다 (백그라운드). 같은 사진을 같은 이름으로 다시 저장하면 중복 반영하지 않는다."""
         if not self._master:
             return "엑셀 미연결"
         month = self._month_var.get()
         self._ledger.set_work_path(self._work_excel())
+        if memo_key(hospital, pharma) in self._ledger.hidden:           # 지웠던 제약사를 다시 저장하면 목록에 복귀
+            self._ledger.hidden.discard(memo_key(hospital, pharma))
+            self._cfg["hidden_pharma"] = sorted(self._ledger.hidden)
+            _save_config(self._cfg)
         if not self._ledger.record_done(path, hospital, month, year_for(int(month[:-1])), pharma,
-                                        f"{datetime.date.today().month}월"):
+                                        f"{datetime.date.today().month}월", status):
             return "엑셀: 이미 반영됨"
         return "엑셀 반영 중…"
 
@@ -702,7 +730,28 @@ class App(TkinterDnD.Tk):
             msg, self._xl_fail = self._xl_fail[0], []
             messagebox.showwarning("엑셀", f"엑셀 반영 실패: {msg}")
 
+    def _copy_original(self, idx=None):
+        """같은 원본으로 통계를 여러 개 만들 수 있게, 사진을 복사해 파일 목록의 원본 바로 아래에 넣고 그 복사본으로 이동한다.
+        복사본은 임시 폴더에 두므로 원본 폴더는 건드리지 않는다. 병원명만 이어받고 제약사·박스는 비워 둔다."""
+        files = self._files.files
+        if idx is None:
+            idx = self._files.index
+        if not files or not (0 <= idx < len(files)):
+            messagebox.showwarning("알림", "먼저 사진을 열어주세요.")
+            return
+        self._remember()
+        src = files[idx]
+        try:
+            dest = make_copy(src, self._copy_dir, files)
+        except Exception as e:
+            messagebox.showerror("오류", f"원본 복사 실패: {e}")
+            return
+        self._photos.copy_of(src, dest)
+        self._files.insert_after(idx, dest)
+        self._st.config(text=f"원본 복사: {Path(dest).name}  (병원명만 이어받음 — 제약사·박스를 새로 입력하세요)")
+
     def _on_close(self):
+        shutil.rmtree(self._copy_dir, ignore_errors=True)       # 원본 복사본(임시 파일) 정리
         self._notes.flush()
         self._ledger.wait()                  # 엑셀 저장 도중에 창을 닫아 파일이 깨지는 일이 없게 기다린다
         self.destroy()
@@ -726,7 +775,7 @@ class App(TkinterDnD.Tk):
     def _ensure_out_dir(self):
         return bool(self._out_dir) or self._choose_out_dir()
 
-    def _save_current(self):
+    def _save_current(self, status=ledger.DONE):
         if self._cv_img is None or not self._current_path:
             messagebox.showwarning("알림", "먼저 사진을 열어주세요.")
             return
@@ -740,7 +789,7 @@ class App(TkinterDnD.Tk):
             return
         try:
             out, xl = self._save_one(self._current_path, self._cv_img, self._hospital_var.get().strip(),
-                                     self._pharma_var.get().strip(), self._canvas.get_rects())
+                                     self._pharma_var.get().strip(), self._canvas.get_rects(), status)
         except Exception as e:
             messagebox.showerror("오류", f"저장 실패: {e}")
             return
@@ -752,28 +801,21 @@ class App(TkinterDnD.Tk):
         self._remember()
         if not self._ensure_out_dir():
             return
-        todo, skipped = [], []
-        for p in self._files.files:
-            st = self._state.get(p)
-            if st and st["hospital"].strip() and st["pharma"].strip():
-                todo.append(p)
-            else:
-                skipped.append(Path(p).name)
+        todo, skipped = self._photos.plan_save(self._files.files)
         if not todo:
             messagebox.showinfo("알림", "병원명·제약사명이 입력된 사진이 없습니다.")
             return
-        bad = [Path(p).name for p in todo if p in self._periods
-               and not period_check.check_period(self._periods[p], *self._selected_ym())[0]]
+        bad = self._photos.period_problems(todo, *self._selected_ym())
         if bad and not messagebox.askyesno(
                 "통계기간확인", f"통계기간 확인이 필요한 사진이 {len(bad)}장 있습니다.\n"
                                + "\n".join(bad[:8]) + "\n\n그래도 모두 저장할까요?"):
             return
         done, xl_fail = 0, []
-        for p in todo:
-            st = self._state[p]
+        for ph in todo:
+            p = ph.path
             img = self._cv_img if p == self._current_path else read_image(p)
             try:
-                _, xl = self._save_one(p, img, st["hospital"].strip(), st["pharma"].strip(), st["rects"])
+                _, xl = self._save_one(p, img, ph.hospital.strip(), ph.pharma.strip(), ph.rects)
                 done += 1
                 if "실패" in xl:
                     xl_fail.append(xl)
