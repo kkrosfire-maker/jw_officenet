@@ -19,7 +19,7 @@ THUMB_PANEL_W    = 148
 
 class ThumbPanel:
     def __init__(self, parent, *, on_select, on_delete, on_delete_selected,
-                 extra_menu_items=None, checkbox_default=True,
+                 extra_menu_items=None, checkbox_default=True, on_reorder=None, on_check=None,
                  open_label="탐색기에서 열기", delete_label="목록에서 삭제",
                  panel_w=THUMB_PANEL_W, thumb_w=THUMB_W, thumb_h=THUMB_H):
         """
@@ -31,6 +31,9 @@ class ThumbPanel:
         """
         self._on_select = on_select
         self._on_delete = on_delete
+        self._on_reorder = on_reorder     # on_reorder(원래 위치, 옮길 위치) — 드래그로 순서 변경
+        self._on_check = on_check         # on_check() — 체크 상태가 바뀔 때마다
+        self._drag = None
         self._extra_menu_items = extra_menu_items or []
         self._checkbox_default = checkbox_default
         self._open_label = open_label
@@ -79,6 +82,7 @@ class ThumbPanel:
 
         self.list_frame.bind("<Configure>", lambda e: self.canvas.configure(
             scrollregion=self.canvas.bbox("all")))
+        self._drop_line = tk.Frame(self.list_frame, bg="#4a9eff", height=3)   # 드래그 중 놓일 위치 표시선
         self._bind_wheel_recursive(self.panel)
 
     # ── 스크롤 ──────────────────────────────────────────────────────────
@@ -96,7 +100,8 @@ class ThumbPanel:
     def rebuild(self, files, current_idx):
         """files 기반으로 패널 전체 재구성 (이미지는 백그라운드 로드)."""
         for w in self.list_frame.winfo_children():
-            w.destroy()
+            if w is not self._drop_line:
+                w.destroy()
         self.items.clear()
         self.photos.clear()
         self.all_btn.configure(text="모두선택")
@@ -201,7 +206,9 @@ class ThumbPanel:
                 "bg_widgets": bg_widgets, "idx": idx, "path": fpath}
 
         for w in (frame, img_lbl, name_lbl):
-            w.bind("<Button-1>", lambda e, it=item: self._on_select(it["idx"]))
+            w.bind("<Button-1>", lambda e, it=item: self._drag_start(e, it))
+            w.bind("<B1-Motion>", self._drag_move)
+            w.bind("<ButtonRelease-1>", self._drag_end)
             w.bind("<Button-3>", lambda e, it=item: self._context_menu(e, it["idx"]))
 
         self._bind_wheel_recursive(frame)
@@ -233,6 +240,62 @@ class ThumbPanel:
                 item["img_lbl"].configure(image=photo, width=0, height=0)
                 self.canvas.configure(scrollregion=self.canvas.bbox("all"))
                 return
+
+    # ── 드래그로 순서 변경 ────────────────────────────────────────────────
+
+    DRAG_THRESHOLD = 6
+
+    def _drag_start(self, event, item):
+        self._drag = {"item": item, "y0": event.y_root, "active": False, "slot": None}
+
+    def _slot_at(self, y_root):
+        """y_root 위치가 속한 삽입 칸(0..n): 항목 가운데보다 위에 있는 항목 수."""
+        return sum(1 for it in self.items
+                   if it["frame"].winfo_rooty() + it["frame"].winfo_height() / 2 < y_root)
+
+    def _drag_move(self, event):
+        d = self._drag
+        if not d or not self._on_reorder:
+            return
+        if not d["active"]:
+            if abs(event.y_root - d["y0"]) < self.DRAG_THRESHOLD:
+                return
+            d["active"] = True
+            self.panel.configure(cursor="fleur")
+        # 가장자리 근처면 자동 스크롤
+        top = self.canvas.winfo_rooty()
+        bot = top + self.canvas.winfo_height()
+        if event.y_root < top + 20:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.y_root > bot - 20:
+            self.canvas.yview_scroll(1, "units")
+        slot = self._slot_at(event.y_root)
+        d["slot"] = slot
+        if slot < len(self.items):
+            fr = self.items[slot]["frame"]
+            y = fr.winfo_y() - 2
+        else:
+            fr = self.items[-1]["frame"]
+            y = fr.winfo_y() + fr.winfo_height() + 1
+        self._drop_line.place(x=0, y=max(0, y), relwidth=1.0, height=3)
+        self._drop_line.lift()
+
+    def _drag_end(self, event):
+        d, self._drag = self._drag, None
+        if not d:
+            return
+        self._drop_line.place_forget()
+        self.panel.configure(cursor="")
+        src = d["item"]["idx"]
+        if not d["active"]:
+            self._on_select(src)          # 드래그가 아니면 평소처럼 클릭 선택
+            return
+        slot = d["slot"]
+        if slot is None:
+            return
+        dst = slot - 1 if slot > src else slot
+        if dst != src and self._on_reorder:
+            self._on_reorder(src, dst)
 
     # ── 하이라이트 & 스크롤 ──────────────────────────────────────────────
 
@@ -276,6 +339,8 @@ class ThumbPanel:
     def _on_var(self, path, var):
         (self.checked_paths.add if var.get() else self.checked_paths.discard)(path)
         self._refresh_all_btn()
+        if self._on_check:
+            self._on_check()
 
     def set_checked(self, path, value=True):
         """경로로 체크 상태를 바꾼다 (패널에 아직 없는 파일이어도 기억해 둔다)."""

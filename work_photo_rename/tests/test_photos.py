@@ -132,14 +132,29 @@ class CopyOriginalTest(unittest.TestCase):
             self.assertEqual(Path(c).read_bytes(), b"x")
             self.assertTrue(src.exists())                        # 원본은 그대로
 
-    def test_copy_record_keeps_hospital_and_period_only(self):
+    def test_copy_record_keeps_hospital_period_and_boxes(self):
         book = PhotoBook()
         book.record("a.png", "다솜의원", "명문제약", [{"cx": 1}])
         book.set_period("a.png", ((2026, 10, 1), (2026, 10, 31)))
         book.set_ocr_pharma("a.png", "명문제약")
         d = book.copy_of("a.png", "a (복사1).png")
-        self.assertEqual((d.hospital, d.pharma, d.rects, d.ocr_pharma), ("다솜의원", "", [], None))
+        self.assertEqual((d.hospital, d.pharma, d.rects, d.ocr_pharma), ("다솜의원", "", [{"cx": 1}], None))
         self.assertTrue(d.period_read and d.opened)
+        d.rects.append({"cx": 2})                            # 복사본을 고쳐도 원본 박스는 그대로
+        self.assertEqual(book.get("a.png").rects, [{"cx": 1}])
+
+
+class HospitalProgressTest(unittest.TestCase):
+    def test_hospital_done_when_all_its_photos_checked(self):
+        book = PhotoBook()
+        book.record("a.png", "다솜의원", "명문제약", [])
+        book.record("b.png", "다솜의원(주)", "대웅제약", [])
+        book.record("c.png", "연세내과", "명문제약", [])
+        book.get("d.png")                                    # 병원명 없음 -> 세지 않음
+        paths = ["a.png", "b.png", "c.png", "d.png"]
+        self.assertEqual(book.hospital_progress(paths, {"a.png", "c.png"}), (1, 2))    # 다솜: b 미체크
+        self.assertEqual(book.hospital_progress(paths, {"a.png", "b.png", "c.png"}), (2, 2))
+        self.assertEqual(book.hospital_progress([], set()), (0, 0))
 
 
 class MonthPerPhotoTest(unittest.TestCase):

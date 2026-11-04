@@ -85,6 +85,20 @@ class FileListController:
         self._panel.scroll_to(idx)
         self._on_load(self.files[idx])
 
+    def move(self, src: int, dst: int):
+        """src 위치의 파일을 dst 위치로 옮긴다 (드래그 앤 드롭 순서 변경). 보고 있던 파일은 그대로 유지."""
+        n = len(self.files)
+        if not (0 <= src < n and 0 <= dst < n) or src == dst:
+            return
+        active = self.files[self.index]
+        self.files.insert(dst, self.files.pop(src))
+        self.index = self.files.index(active)
+        y = self._panel.canvas.yview()[0]
+        self._update_nav()
+        self._panel.rebuild(self.files, self.index)
+        self._panel.canvas.update_idletasks()
+        self._panel.canvas.yview_moveto(y)
+
     def prev(self):
         self.select(self.index - 1)
 

@@ -18,6 +18,7 @@ class NotesPanel:
         self._on_edit = on_edit
         self._on_delete = on_delete
         self._hospital = ""
+        self._done = set()                  # 작업이 끝난(체크된) 제약사 이름(정규화) — 이름 앞에 ✓
         self._rows = []                     # {norm, frame, text, original, pharma}
 
         self.panel = tk.Frame(parent, bg=BG, width=width)
@@ -72,7 +73,7 @@ class NotesPanel:
         close = tk.Label(top, text="✕", bg=ROW_BG, fg="#b8bdc3", font=("Segoe UI", 9, "bold"), cursor="hand2",
                          padx=4)
         close.pack(side="right")
-        name = tk.Label(top, text=g["pharma"], bg=ROW_BG, fg="#f2f2f2", font=("Malgun Gothic", 9, "bold"),
+        name = tk.Label(top, text=self._title(g["pharma"]), bg=ROW_BG, fg="#f2f2f2", font=("Malgun Gothic", 9, "bold"),
                         anchor="w")
         name.pack(side="left")
         tag = tk.Label(top, text=f"  {g['tag']}" if g.get("tag") else "", bg=ROW_BG, fg="#d9a441",
@@ -94,6 +95,18 @@ class NotesPanel:
         txt.bind("<Control-Return>", lambda e, r=row: (self._commit(r), "break")[1])
         for w in (fr, top, name, tag, close):
             w.bind("<MouseWheel>", self._on_wheel)
+        # 메모 칸은 높이를 내용에 맞추므로 안쪽 스크롤이 필요 없다 — 휠은 패널 스크롤로 넘긴다
+        # (기본 동작은 칸 자체만 움직이려 해서, 칸이 패널을 덮으면 휠이 먹통처럼 보였다)
+        txt.bind("<MouseWheel>", lambda e: (self._on_wheel(e), "break")[1])
+
+    def _title(self, pharma):
+        return ("✓ " if norm(pharma) in self._done else "") + pharma
+
+    def set_done(self, norms):
+        """체크된(작업 끝낸) 제약사 이름 집합을 받아 각 칸 이름 앞에 ✓ 를 붙이거나 뗀다."""
+        self._done = set(norms)
+        for r in self._rows:
+            r["labels"][1].config(text=self._title(r["pharma"]))
 
     @staticmethod
     def _fit(txt):

@@ -7,6 +7,7 @@ PhotoBook은 그 기록들을 사진 경로로 찾아 주고, 화면 없이 판�
   - 같은 병원에서 이미 작업이 끝난(체크된) 제약사 이름 모으기 (드롭다운 ✓ 표시용)
 체크 상태 자체(체크박스)는 화면이 가지고 있고, 여기서는 '체크된 경로 집합'을 받아서 쓴다.
 """
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -53,11 +54,12 @@ class PhotoBook:
             ph.month = month
 
     def copy_of(self, src, dst):
-        """src 사진의 복사본(dst) 기록: 병원명·통계기간만 이어받고, 제약사·박스는 비운다 (같은 원본으로 다른 통계를 만들 용도)."""
+        """src 사진의 복사본(dst) 기록: 병원명·통계기간·박스(같은 위치)를 이어받고, 제약사는 비운다 (같은 원본으로 다른 통계를 만들 용도)."""
         s = self.get(src)
         d = self.get(dst)
         d.hospital, d.month, d.opened = s.hospital, s.month, True
         d.period, d.period_read = s.period, s.period_read
+        d.rects = copy.deepcopy(s.rects)
         return d
 
     def set_period(self, path, period):
@@ -101,6 +103,17 @@ class PhotoBook:
             if status is not None and not status[0]:
                 out.append(Path(ph.path).name)
         return out
+
+    def hospital_progress(self, paths, checked_paths):
+        """(완료 거래처 수, 전체 거래처 수). 목록 사진들에 입력된 병원 중, 그 병원 사진이 모두 체크된 곳이 완료.
+        병원명이 아직 없는 사진은 세지 않는다."""
+        groups = {}
+        for p in paths:
+            ph = self._photos.get(p)
+            k = norm(ph.hospital) if ph else ""
+            if k:
+                groups.setdefault(k, []).append(p in checked_paths)
+        return sum(1 for v in groups.values() if all(v)), len(groups)
 
     def pharma_norms_done(self, hospital, checked_paths):
         """그 병원에서 이미 체크된(작업이 끝난) 사진들의 제약사 이름(정규화) 집합."""

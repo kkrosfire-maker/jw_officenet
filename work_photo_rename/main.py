@@ -168,6 +168,8 @@ class App(TkinterDnD.Tk):
         self._excel_lbl = tk.Label(top, text="엑셀: 없음", **L)
         self._excel_lbl.pack(side="left", padx=10)
         self._nav = tk.Frame(top, bg="#2e2e2e")
+        self._hosp_lbl = tk.Label(self._nav, text="", **L)          # 완료거래처 : 완료/전체
+        self._hosp_lbl.pack(side="left", padx=(0, 14))
         tk.Button(self._nav, text="◀", command=lambda: self._files.prev(), **B).pack(side="left", padx=2)
         self._nav_lbl = tk.Label(self._nav, text="", width=10, **L)
         self._nav_lbl.pack(side="left")
@@ -232,6 +234,7 @@ class App(TkinterDnD.Tk):
         self._thumb_panel = ThumbPanel(
             body, on_select=self._on_thumb_select, on_delete=lambda i: self._files.remove(i),
             on_delete_selected=lambda: self._files.remove_selected(), checkbox_default=False,
+            on_reorder=lambda a, b: self._files.move(a, b), on_check=self._schedule_notes_done,
             extra_menu_items=[("원본 복사", lambda i: self._copy_original(i))])
 
         self._notes = NotesPanel(body, on_edit=self._on_note_edit, on_delete=self._on_pharma_delete, width=NOTES_W)
@@ -316,6 +319,19 @@ class App(TkinterDnD.Tk):
             return
         self._notes.set_data(h, self._master.notes_for(h, self._memos, self._month_var.get()),
                              self._pharma_var.get())
+        self._refresh_notes_done()
+
+    def _schedule_notes_done(self):
+        """체크가 바뀌면(한꺼번에 바뀌어도 한 번만) 특이사항 칸의 제약사 이름 앞 ✓ 를 갱신한다."""
+        if getattr(self, "_notes_done_job", None):
+            self.after_cancel(self._notes_done_job)
+        self._notes_done_job = self.after(50, self._refresh_notes_done)
+
+    def _refresh_notes_done(self):
+        self._notes_done_job = None
+        self._notes.set_done(self._checked_pharma_norms())
+        done, total = self._photos.hospital_progress(self._files.files, self._thumb_panel.checked_paths)
+        self._hosp_lbl.config(text=f"완료거래처 : {done}/{total}")
 
     def _schedule_notes(self):
         if self._notes_job:
@@ -491,6 +507,7 @@ class App(TkinterDnD.Tk):
         self._files.remove_current()
 
     def _note_removed(self, items):
+        self._schedule_notes_done()                      # 목록이 줄면 완료거래처 수도 다시 센다
         if getattr(self, "_quiet_removed", False):
             return
         self._file_undo.append(list(items))
@@ -758,7 +775,7 @@ class App(TkinterDnD.Tk):
             return
         self._photos.copy_of(src, dest)
         self._files.insert_after(idx, dest)
-        self._st.config(text=f"원본 복사: {Path(dest).name}  (병원명만 이어받음 — 제약사·박스를 새로 입력하세요)")
+        self._st.config(text=f"원본 복사: {Path(dest).name}  (병원명·박스를 이어받음 — 제약사를 새로 입력하세요)")
 
     def _on_close(self):
         shutil.rmtree(self._copy_dir, ignore_errors=True)       # 원본 복사본(임시 파일) 정리
@@ -804,6 +821,9 @@ class App(TkinterDnD.Tk):
             messagebox.showerror("오류", f"저장 실패: {e}")
             return
         self._st.config(text=f"저장됨: {out.name}  |  {xl}")
+        if status == ledger.NOSETTLE:       # 정산불가로 끝낸 제약사도 체크 -> 썸네일 체크 + 드롭다운 ✓ 로 구분
+            self._remember()
+            self._thumb_panel.set_checked(self._current_path, True)
         if "실패" in xl:
             messagebox.showwarning("엑셀", xl)
 
