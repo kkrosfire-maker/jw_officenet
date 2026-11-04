@@ -19,6 +19,7 @@ class Photo:
     path: str
     hospital: str = ""
     pharma: str = ""
+    month: str = ""                   # 이 사진의 처방월 ("10월"). 비어 있으면 아직 정하지 않음 → 기본값(지난달)
     rects: list = field(default_factory=list)
     opened: bool = False              # 한 번이라도 열어서 입력 상태를 저장했는가 (처음 여는 사진 판정)
     period: object = None             # OCR로 읽은 ((년,월,일),(년,월,일)); None=못 읽음
@@ -44,16 +45,18 @@ class PhotoBook:
 
     # ── 입력 ────────────────────────────────────────────────────────────
 
-    def record(self, path, hospital, pharma, rects):
-        """지금 화면에 입력된 내용을 그 사진의 기록으로 저장한다."""
+    def record(self, path, hospital, pharma, rects, month=None):
+        """지금 화면에 입력된 내용을 그 사진의 기록으로 저장한다. 처방월도 사진마다 따로 기억한다."""
         ph = self.get(path)
         ph.hospital, ph.pharma, ph.rects, ph.opened = hospital, pharma, list(rects), True
+        if month is not None:
+            ph.month = month
 
     def copy_of(self, src, dst):
         """src 사진의 복사본(dst) 기록: 병원명·통계기간만 이어받고, 제약사·박스는 비운다 (같은 원본으로 다른 통계를 만들 용도)."""
         s = self.get(src)
         d = self.get(dst)
-        d.hospital, d.opened = s.hospital, True
+        d.hospital, d.month, d.opened = s.hospital, s.month, True
         d.period, d.period_read = s.period, s.period_read
         return d
 
@@ -88,11 +91,13 @@ class PhotoBook:
                 skipped.append(Path(p).name)
         return todo, skipped
 
-    def period_problems(self, photos, year, month):
-        """통계기간 확인이 필요한 사진 파일명들 (OCR이 끝났고 선택한 연/월과 맞지 않는 것만)."""
+    def period_problems(self, photos, year, month=None):
+        """통계기간 확인이 필요한 사진 파일명들 (OCR이 끝났고 선택한 연/월과 맞지 않는 것만).
+        year 자리에 함수 ym(photo) -> (연, 월) 을 주면 사진마다 자기 처방월로 따진다."""
         out = []
         for ph in photos:
-            status = self.period_status(ph.path, year, month)
+            y, m = year(ph) if callable(year) else (year, month)
+            status = self.period_status(ph.path, y, m)
             if status is not None and not status[0]:
                 out.append(Path(ph.path).name)
         return out

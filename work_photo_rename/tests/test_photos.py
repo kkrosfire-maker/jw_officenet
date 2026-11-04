@@ -140,3 +140,22 @@ class CopyOriginalTest(unittest.TestCase):
         d = book.copy_of("a.png", "a (복사1).png")
         self.assertEqual((d.hospital, d.pharma, d.rects, d.ocr_pharma), ("다솜의원", "", [], None))
         self.assertTrue(d.period_read and d.opened)
+
+
+class MonthPerPhotoTest(unittest.TestCase):
+    def test_month_is_kept_per_photo(self):
+        book = PhotoBook()
+        book.record("a.png", "다솜의원", "명문제약", [], "9월")
+        book.record("b.png", "다솜의원", "안국뉴팜", [], "10월")
+        self.assertEqual((book.get("a.png").month, book.get("b.png").month), ("9월", "10월"))
+        book.record("a.png", "다솜의원", "명문제약", [])           # 월을 안 주면 기존 값 유지
+        self.assertEqual(book.get("a.png").month, "9월")
+        self.assertEqual(book.copy_of("a.png", "a2.png").month, "9월")
+
+    def test_period_problems_uses_each_photos_own_month(self):
+        book = PhotoBook()
+        for p, m in (("a.png", "9월"), ("b.png", "10월")):
+            book.record(p, "다솜의원", "명문제약", [], m)
+            book.set_period(p, ((2026, 10, 1), (2026, 10, 31)))     # 둘 다 10월 통계
+        photos, _ = book.plan_save(["a.png", "b.png"])
+        self.assertEqual(book.period_problems(photos, lambda ph: (2026, int(ph.month[:-1]))), ["a.png"])

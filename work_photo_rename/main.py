@@ -421,7 +421,7 @@ class App(TkinterDnD.Tk):
     def _remember(self):
         if self._current_path:
             self._photos.record(self._current_path, self._hospital_var.get(), self._pharma_var.get(),
-                                self._canvas.get_rects())
+                                self._canvas.get_rects(), self._month_var.get())
 
     def _load_image(self, path):
         prev = self._current_path
@@ -438,6 +438,8 @@ class App(TkinterDnD.Tk):
         first_open = not ph.opened
         self._hospital_var.set(ph.hospital)
         self._pharma_var.set(ph.pharma)
+        self._month_var.set(ph.month or f"{default_month()}월")      # 처방월은 사진마다 따로 (처음 여는 사진은 지난달)
+        self._schedule_notes()
         guessed = ""
         if first_open and self._master:                    # 처음 여는 사진: 파일명에서 병원명 추측
             h, p = self._master.guess_from_filename(path)
@@ -542,6 +544,12 @@ class App(TkinterDnD.Tk):
         m = int(self._month_var.get()[:-1])
         return year_for(m), m
 
+    @staticmethod
+    def _ym_of(ph):
+        """사진 한 장의 (처방 연도, 월) — 그 사진에 정해 둔 월 기준."""
+        m = int((ph.month or f"{default_month()}월")[:-1])
+        return year_for(m), m
+
     def _update_warn(self):
         """좌측 화면 우측상단에 빨간 '통계기간확인'. OCR 전에는 숨기고, 못 읽거나 다르면 표시."""
         p = self._current_path
@@ -561,6 +569,7 @@ class App(TkinterDnD.Tk):
     # ── 입력 변경 ────────────────────────────────────────────────────────
 
     def _on_month_change(self, event=None):
+        self._remember()                                    # 바꾼 월은 지금 보는 사진에만 기록된다
         self._refresh_pharma_candidates()
         self._refresh_notes()
         self._update_warn()
@@ -689,8 +698,9 @@ class App(TkinterDnD.Tk):
 
     # ── 저장 ─────────────────────────────────────────────────────────────
 
-    def _save_one(self, path, img, hospital, pharma, rects, status=ledger.DONE):
-        label = labeling.build_label(hospital, self._month_var.get(), pharma)
+    def _save_one(self, path, img, hospital, pharma, rects, status=ledger.DONE, month=None):
+        month = month or self._month_var.get()
+        label = labeling.build_label(hospital, month, pharma)
         if norm(pharma):                      # 최근에 쓴 표기를 기억 -> 비슷한 이름 후보 중 이것만 보인다
             self._cfg.setdefault("recent_pharma", {})[norm(pharma)] = pharma.strip()
             _save_config(self._cfg)
@@ -701,13 +711,13 @@ class App(TkinterDnD.Tk):
         out = labeling.numbered_path(out_dir, labeling.safe_filename(label), ".jpg")
         if not labeling.save_jpg(result, out):
             raise OSError("JPG 인코딩 실패")
-        return out, self._update_excel(path, hospital, pharma, status)
+        return out, self._update_excel(path, hospital, pharma, status, month)
 
-    def _update_excel(self, path, hospital, pharma, status=ledger.DONE):
+    def _update_excel(self, path, hospital, pharma, status=ledger.DONE, month=None):
         """저장한 사진을 장부에 반영하도록 맡긴다 (백그라운드). 같은 사진을 같은 이름으로 다시 저장하면 중복 반영하지 않는다."""
         if not self._master:
             return "엑셀 미연결"
-        month = self._month_var.get()
+        month = month or self._month_var.get()
         self._ledger.set_work_path(self._work_excel())
         if memo_key(hospital, pharma) in self._ledger.hidden:           # 지웠던 제약사를 다시 저장하면 목록에 복귀
             self._ledger.hidden.discard(memo_key(hospital, pharma))
@@ -805,7 +815,7 @@ class App(TkinterDnD.Tk):
         if not todo:
             messagebox.showinfo("알림", "병원명·제약사명이 입력된 사진이 없습니다.")
             return
-        bad = self._photos.period_problems(todo, *self._selected_ym())
+        bad = self._photos.period_problems(todo, self._ym_of)
         if bad and not messagebox.askyesno(
                 "통계기간확인", f"통계기간 확인이 필요한 사진이 {len(bad)}장 있습니다.\n"
                                + "\n".join(bad[:8]) + "\n\n그래도 모두 저장할까요?"):
@@ -815,7 +825,8 @@ class App(TkinterDnD.Tk):
             p = ph.path
             img = self._cv_img if p == self._current_path else read_image(p)
             try:
-                _, xl = self._save_one(p, img, ph.hospital.strip(), ph.pharma.strip(), ph.rects)
+                _, xl = self._save_one(p, img, ph.hospital.strip(), ph.pharma.strip(), ph.rects,
+                                   month=ph.month or f"{default_month()}월")
                 done += 1
                 if "실패" in xl:
                     xl_fail.append(xl)
