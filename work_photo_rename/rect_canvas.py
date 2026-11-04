@@ -488,13 +488,22 @@ class RectCanvas(tk.Canvas):
                 self._drag_mode = ("move", idx, ix, iy, r["cx"], r["cy"])
                 return
 
-        self.select(None)                          # 빈 곳: 선택 해제 + 끌면 영역 선택
-        self._drag_mode = ("marquee", None, event.x, event.y)
+        self.select(None)                          # 빈 곳: 선택 해제
+        zoomed = self._zoom != 1.0 or self._pan_x or self._pan_y
+        if zoomed and not (event.state & 0x1):     # 확대/이동한 상태: 끌면 사진 이동 (Shift+끌기 = 영역 선택)
+            self._pan_anchor = (event.x - self._pan_x, event.y - self._pan_y)
+            self._drag_mode = ("pan", None)
+            self.configure(cursor="fleur")
+            return
+        self._drag_mode = ("marquee", None, event.x, event.y)   # 그대로: 끌면 영역 선택
 
     def _on_motion(self, event):
         if not self._drag_mode:
             return
         mode, idx = self._drag_mode[0], self._drag_mode[1]
+        if mode == "pan":
+            self._pan_motion(event)
+            return
         if mode == "marquee":
             _, _, x0, y0 = self._drag_mode
             self.delete("marquee")
@@ -547,6 +556,10 @@ class RectCanvas(tk.Canvas):
         self._render_overlay()
 
     def _on_release(self, event):
+        if self._drag_mode and self._drag_mode[0] == "pan":
+            self._drag_mode = self._pan_anchor = None
+            self.configure(cursor="")
+            return
         if self._drag_mode and self._drag_mode[0] == "marquee":
             self.delete("marquee")
             self._drag_mode = None
