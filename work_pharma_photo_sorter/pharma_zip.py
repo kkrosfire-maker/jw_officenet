@@ -1,5 +1,5 @@
+import io
 import os
-import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -48,6 +48,8 @@ def build_pharma_folders(
 
     파일명 마지막 단어(extract_pharma)를 제약사명으로 보고 그룹핑하며,
     제약사명과 같은 이름의 폴더 하나에 변환된 JPG들을 넣는다.
+    폴더가 이미 있으면 유지하며, 같은 이름·같은 내용 파일은 건너뛰고
+    같은 이름·다른 내용 파일은 _1, _2 번호를 붙여 추가한다.
     진행 단계마다 on_event(FolderEvent)를 호출하고, 전체 이벤트 목록을 반환한다.
     """
     events: list[FolderEvent] = []
@@ -83,24 +85,30 @@ def build_pharma_folders(
         folder_name = pharma_name
         part_dir = out_dir / folder_name
 
-        if part_dir.exists():
-            shutil.rmtree(part_dir)
-        part_dir.mkdir()
+        # 기존 폴더는 지우지 않는다(반복 실행 시 이전 결과·수동 추가 파일 보존)
+        part_dir.mkdir(exist_ok=True)
 
         converted = 0
         for fname in part_files:
             src = os.path.join(photo_dir, fname)
-            # 확장자만 다른 같은 이름(a.png / a.jpg)이 서로 덮어쓰지 않도록 번호를 붙인다
-            dst = part_dir / (Path(fname).stem + ".jpg")
-            n = 1
-            while dst.exists():
-                dst = part_dir / f"{Path(fname).stem}_{n}.jpg"
-                n += 1
             try:
                 with Image.open(src) as img:
                     if img.mode in ("RGBA", "P", "LA"):
                         img = img.convert("RGB")
-                    img.save(str(dst), "JPEG", quality=90)
+                    buf = io.BytesIO()
+                    img.save(buf, "JPEG", quality=90)
+                data = buf.getvalue()
+
+                # 같은 이름이 있으면: 내용 같음 → 이미 저장된 것이므로 건너뜀,
+                # 내용 다름(또는 a.png/a.jpg처럼 이름만 같음) → _1, _2 번호를 붙여 저장
+                stem = Path(fname).stem
+                dst = part_dir / f"{stem}.jpg"
+                n = 1
+                while dst.exists() and dst.read_bytes() != data:
+                    dst = part_dir / f"{stem}_{n}.jpg"
+                    n += 1
+                if not dst.exists():
+                    dst.write_bytes(data)
                 converted += 1
             except Exception as e:
                 review.append(ReviewItem(CONVERT_FAILED, fname, str(e)))

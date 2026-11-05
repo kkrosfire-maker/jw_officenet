@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _MONTH_RE = re.compile(r"\d{1,2}월")
+_NUMBER_ONLY_RE = re.compile(r"[\s_\-()\[\]]*\d+[\s_\-()\[\]]*")
 FALLBACK_PHARMA = "기타"
 
 
@@ -49,7 +50,12 @@ def parse_filename(filename: str) -> ParsedName:
 
     # 제약사명: 마지막 단어. 공백 없이 '병원_제약사'로 붙은 경우만 _ 뒤를 쓴다
     # (공백이 있는 '코오롱제약_1' 같은 번호 접미사는 그대로 둔다)
-    raw = tokens[-1]
+    # 끝에 공백으로 떨어진 번호('2', '(1)', '_1')는 제약사명이 아니므로 건너뛴다
+    pharma_tokens = list(tokens)
+    # (첫 단어는 병원명이므로 제약사 후보로 올리지 않는다: '미더스 (1)' → 제약사 없음)
+    while len(pharma_tokens) > 2 and _NUMBER_ONLY_RE.fullmatch(pharma_tokens[-1]):
+        pharma_tokens.pop()
+    raw = pharma_tokens[-1]
     if len(tokens) == 1 and "_" in raw:
         raw = raw.rsplit("_", 1)[-1] or raw
 
