@@ -13,14 +13,18 @@ from PIL import Image, ImageTk
 import threading
 from pathlib import Path
 
-from converter import auto_detect_corners, process_image
+from converter import process_image
 from corner_memory import CornerMemory
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
 from file_list_controller import FileListController
 from undo_stack import HistoryController
+from view_transform import ViewTransform, layout_zoomable, pan_for_anchor
+from photo_edits import PhotoEdits
+from corner_resolver import resolve_corners, render_resolved, SAVED, LEARNED, FALLBACK
+from workbench import IMAGE_EXT, IMAGE_FILETYPES, images_in_folder
 
-SUPPORTED_EXT      = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
+SUPPORTED_EXT      = IMAGE_EXT
 SAVE_FOLDER        = "변환파일"
 POINT_COLORS       = ["#FF5555", "#55DD55", "#5599FF", "#FFEE44"]
 DEBOUNCE_MS        = 60
@@ -68,9 +72,7 @@ class ImageCanvas(tk.Canvas):
         self._tk_img     = None
         self._hint_text  = None
 
-        self._base_scale = 1.0
-        self._scale      = 1.0
-        self._ox = self._oy = 0
+        self._view       = ViewTransform()
 
         self._zoom       = 1.0
         self._pan_x      = 0.0
@@ -166,28 +168,17 @@ class ImageCanvas(tk.Canvas):
             self._draw_label()
             return
 
-        h, w    = self._cv_img.shape[:2]
-        avail_w = cw - 4
-        avail_h = ch - 28
-
-        self._base_scale = min(avail_w / w, avail_h / h)
-        eff  = self._base_scale * self._zoom
-        nw   = max(1, int(w * eff))
-        nh   = max(1, int(h * eff))
-
-        cx = max(2, (avail_w - nw) // 2) + 2
-        cy = max(0, (avail_h - nh) // 2) + 26
-
-        self._ox    = cx + int(self._pan_x)
-        self._oy    = cy + int(self._pan_y)
-        self._scale = eff
+        h, w = self._cv_img.shape[:2]
+        lay  = layout_zoomable(w, h, cw, ch, self._zoom, self._pan_x, self._pan_y)
+        nw, nh = lay.width, lay.height
+        self._view.apply(lay)
 
         resized = cv2.resize(self._cv_img, (nw, nh), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         self._tk_img = ImageTk.PhotoImage(Image.fromarray(rgb))
 
         self._draw_label()
-        self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+        self.create_image(self._view.ox, self._view.oy, anchor="nw", image=self._tk_img)
         self._draw_grid()
         if len(self._pts) == 4:
             self._draw_overlay()
@@ -196,16 +187,16 @@ class ImageCanvas(tk.Canvas):
         self.delete("all")
         self._draw_label()
         if self._tk_img is not None:
-            self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+            self.create_image(self._view.ox, self._view.oy, anchor="nw", image=self._tk_img)
             self._draw_grid()
-        if len(self._pts) == 4 and self._scale > 0:
+        if len(self._pts) == 4 and self._view.scale > 0:
             self._draw_overlay()
 
     def _draw_grid(self):
         """사진 위에 가로세로 눈금선 (화면 기준 일정 간격, 사진 영역 안에만)."""
         if not self._grid_on or self._tk_img is None:
             return
-        x0, y0 = self._ox, self._oy
+        x0, y0 = self._view.ox, self._view.oy
         x1, y1 = x0 + self._tk_img.width(), y0 + self._tk_img.height()
         # 캔버스 밖으로 나간 부분은 그리지 않음 (줌·패닝 시)
         cw, ch = self.winfo_width(), self.winfo_height()
@@ -227,11 +218,8 @@ class ImageCanvas(tk.Canvas):
         self.create_text(10, 10, anchor="nw", text=self._label,
                          fill="#555", font=("Segoe UI", 9))
 
-    def _to_canvas(self, ix, iy):
-        return ix * self._scale + self._ox, iy * self._scale + self._oy
-
     def _canvas_pts(self):
-        return [self._to_canvas(px, py) for px, py in self._pts]
+        return [self._view.to_canvas(px, py) for px, py in self._pts]
 
     def _draw_overlay(self):
         cpts = self._canvas_pts()
@@ -257,12 +245,10 @@ class ImageCanvas(tk.Canvas):
     # ── 드래그 ──────────────────────────────────────────────────────────
 
     def _img_coord(self, cx, cy):
-        if self._scale <= 0 or self._cv_img is None:
+        if self._cv_img is None:
             return None
         h, w = self._cv_img.shape[:2]
-        ix = max(0.0, min(float(w), (cx - self._ox) / self._scale))
-        iy = max(0.0, min(float(h), (cy - self._oy) / self._scale))
-        return ix, iy
+        return self._view.to_image_clamped(cx, cy, w, h)
 
     def _closest_idx(self, cx, cy):
         """캔버스 어디를 클릭하든 4개 꼭짓점 중 가장 가까운 것의 인덱스."""
@@ -337,15 +323,9 @@ class ImageCanvas(tk.Canvas):
         self._zoom = max(ZOOM_MIN, min(ZOOM_MAX, self._zoom * factor))
 
         self.update_idletasks()
-        cw, ch = max(self.winfo_width(), 200), max(self.winfo_height(), 200)
-        h, w   = self._cv_img.shape[:2]
-        new_eff = self._base_scale * self._zoom
-        nw, nh  = max(1, int(w * new_eff)), max(1, int(h * new_eff))
-        new_cx  = max(2, (cw - 4 - nw) // 2) + 2
-        new_cy  = max(0, (ch - 28 - nh) // 2) + 26
-
-        self._pan_x = event.x - new_cx - ix * new_eff
-        self._pan_y = event.y - new_cy - iy * new_eff
+        h, w = self._cv_img.shape[:2]
+        lay  = layout_zoomable(w, h, self.winfo_width(), self.winfo_height(), self._zoom)
+        self._pan_x, self._pan_y = pan_for_anchor(lay, event.x, event.y, ix, iy)
 
         self._render()
 
@@ -412,8 +392,7 @@ class App(TkinterDnD.Tk):
         self._current_path  = None
         self._transform_job = None
         self._memory        = CornerMemory()
-        self._rot           = {}    # 파일경로 -> 현재 회전 상태(시계방향 90도 횟수)
-        self._edits         = {}    # 파일경로 -> {"rot": 시계방향 90도 횟수, "pts": 꼭짓점} (사진별 조정 기억)
+        self._edits         = PhotoEdits()   # 사진별 회전·꼭짓점 조정 기억
         self.report_callback_exception = lambda t, v, tb: _log_error("tk callback", v)
 
         # 꼭짓점 위치 실행취소(Ctrl+Z) / 다시실행(Ctrl+Y). 스냅샷 = 꼭짓점 좌표 목록
@@ -581,9 +560,7 @@ class App(TkinterDnD.Tk):
     # ── 파일 열기 ────────────────────────────────────────────────────────
 
     def _open_file(self):
-        p = filedialog.askopenfilename(
-            filetypes=[("이미지", "*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.webp"),
-                       ("모든 파일", "*.*")])
+        p = filedialog.askopenfilename(filetypes=IMAGE_FILETYPES)
         if p:
             self._files.add_files([p])
 
@@ -591,8 +568,7 @@ class App(TkinterDnD.Tk):
         folder = filedialog.askdirectory()
         if not folder:
             return
-        files = sorted(str(f) for f in Path(folder).iterdir()
-                       if f.suffix.lower() in SUPPORTED_EXT)
+        files = images_in_folder(folder)
         if not files:
             messagebox.showinfo("알림", "지원하는 이미지가 없습니다.")
             return
@@ -611,7 +587,7 @@ class App(TkinterDnD.Tk):
         if img is None:
             self._st.config(text=f"읽기 실패: {path}")
             return
-        img = _rotate_quarter(img, self._rot.get(path, 0))
+        img = _rotate_quarter(img, self._edits.rotation(path))
         self._cv_orig      = img
         self._cv_result    = None
         self._current_path = path
@@ -630,36 +606,20 @@ class App(TkinterDnD.Tk):
             return
         if not silent and len(self._orig_cv.get_points()) == 4:
             self._history.push([list(p) for p in self._orig_cv.get_points()])   # 재감지도 되돌릴 수 있게
-        saved = self._edits.get(self._current_path) if silent else None
-        if saved and saved["pts"] and saved["rot"] == self._rot_now():
-            self._orig_cv.show(self._cv_orig, saved["pts"], reset_view=True)
-            self._apply()
-            return
-        try:
-            learned = self._memory.match(self._cv_orig)
-        except Exception as e:      # 학습 매칭이 실패해도 일반 자동 감지로 계속 진행
-            _log_error("memory.match", e)
-            learned = None
-        if learned is not None:
-            self._orig_cv.show(self._cv_orig, learned.pts.tolist(), reset_view=True)
-            self._apply()
-            self._st.config(text=f"학습된 영역 적용 (참고: {learned.source or '이전 사진'}). "
-                                 "틀리면 꼭짓점을 고친 뒤 '학습하기'를 다시 누르세요.")
-            return
-        pts = auto_detect_corners(self._cv_orig)
-        if pts is None:
-            h, w = self._cv_orig.shape[:2]
-            m    = min(w, h) * 0.05
-            pts  = [[m, m], [w - m, m], [w - m, h - m], [m, h - m]]
-            if not silent:
-                self._st.config(text="자동 감지 실패 — 꼭짓점을 드래그해 영역을 맞춰주세요.")
-        else:
-            pts = pts.tolist()
-            if not silent:
-                self._st.config(text="자동 감지 완료. 꼭짓점 드래그로 미세 조정하세요.")
-
-        self._orig_cv.show(self._cv_orig, pts, reset_view=True)
+        saved = self._edits.saved_pts(self._current_path) if silent else None
+        res = resolve_corners(self._cv_orig, saved_pts=saved, memory=self._memory,
+                              on_error=_log_error)
+        self._orig_cv.show(self._cv_orig, res.pts, reset_view=True)
         self._apply()
+        if res.source == LEARNED:
+            self._st.config(text=f"학습된 영역 적용 (참고: {res.detail or '이전 사진'}). "
+                                 "틀리면 꼭짓점을 고친 뒤 '학습하기'를 다시 누르세요.")
+        elif silent or res.source == SAVED:
+            return
+        elif res.source == FALLBACK:
+            self._st.config(text="자동 감지 실패 — 꼭짓점을 드래그해 영역을 맞춰주세요.")
+        else:
+            self._st.config(text="자동 감지 완료. 꼭짓점 드래그로 미세 조정하세요.")
 
     # ── 변환 ─────────────────────────────────────────────────────────────
 
@@ -678,9 +638,8 @@ class App(TkinterDnD.Tk):
         )
         self._cv_result = r.image
         self._res_cv.show(r.image)
-        if self._current_path and len(pts) == 4:
-            self._edits[self._current_path] = {"rot": self._rot_now(),
-                                               "pts": [list(p) for p in pts]}
+        if self._current_path:
+            self._edits.save_pts(self._current_path, pts)
 
     # ── 실행취소 ─────────────────────────────────────────────────────────
 
@@ -741,13 +700,12 @@ class App(TkinterDnD.Tk):
         self._turn(1)
 
     def _rot_now(self):
-        return self._rot.get(self._current_path, 0)
+        return self._edits.rotation(self._current_path)
 
     def _turn(self, delta):
         """회전 횟수를 기록하고, 좌표계가 바뀌었으므로 점 기록·저장된 조정은 버리고 재감지."""
         if self._current_path:
-            self._rot[self._current_path] = (self._rot_now() + delta) % 4
-            self._edits.pop(self._current_path, None)
+            self._edits.turn(self._current_path, delta)
         self._history.clear()
         self._redetect(silent=True)
 
@@ -874,8 +832,7 @@ class App(TkinterDnD.Tk):
                                     f"체크된 {len(targets)}개 파일을 {how}\n"
                                     f"'변환파일' 폴더에 저장할까요?\n(기존 파일은 덮어쓰지 않습니다)"):
             return
-        edits = {k: v["pts"] for k, v in self._edits.items()} if use_edits else {}
-        rots  = dict(self._rot) if use_edits else {}
+        edits = self._edits.copy() if use_edits else PhotoEdits()
 
         def worker():
             ok = fail = 0
@@ -885,21 +842,14 @@ class App(TkinterDnD.Tk):
                 img = read_image(fpath)
                 if img is None:
                     fail += 1; continue
-                img = _rotate_quarter(img, rots.get(fpath, 0))
-                pts = edits.get(fpath)
-                if pts is None:
-                    try:
-                        learned = self._memory.match(img)
-                    except Exception as e:
-                        _log_error("memory.match(batch)", e)
-                        learned = None
-                    pts = learned.pts if learned else None
-                r       = process_image(img, np.array(pts, dtype="float32") if pts is not None else None)
+                img = _rotate_quarter(img, edits.rotation(fpath))
+                res = resolve_corners(img, saved_pts=edits.saved_pts(fpath),
+                                      memory=self._memory, on_error=_log_error)
                 p       = Path(fpath)
                 out_dir = p.parent / SAVE_FOLDER
                 out_dir.mkdir(exist_ok=True)
                 out = unique_path(out_dir, p.stem, p.suffix)
-                if write_image(str(out), r.image):
+                if write_image(str(out), render_resolved(img, res)):
                     ok += 1
                 else:
                     fail += 1

@@ -20,6 +20,7 @@ from PIL import Image, ImageTk
 
 from annotate import (rect_corners, hit_zone, point_in_rect,
                        resize_rect, rotate_angle, move_rect_center)
+from view_transform import ViewTransform, layout_fit
 
 HANDLE_R   = 5
 RESIZE_HIT = HANDLE_R * 4
@@ -37,8 +38,7 @@ class RectCanvas(tk.Canvas):
 
         self._cv_img = None
         self._tk_img = None
-        self._scale  = 1.0
-        self._ox = self._oy = 0
+        self._view   = ViewTransform()
         self._resize_job = None
 
         self._rects        = []
@@ -206,15 +206,14 @@ class RectCanvas(tk.Canvas):
             return
 
         h, w = self._cv_img.shape[:2]
-        self._scale = min((cw - 4) / w, (ch - 4) / h)
-        nw, nh = max(1, int(w * self._scale)), max(1, int(h * self._scale))
-        self._ox = max(0, (cw - nw) // 2)
-        self._oy = max(0, (ch - nh) // 2)
+        lay = layout_fit(w, h, cw, ch)
+        nw, nh = lay.width, lay.height
+        self._view.apply(lay)
 
         resized = cv2.resize(self._cv_img, (nw, nh), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         self._tk_img = ImageTk.PhotoImage(Image.fromarray(rgb))
-        self.create_image(self._ox, self._oy, anchor="nw", image=self._tk_img)
+        self.create_image(self._view.ox, self._view.oy, anchor="nw", image=self._tk_img)
         self._render_overlay()
 
     def _render_overlay(self):
@@ -240,15 +239,15 @@ class RectCanvas(tk.Canvas):
     # ── 좌표 변환 ───────────────────────────────────────────────────────
 
     def _to_canvas(self, ix, iy):
-        return ix * self._scale + self._ox, iy * self._scale + self._oy
+        return self._view.to_canvas(ix, iy)
 
     def _to_image(self, cx, cy):
-        return (cx - self._ox) / self._scale, (cy - self._oy) / self._scale
+        return self._view.to_image(cx, cy)
 
     # ── 히트테스트 ──────────────────────────────────────────────────────
 
     def _hit_zone(self, r, cx, cy):
-        return hit_zone(r, cx, cy, self._scale, self._ox, self._oy, RESIZE_HIT, ROTATE_HIT)
+        return hit_zone(r, cx, cy, self._view.scale, self._view.ox, self._view.oy, RESIZE_HIT, ROTATE_HIT)
 
     # ── 드래그(이동/리사이즈/회전) ───────────────────────────────────────
 

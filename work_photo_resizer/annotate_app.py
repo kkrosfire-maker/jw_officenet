@@ -5,19 +5,16 @@ from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
 
 import cv2
-import numpy as np
 import openpyxl
-from PIL import Image, ImageGrab, ImageTk
-from tkinterdnd2 import TkinterDnD, DND_FILES
+from PIL import Image, ImageTk
+from tkinterdnd2 import TkinterDnD
 
 from annotate import parse_filename, build_label, annotate_image
 from imageio_utils import read_image, write_image, unique_path
 from thumb_panel import ThumbPanel
-from undo_stack import HistoryController
-from file_list_controller import FileListController
 from rect_canvas import RectCanvas
+from workbench import RectEditorShell
 
-IMAGE_EXT     = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 EXCEL_EXT     = {".xlsx", ".xlsm"}
 SAVE_FOLDER   = "라벨완료"
 CANVAS_W      = 620
@@ -139,7 +136,7 @@ class AutocompleteEntry(tk.Entry):
             self._listbox = None
 
 
-class App(TkinterDnD.Tk):
+class App(RectEditorShell, TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
         self.title("라벨 + 테두리 삽입 (2단계 테스트)")
@@ -155,27 +152,7 @@ class App(TkinterDnD.Tk):
 
         self._build_ui()
 
-        self._history = HistoryController(
-            snapshot_fn=self._orig_canvas.get_rects,
-            restore_fn=self._restore_rects,
-            limit=UNDO_LIMIT,
-        )
-        self._files = FileListController(
-            self._thumb_panel,
-            on_load=self._load_image,
-            on_empty=self._on_files_empty,
-            nav=self._nav,
-            nav_label=self._nav_lbl,
-            status=lambda t: self._st.config(text=t),
-        )
-
-        self._orig_canvas.bind_keyboard_rotate(self)
-        self._history.bind_keys(self, ignore_types=(tk.Entry, tk.Spinbox, ttk.Entry),
-                                 status_fn=self._history_status)
-
-        self._setup_dnd()
-        self.bind_all("<Control-v>", self._on_paste_shortcut)
-        self.bind("<Delete>", self._on_key_delete_file)
+        self._wire_shell(UNDO_LIMIT)
 
     # ── UI ──────────────────────────────────────────────────────────────
 
@@ -290,24 +267,11 @@ class App(TkinterDnD.Tk):
         self._res_canvas.delete("all")
         self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
 
-    def _on_key_delete_file(self, event):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
-            return
-        self._files.remove_current()
-
     # ── 실행 취소 / 다시 실행 ─────────────────────────────────────────────
 
     def _restore_rects(self, snapshot):
         self._orig_canvas.set_rects(snapshot)
         self._apply(silent=True)
-
-    def _history_status(self, action, ok):
-        n = len(self._orig_canvas.get_rects())
-        if action == "undo":
-            self._st.config(text=f"실행 취소함 (테두리 {n}개)" if ok else "더 되돌릴 내용이 없습니다.")
-        else:
-            self._st.config(text=f"다시 실행함 (테두리 {n}개)" if ok else "다시 실행할 내용이 없습니다.")
 
     # ── 테두리 편집 콜백 (RectCanvas) ─────────────────────────────────────
 
@@ -336,52 +300,9 @@ class App(TkinterDnD.Tk):
             return
         self._st.config(text="테두리를 모두 지웠습니다.")
 
-    def _on_thickness_change(self, *args):
-        if self._orig_canvas.selected_index() is not None:
-            try:
-                self._orig_canvas.set_selected_thickness(self._thick_var.get())
-            except tk.TclError:
-                return
-
     # ── DnD ─────────────────────────────────────────────────────────────
 
-    def _setup_dnd(self):
-        for w in (self, self._orig_canvas, self._res_canvas):
-            w.drop_target_register(DND_FILES)
-            w.dnd_bind("<<Drop>>", self._on_drop)
-
-    def _on_drop(self, event):
-        files = self.tk.splitlist(event.data)
-        images = [f for f in files if Path(f).suffix.lower() in IMAGE_EXT]
-        excels = [f for f in files if Path(f).suffix.lower() in EXCEL_EXT]
-        others = [f for f in files if f not in images and f not in excels]
-
-        if images:
-            self._files.add_files(images)
-        if excels:
-            self._load_excel(excels[0])
-        if others:
-            self._st.config(text=f"지원하지 않는 파일 형식: {Path(others[0]).name}")
-
     # ── 파일 열기 (이미지) ────────────────────────────────────────────────
-
-    def _open_file(self):
-        paths = filedialog.askopenfilenames(
-            filetypes=[("이미지", "*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.webp"),
-                       ("모든 파일", "*.*")])
-        if paths:
-            self._files.add_files(list(paths))
-
-    def _open_folder(self):
-        folder = filedialog.askdirectory()
-        if not folder:
-            return
-        files = sorted(str(f) for f in Path(folder).iterdir()
-                       if f.suffix.lower() in IMAGE_EXT)
-        if not files:
-            messagebox.showinfo("알림", "지원하는 이미지가 없습니다.")
-            return
-        self._files.add_files(files)
 
     def _load_image(self, path: str):
         img = read_image(path)
@@ -412,36 +333,6 @@ class App(TkinterDnD.Tk):
 
     # ── 클립보드 붙여넣기 ────────────────────────────────────────────────
 
-    def _on_paste_shortcut(self, event):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry)):
-            return None   # 입력창에서의 Ctrl+V는 기본 텍스트 붙여넣기 동작에 맡긴다
-        self._paste_from_clipboard()
-        return "break"
-
-    def _paste_from_clipboard(self):
-        try:
-            data = ImageGrab.grabclipboard()
-        except Exception as e:
-            messagebox.showerror("오류", f"클립보드를 읽을 수 없습니다: {e}")
-            return
-
-        if isinstance(data, list) and data:
-            images = [f for f in data if Path(f).suffix.lower() in IMAGE_EXT]
-            if images:
-                self._files.add_files(images)
-                return
-            self._st.config(text="클립보드의 파일 중 지원하는 이미지가 없습니다.")
-            return
-
-        if data is None:
-            self._st.config(text="클립보드에 이미지가 없습니다.")
-            return
-
-        rgb = np.array(data.convert("RGB"))
-        img = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        self._load_clipboard_image(img)
-
     def _load_clipboard_image(self, img):
         self._current_path = None
         self._cv_img    = img
@@ -455,6 +346,17 @@ class App(TkinterDnD.Tk):
         self._orig_canvas.show(img)
         self._orig_canvas.set_rects([])
         self._res_canvas.delete("all")
+
+    # ── 드래그앤드롭: 이미지 외에 기준 엑셀도 받는다 ─────────────────────────
+
+    def _drop_targets(self):
+        return (self, self._orig_canvas, self._res_canvas)
+
+    def _handle_dropped_extras(self, files):
+        excels = [f for f in files if Path(f).suffix.lower() in EXCEL_EXT]
+        if excels:
+            self._load_excel(excels[0])
+        return [f for f in files if f not in excels]
 
     # ── 기준 엑셀 ────────────────────────────────────────────────────────
 

@@ -6,29 +6,24 @@ rect_canvas.RectCanvas를 그대로 재사용한다. 다른 점은 결과 미리
 """
 import csv
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import messagebox
 from pathlib import Path
 
-import numpy as np
-import cv2
-from PIL import ImageGrab
-from tkinterdnd2 import TkinterDnD, DND_FILES
+from tkinterdnd2 import TkinterDnD
 
 from ocr_grid import recognize_lines
 from imageio_utils import read_image, unique_path
 from thumb_panel import ThumbPanel
-from undo_stack import HistoryController
-from file_list_controller import FileListController
 from rect_canvas import RectCanvas
+from workbench import RectEditorShell
 
-IMAGE_EXT     = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 EXPORT_FOLDER = "그리드결과"
 CANVAS_W      = 760
 CANVAS_H      = 760
 UNDO_LIMIT    = 50
 
 
-class App(TkinterDnD.Tk):
+class App(RectEditorShell, TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
         self.title("그리드 OCR 인식 + 교정 (3단계 테스트)")
@@ -43,27 +38,7 @@ class App(TkinterDnD.Tk):
 
         self._build_ui()
 
-        self._history = HistoryController(
-            snapshot_fn=self._orig_canvas.get_rects,
-            restore_fn=self._restore_rects,
-            limit=UNDO_LIMIT,
-        )
-        self._files = FileListController(
-            self._thumb_panel,
-            on_load=self._load_image,
-            on_empty=self._on_files_empty,
-            nav=self._nav,
-            nav_label=self._nav_lbl,
-            status=lambda t: self._st.config(text=t),
-        )
-
-        self._orig_canvas.bind_keyboard_rotate(self)
-        self._history.bind_keys(self, ignore_types=(tk.Entry, tk.Spinbox, ttk.Entry, tk.Text),
-                                 status_fn=self._history_status)
-
-        self._setup_dnd()
-        self.bind_all("<Control-v>", self._on_paste_shortcut)
-        self.bind("<Delete>", self._on_key_delete_file)
+        self._wire_shell(UNDO_LIMIT)
 
     # ── UI ──────────────────────────────────────────────────────────────
 
@@ -179,12 +154,6 @@ class App(TkinterDnD.Tk):
         self._right_lbl.config(text="OCR 결과 (테두리를 선택하세요)")
         self._st.config(text="파일을 열거나 창에 드래그 & 드롭하세요.")
 
-    def _on_key_delete_file(self, event):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry, tk.Text)):
-            return
-        self._files.remove_current()
-
     # ── 실행 취소 / 다시 실행 (테두리 기하만 대상 — 텍스트 교정은 스코프 밖) ──
 
     def _sync_rect_texts_len(self):
@@ -200,13 +169,6 @@ class App(TkinterDnD.Tk):
         self._text_idx = None
         self._text.delete("1.0", tk.END)
         self._right_lbl.config(text="OCR 결과 (테두리를 선택하세요)")
-
-    def _history_status(self, action, ok):
-        n = len(self._orig_canvas.get_rects())
-        if action == "undo":
-            self._st.config(text=f"실행 취소함 (테두리 {n}개)" if ok else "더 되돌릴 내용이 없습니다.")
-        else:
-            self._st.config(text=f"다시 실행함 (테두리 {n}개)" if ok else "다시 실행할 내용이 없습니다.")
 
     # ── 테두리 편집 콜백 (RectCanvas) ─────────────────────────────────────
 
@@ -265,48 +227,9 @@ class App(TkinterDnD.Tk):
         self._right_lbl.config(text="OCR 결과 (테두리를 선택하세요)")
         self._st.config(text="테두리를 모두 지웠습니다.")
 
-    def _on_thickness_change(self, *args):
-        if self._orig_canvas.selected_index() is not None:
-            try:
-                self._orig_canvas.set_selected_thickness(self._thick_var.get())
-            except tk.TclError:
-                return
-
     # ── DnD ─────────────────────────────────────────────────────────────
 
-    def _setup_dnd(self):
-        for w in (self, self._orig_canvas):
-            w.drop_target_register(DND_FILES)
-            w.dnd_bind("<<Drop>>", self._on_drop)
-
-    def _on_drop(self, event):
-        files = self.tk.splitlist(event.data)
-        images = [f for f in files if Path(f).suffix.lower() in IMAGE_EXT]
-        others = [f for f in files if f not in images]
-        if images:
-            self._files.add_files(images)
-        if others:
-            self._st.config(text=f"지원하지 않는 파일 형식: {Path(others[0]).name}")
-
     # ── 파일 열기 ──────────────────────────────────────────────────────
-
-    def _open_file(self):
-        paths = filedialog.askopenfilenames(
-            filetypes=[("이미지", "*.jpg *.jpeg *.png *.bmp *.tiff *.tif *.webp"),
-                       ("모든 파일", "*.*")])
-        if paths:
-            self._files.add_files(list(paths))
-
-    def _open_folder(self):
-        folder = filedialog.askdirectory()
-        if not folder:
-            return
-        files = sorted(str(f) for f in Path(folder).iterdir()
-                       if f.suffix.lower() in IMAGE_EXT)
-        if not files:
-            messagebox.showinfo("알림", "지원하는 이미지가 없습니다.")
-            return
-        self._files.add_files(files)
 
     def _load_image(self, path: str):
         img = read_image(path)
@@ -328,34 +251,7 @@ class App(TkinterDnD.Tk):
 
     # ── 클립보드 붙여넣기 ────────────────────────────────────────────────
 
-    def _on_paste_shortcut(self, event):
-        focused = self.focus_get()
-        if isinstance(focused, (tk.Entry, tk.Spinbox, ttk.Entry, tk.Text)):
-            return None
-        self._paste_from_clipboard()
-        return "break"
-
-    def _paste_from_clipboard(self):
-        try:
-            data = ImageGrab.grabclipboard()
-        except Exception as e:
-            messagebox.showerror("오류", f"클립보드를 읽을 수 없습니다: {e}")
-            return
-
-        if isinstance(data, list) and data:
-            images = [f for f in data if Path(f).suffix.lower() in IMAGE_EXT]
-            if images:
-                self._files.add_files(images)
-                return
-            self._st.config(text="클립보드의 파일 중 지원하는 이미지가 없습니다.")
-            return
-
-        if data is None:
-            self._st.config(text="클립보드에 이미지가 없습니다.")
-            return
-
-        rgb = np.array(data.convert("RGB"))
-        img = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    def _load_clipboard_image(self, img):
         self._current_path = None
         self._cv_img = img
         self._rect_texts.clear()
