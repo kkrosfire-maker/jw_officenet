@@ -92,20 +92,17 @@ class HistoryController:
         self._restore_fn(nxt)
         return True
 
-    def bind_keys(self, root, ignore_types=(), status_fn=None):
-        """root에 Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z를 전역 바인딩한다.
-        ignore_types에 해당하는 위젯(Entry 등)에 포커스가 있으면 무시(기본 동작에 위임).
+    def bind_keys(self, shortcuts, status_fn=None):
+        """Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z를 shortcuts(입력칸에서는 알아서 무시)에 등록한다.
         status_fn(action, ok): action은 "undo"|"redo", ok는 실행 성공 여부."""
-        def guarded(action, fn):
-            def handler(event=None):
-                if ignore_types and isinstance(root.focus_get(), ignore_types):
-                    return None
+        def handler(action, fn):
+            def run(event=None):
                 ok = fn()
                 if status_fn:
                     status_fn(action, ok)
                 return "break"
-            return handler
+            return run
 
-        root.bind_all("<Control-z>", guarded("undo", self.undo))
-        root.bind_all("<Control-y>", guarded("redo", self.redo))
-        root.bind_all("<Control-Z>", guarded("redo", self.redo))
+        shortcuts.bind("<Control-z>", handler("undo", self.undo))
+        shortcuts.bind("<Control-y>", handler("redo", self.redo))
+        shortcuts.bind("<Control-Z>", handler("redo", self.redo))

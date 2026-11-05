@@ -20,11 +20,11 @@ from PIL import Image, ImageTk
 
 from annotate import (rect_corners, hit_zone, point_in_rect,
                        resize_rect, rotate_angle, move_rect_center)
+from boxes import BoxSet, MIN_HALF
 
 HANDLE_R   = 5
 RESIZE_HIT = HANDLE_R * 4
 ROTATE_HIT = RESIZE_HIT + 20
-MIN_HALF   = 8
 EDGE_HIT   = 6
 ZOOM_MIN, ZOOM_MAX = 0.3, 15.0     # 휠 확대/축소 범위 (창에 맞춘 크기 = 1.0)
 ZOOM_STEP  = 1.2
@@ -48,9 +48,7 @@ class RectCanvas(tk.Canvas):
         self._pan_x = self._pan_y = 0.0
         self._pan_anchor = None
 
-        self._rects        = []
-        self._selected_idx = None    # 대표 선택(마지막으로 고른 박스)
-        self._sel          = set()   # 다중 선택된 박스 번호들 (Ctrl+클릭 / 빈 곳 드래그)
+        self.boxes         = BoxSet()    # 박스 목록·선택·클립보드 (규칙은 boxes.py)
         self._group_orig   = {}
         self._drag_mode     = None   # ("resize"|"rotate"|"move"|"edge"|"marquee", idx, ...)
         self._pre_drag_snapshot = None
@@ -71,6 +69,31 @@ class RectCanvas(tk.Canvas):
             self.bind(f"<B{b}-Motion>",       self._pan_motion)
             self.bind(f"<ButtonRelease-{b}>", self._pan_end)
 
+    # BoxSet 의 상태를 예전 이름 그대로 읽고 쓴다 (마우스 처리 코드가 이 이름을 많이 쓴다)
+    @property
+    def _rects(self):
+        return self.boxes.rects
+
+    @_rects.setter
+    def _rects(self, v):
+        self.boxes.rects = v
+
+    @property
+    def _sel(self):
+        return self.boxes.sel
+
+    @_sel.setter
+    def _sel(self, v):
+        self.boxes.sel = set(v)
+
+    @property
+    def _selected_idx(self):
+        return self.boxes.primary
+
+    @_selected_idx.setter
+    def _selected_idx(self, v):
+        self.boxes.primary = v
+
     # ── 공개 API: 이미지 / 전체 초기화 ────────────────────────────────────
 
     def show(self, cv_img):
@@ -84,12 +107,10 @@ class RectCanvas(tk.Canvas):
         self._render()
 
     def clear(self):
-        """이미지·테두리·선택을 모두 지운다 (콜백 발생 없음 — 파일 전환/빈 상태 전용)."""
+        """이미지·테두리·선택을 모두 지운다 (콜백 발생 없음 — 파일 전환/빈 상태 전용). 복사해 둔 박스는 남는다."""
         self._cv_img = None
         self._tk_img = None
-        self._rects = []
-        self._selected_idx = None
-        self._sel = set()
+        self.boxes.reset()
         self._drag_mode = None
         self._zoom, self._pan_x, self._pan_y = 1.0, 0.0, 0.0
         self.delete("all")
@@ -98,153 +119,115 @@ class RectCanvas(tk.Canvas):
 
     def get_rects(self):
         """항상 깊은 복사본을 반환 — 호출자가 자유롭게 스냅샷으로 써도 안전."""
-        return [dict(r) for r in self._rects]
+        return self.boxes.snapshot()
 
     def set_rects(self, rects):
         """undo/redo 복원 등, 실행취소 대상이 아닌 방식으로 테두리 목록을 통째로 교체.
         콜백을 발생시키지 않는다 — 호출자(주로 restore_fn)가 이미 전체 문맥을 알고
         있으므로 필요한 후처리(텍스트창 초기화 등)를 직접 수행한다."""
-        self._rects = [dict(r) for r in rects]
-        self._selected_idx = None
-        self._sel = set()
+        self.boxes.replace(rects)
         self._render_overlay()
 
     def selected_index(self):
-        return self._selected_idx
+        return self.boxes.primary
 
     def selected_indices(self):
-        return sorted(self._sel)
+        return sorted(self.boxes.sel)
 
     def _set_multi(self, indices, primary):
-        self._sel = set(indices)
-        self._selected_idx = primary if self._sel else None
+        self.boxes.select_many(indices, primary)
         self._render_overlay()
         if self._on_select:
-            self._on_select(self._selected_idx)
+            self._on_select(self.boxes.primary)
 
     def select(self, idx):
-        self._selected_idx = idx
-        self._sel = {idx} if idx is not None else set()
+        self.boxes.select(idx)
         self._render_overlay()
         if self._on_select:
             self._on_select(idx)
 
+    def _edit(self, change, kind):
+        """박스 규칙(change)을 실행하고 실행취소 스냅샷(on_edit)·그리기까지 처리한다. change 의 결과를 돌려준다."""
+        pre = self.get_rects()
+        out = change()
+        # on_edit를 렌더링보다 먼저 호출한다 — badge_fn 등 렌더링 시점 콜백이
+        # 호출자 쪽에서 이미 갱신된 상태(예: 텍스트 목록 길이)를 보도록 하기 위함.
+        self._emit_edit(kind, pre, self.boxes.primary)
+        self._render_overlay()
+        return out
+
+    def _img_size(self):
+        h, w = self._cv_img.shape[:2]
+        return w, h
+
     def add_rect(self, hw_ratio=0.125, hh_ratio=0.125, thickness=4):
         if self._cv_img is None:
             return None
-        pre = self.get_rects()
-        h, w = self._cv_img.shape[:2]
-        self._rects.append({
-            "cx": w / 2, "cy": h / 2,
-            "hw": w * hw_ratio, "hh": h * hh_ratio,
-            "angle": 0.0, "thickness": thickness,
-        })
-        new_idx = len(self._rects) - 1
-        self._selected_idx = new_idx
-        self._sel = {new_idx}
-        # on_edit를 렌더링보다 먼저 호출한다 — badge_fn 등 렌더링 시점 콜백이
-        # 호출자 쪽에서 이미 갱신된 상태(예: 텍스트 목록 길이)를 보도록 하기 위함.
-        self._emit_edit("add", pre, new_idx)
-        self._render_overlay()
+        idx = self._edit(lambda: self.boxes.add(*self._img_size(), hw_ratio, hh_ratio, thickness), "add")
         if self._on_select:
-            self._on_select(new_idx)
-        return new_idx
+            self._on_select(idx)
+        return idx
+
+    def copy_selected(self):
+        """선택된 박스(여러 개면 모두)를 복사해 둔다. 복사한 개수를 돌려준다."""
+        return self.boxes.copy_selected()
+
+    def paste(self):
+        """복사해 둔 박스를 사진 한가운데에 붙이고 선택한다. 붙인 개수를 돌려준다."""
+        if self._cv_img is None or not self.boxes.clipboard:
+            return 0
+        n = self._edit(lambda: self.boxes.paste(*self._img_size()), "add")
+        if self._on_select:
+            self._on_select(self.boxes.primary)
+        return n
 
     def delete_selected(self):
         """선택된 박스(여러 개면 모두)를 지운다."""
-        if self._selected_idx is None or not self._sel:
+        if self.boxes.primary is None or not self.boxes.sel:
             return None
         pre = self.get_rects()
-        idx = self._selected_idx
-        for i in sorted(self._sel, reverse=True):
-            if 0 <= i < len(self._rects):
-                del self._rects[i]
-        self._selected_idx = None
-        self._sel = set()
+        idx = self.boxes.delete_selected()
         self._emit_edit("delete", pre, idx)
         self._render_overlay()
         return idx
 
     def clear_rects(self):
-        if not self._rects:
+        if not self.boxes.rects:
             return False
-        pre = self.get_rects()
-        self._rects = []
-        self._selected_idx = None
-        self._sel = set()
-        self._emit_edit("clear", pre)
-        self._render_overlay()
-        return True
+        return self._edit(self.boxes.clear, "clear")
 
     def rotate_selected(self, delta_deg):
-        if self._selected_idx is None:
+        if self.boxes.primary is None:
             return
-        pre = self.get_rects()
-        for i in self._sel:
-            r = self._rects[i]
-            r["angle"] = (r["angle"] + delta_deg) % 360
-        self._emit_edit("rotate", pre, self._selected_idx)
-        self._render_overlay()
+        self._edit(lambda: self.boxes.rotate_selected(delta_deg), "rotate")
 
     def selected_thickness(self):
-        if self._selected_idx is None:
-            return None
-        return self._rects[self._selected_idx]["thickness"]
+        return self.boxes.thickness()
 
     def set_selected_thickness(self, value):
         """두께는 실행취소 대상이 아님 — on_edit 발생 없이 즉시 반영."""
-        if self._selected_idx is None:
-            return
-        self._rects[self._selected_idx]["thickness"] = value
+        self.boxes.set_thickness(value)
         self._render_overlay()
 
     def _emit_edit(self, kind, pre_snapshot, index=None):
         if self._on_edit and pre_snapshot != self._rects:
             self._on_edit(kind, pre_snapshot, index)
 
-    # ── 키보드 회전 (ALT+←→: 15°, CTRL+ALT+←→: 5°) ────────────────────────
+    # ── 키보드 (방향키 이동·크기·회전) ───────────────────────────────────
 
-    def bind_keyboard_rotate(self, root):
-        """root(Tk 최상위 창)에 전역 단축키를 건다. 마우스 드래그 회전 스냅에도
-        같은 Alt/Ctrl 상태를 사용하므로, 이 위젯을 쓰는 앱은 반드시 호출해야 한다."""
-        def set_alt(v):
-            self._alt_held = v
-        def set_ctrl(v):
-            self._ctrl_held = v
-
-        for key in ("Alt_L", "Alt_R"):
-            root.bind_all(f"<KeyPress-{key}>", lambda e: set_alt(True))
-            root.bind_all(f"<KeyRelease-{key}>", lambda e: set_alt(False))
-        for key in ("Control_L", "Control_R"):
-            root.bind_all(f"<KeyPress-{key}>", lambda e: set_ctrl(True))
-            root.bind_all(f"<KeyRelease-{key}>", lambda e: set_ctrl(False))
-
-        def on_arrow(event):
-            if not self._alt_held or self._selected_idx is None:
-                return None
-            step = 5 if self._ctrl_held else 15
-            if event.keysym == "Left":
-                step = -step
-            self.rotate_selected(step)
-            return "break"
-
-        root.bind_all("<Left>", on_arrow)
-        root.bind_all("<Right>", on_arrow)
-
-    def bind_keyboard(self, root, skip_types=()):
-        """선택된 박스를 방향키로 조작한다 (Entry 등 skip_types에 포커스가 있으면 무시).
+    def bind_keyboard(self, shortcuts):
+        """선택된 박스를 방향키로 조작한다 (입력칸에 포커스가 있으면 shortcuts 가 알아서 무시).
         방향키: 이동 / Shift+방향키: 크기(←→ 가로, ↑↓ 세로) / Alt+←→: 회전 15°(Ctrl+Alt 5°)
-        이동량: 기본 5단위, Ctrl을 누르면 1단위(미세 조정). 크기: 기본 3단위, Ctrl을 누르면 1단위."""
+        이동량: 기본 5단위, Ctrl을 누르면 1단위(미세 조정). 크기: 기본 3단위, Ctrl을 누르면 1단위.
+        마우스 회전 스냅에도 같은 Alt/Ctrl 상태를 쓰므로, 이 위젯을 쓰는 앱은 반드시 호출해야 한다."""
         for key in ("Alt_L", "Alt_R"):
-            root.bind_all(f"<KeyPress-{key}>", lambda e: setattr(self, "_alt_held", True))
-            root.bind_all(f"<KeyRelease-{key}>", lambda e: setattr(self, "_alt_held", False))
+            shortcuts.bind(f"<KeyPress-{key}>", lambda e: setattr(self, "_alt_held", True), in_inputs=True)
+            shortcuts.bind(f"<KeyRelease-{key}>", lambda e: setattr(self, "_alt_held", False), in_inputs=True)
         for key in ("Control_L", "Control_R"):
-            root.bind_all(f"<KeyPress-{key}>", lambda e: setattr(self, "_ctrl_held", True))
-            root.bind_all(f"<KeyRelease-{key}>", lambda e: setattr(self, "_ctrl_held", False))
+            shortcuts.bind(f"<KeyPress-{key}>", lambda e: setattr(self, "_ctrl_held", True), in_inputs=True)
+            shortcuts.bind(f"<KeyRelease-{key}>", lambda e: setattr(self, "_ctrl_held", False), in_inputs=True)
 
         def on_arrow(event):
-            if skip_types and isinstance(root.focus_get(), skip_types):
-                return None
             if self._selected_idx is None:
                 return None
             key = event.keysym
@@ -263,16 +246,11 @@ class RectCanvas(tk.Canvas):
             dy = {"Up": -1, "Down": 1}.get(key, 0)
             if self._kb_pre is None:
                 self._kb_pre = self.get_rects()
-            for i in sorted(self._sel):
-                r = self._rects[i]
-                if shift:
-                    # → 가로 넓힘 / ← 좁힘 / ↑ 세로 키움 / ↓ 줄임 (회전된 박스는 박스 자체의 가로·세로 기준)
-                    r["hw"] = max(MIN_HALF, r["hw"] + dx * step / 2)
-                    r["hh"] = max(MIN_HALF, r["hh"] - dy * step / 2)
-                else:
-                    h_img, w_img = self._cv_img.shape[:2]
-                    r["cx"] = max(0.0, min(float(w_img), r["cx"] + dx * step))
-                    r["cy"] = max(0.0, min(float(h_img), r["cy"] + dy * step))
+            if shift:
+                # → 가로 넓힘 / ← 좁힘 / ↑ 세로 키움 / ↓ 줄임
+                self.boxes.resize_selected(dx * step, -dy * step)
+            else:
+                self.boxes.move_selected(dx * step, dy * step, *self._img_size())
             self._render_overlay()
             if self._kb_job:
                 self.after_cancel(self._kb_job)
@@ -280,7 +258,7 @@ class RectCanvas(tk.Canvas):
             return "break"
 
         for k in ("Left", "Right", "Up", "Down"):
-            root.bind_all(f"<{k}>", on_arrow)
+            shortcuts.bind(f"<{k}>", on_arrow)
 
     def _commit_kb(self):
         """연속 방향키 입력을 실행취소 1단계로 묶어 확정한다."""

@@ -76,6 +76,14 @@ class MarkDoneTest(LedgerTestCase):
         self.assertEqual(col(ws, 7)[:5], ["명문제약"] * 4 + ["안국뉴팜(주)"])      # 같은 건이 붙어 있다
         self.assertEqual(ws.cell(6, 7).value, "안국뉴팜(주)")
 
+    def test_month_spelling_08_and_8_is_the_same_month(self):
+        """엑셀엔 '10월' 인데 '010월' 같은 표기가 아니라, 앞 0 유무만 다른 같은 달은 같은 건으로 본다."""
+        ws = sheet(self.base)
+        ws.cell(3, 5).value = "010월"                    # 다솜의원 명문제약 두 번째 줄을 앞 0 표기로
+        ws.parent.save(self.base)
+        self.assertEqual(ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "명문제약", "11월"), ("updated", 3))
+        self.assertEqual(ledger.row_key(sheet(self.base), Schema.of(sheet(self.base)), 3)[2], 10)
+
     def test_numbers_are_not_appended_to_names(self):
         for _ in range(3):
             ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "명문제약", "11월")

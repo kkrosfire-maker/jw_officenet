@@ -20,6 +20,7 @@ from pathlib import Path
 import openpyxl
 from openpyxl.utils import get_column_letter
 
+import rxmonth
 from names import NameBook, clean_pharma, memo_key, norm   # noqa: F401  (memo_key는 호출자 편의로 다시 내보냄)
 
 SHEET = "통계입력확인"
@@ -70,7 +71,8 @@ def _text(ws, r, c):
 
 def row_key(ws, sc, r):
     """'같은 건' 판정 기준: (연도, 병원, 처방월, 제약사 정규화 이름)."""
-    return (ws.cell(r, sc.year).value, _text(ws, r, sc.hospital), _text(ws, r, sc.rx_month),
+    rx = _text(ws, r, sc.rx_month)
+    return (ws.cell(r, sc.year).value, _text(ws, r, sc.hospital), rxmonth.parse(rx) or rx,      # '8월'='08월'
             norm(clean_pharma(_text(ws, r, sc.pharma))))
 
 
@@ -159,38 +161,25 @@ class MasterExcel:
 
     @staticmethod
     def _period(r):
-        """처방 (연도, 월) 숫자 — '08월'·'8월' 모두 8. 읽을 수 없으면 None.
-        연도 열은 입력(정산) 연도라서, 처방월이 입력월보다 크면(12월분을 2월에 입력) 전년도로 본다."""
-        m = re.match(r"\d+", r["rx_month"] or "")
-        y = r["year"]
-        if not m or not isinstance(y, int):
-            return None
-        rx = int(m.group())
-        im = re.match(r"\d+", r["input_month"] or "")
-        if im and rx > int(im.group()):
-            y -= 1
-        return (y, rx)
+        """그 줄의 처방 (연도, 월) — 규칙은 rxmonth.period_of."""
+        return rxmonth.period_of(r["year"], r["rx_month"], r["input_month"])
 
     def recent_periods(self):
         """가장 최근 처방월부터 RECENT_MONTHS개월의 (연도, 월) 집합."""
         latest = max((p for p in map(self._period, self.rows) if p), default=None)
-        if not latest:
-            return set()
-        y, m = latest
-        out = set()
-        for _ in range(self.RECENT_MONTHS):
-            out.add((y, m))
-            y, m = (y, m - 1) if m > 1 else (y - 1, 12)
-        return out
+        return rxmonth.recent_periods(latest, self.RECENT_MONTHS)
 
     def hospital_pharmas(self, hospital: str, month: str = None):
-        """그 병원에서 최근 3개월 안에 처방이 나온 제약사. 해당 월 항목을 맨 앞에, 나머지는 빈도순."""
+        """그 병원에서 최근 3개월 안에 처방이 나온 제약사. 고른 처방월(그 처방 연도) 항목은 3개월이 지났어도 맨 앞에, 나머지는 빈도순.
+        (작년 같은 달 기록은 고른 월로 치지 않는다)"""
         recent = self.recent_periods()
+        m = rxmonth.parse(month)
+        chosen = (rxmonth.year_for(m), m) if m else None
         cnt = Counter(r["pharma"] for r in self.rows
                       if r["hospital"] == hospital and self._period(r) in recent
                       and not self._is_hidden(hospital, r["pharma"]))
         cur = list(dict.fromkeys(r["pharma"] for r in self.rows
-                                 if r["hospital"] == hospital and r["rx_month"] == month
+                                 if r["hospital"] == hospital and chosen and self._period(r) == chosen
                                  and not self._is_hidden(hospital, r["pharma"])))
         return cur + [p for p, _ in cnt.most_common() if p not in cur]
 
@@ -198,7 +187,7 @@ class MasterExcel:
         """해당 병원·처방월에 엑셀에 올라 있는 제약사 (엑셀 순서 유지)."""
         return list(dict.fromkeys(
             r["pharma"] for r in self.rows
-            if r["hospital"] == hospital and r["rx_month"] == month and (year is None or r["year"] == year)
+            if r["hospital"] == hospital and rxmonth.same(r["rx_month"], month) and (year is None or r["year"] == year)
             and not self._is_hidden(hospital, r["pharma"])))
 
     def notes_for(self, hospital, memos=None, month=None):
@@ -213,7 +202,7 @@ class MasterExcel:
             g["pharma"] = r["pharma"]
             if r["note"]:
                 g["note"] = r["note"]
-                g["tag"] = "" if (month and r["rx_month"] == month) else f"{r['rx_month']} 기록"
+                g["tag"] = "" if (month and rxmonth.same(r["rx_month"], month)) else f"{r['rx_month']} 기록"
         out = []
         for g in groups.values():
             key = memo_key(hospital, g["pharma"])
@@ -273,7 +262,7 @@ def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hin
         if str(host).strip() != hospital:
             continue
         manager = ws.cell(r, sc.manager).value or manager
-        if (_text(ws, r, sc.rx_month) == month and ws.cell(r, sc.year).value == year
+        if (rxmonth.same(_text(ws, r, sc.rx_month), month) and ws.cell(r, sc.year).value == year
                 and norm(clean_pharma(_text(ws, r, sc.pharma))) == norm(pharma)):
             last_same = r
             if free is None and ws.cell(r, sc.status).value not in FINISHED:
@@ -450,6 +439,21 @@ def clean_names(path: str, backup_dir=None) -> int:
     wb.save(path)
     wb.close()
     return len(todo)
+
+
+def work_excel_path(out_dir, today=None):
+    """JPG 저장 폴더의 이번 달 작업 엑셀: 1.통계입력_yymm.xlsx (예전 이름 통계입력_yymm.xlsx 가 있으면 새 이름으로 바꿔 이어 쓴다).
+    폴더가 정해지지 않았으면 None."""
+    if not out_dir:
+        return None
+    ym = f"{today or datetime.date.today():%y%m}"
+    new, old = Path(out_dir) / f"1.통계입력_{ym}.xlsx", Path(out_dir) / f"통계입력_{ym}.xlsx"
+    if old.exists() and not new.exists():
+        try:
+            old.rename(new)
+        except OSError:
+            return old                      # 열려 있어 못 바꾸면 이번에는 예전 이름 그대로 쓴다
+    return new
 
 
 # ── 장부: 화면이 쓰는 단 하나의 입구 ─────────────────────────────────────

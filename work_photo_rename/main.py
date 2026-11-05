@@ -1,6 +1,4 @@
 """통계 사진 문구 삽입 프로그램: 사진 하단에 '병원명 월 제약사명' 문구 + 빨간 박스 → 가로 2500px JPG."""
-import datetime
-import json
 import os
 import queue
 import shutil
@@ -18,13 +16,17 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 import labeling
 import ledger
 import period_check
+import rxmonth
+import saving
+import suggest
 from file_list_controller import FileListController
 from imageio_utils import make_copy, read_image, unique_path
 from ledger import Ledger, clean_names
-from names import memo_key, norm
 from notes_panel import NotesPanel, PANEL_W as NOTES_W
 from photos import PhotoBook
 from rect_canvas import RectCanvas
+from settings import MemoStore, Settings
+from shortcuts import Shortcuts
 from suggest_entry import SuggestEntry
 from thumb_panel import ThumbPanel
 from undo_stack import HistoryController
@@ -40,32 +42,6 @@ CONFIG = Path(os.environ.get("PHOTO_RENAME_CONFIG")
 MONTHS = [f"{i}월" for i in range(1, 13)]
 MEMO_FILE = CONFIG.parent / "특이사항메모.json"   # 병원·제약사별 메모(월이 바뀌어도 이어서 보인다, 설정과 같은 폴더)
 INPUT_TYPES = (tk.Entry, tk.Spinbox, ttk.Entry, ttk.Combobox, tk.Text)   # 글자 입력 중엔 단축키(방향키·Delete·Ctrl+Z) 무시
-
-
-def _load_config():
-    try:
-        return json.loads(CONFIG.read_text(encoding="utf-8-sig"))
-    except Exception:
-        return {}
-
-
-def _save_config(cfg):
-    try:
-        CONFIG.parent.mkdir(parents=True, exist_ok=True)
-        CONFIG.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
-
-
-def default_month():
-    """통계는 보통 다음 달에 정리하므로 기본값은 '지난달'. (콤보박스에서 바꿀 수 있다)"""
-    t = datetime.date.today()
-    return (t.month - 2) % 12 + 1
-
-
-def year_for(month: int):
-    t = datetime.date.today()
-    return t.year if month <= t.month else t.year - 1
 
 
 def _crisp_taskbar_icon(win, ico):
@@ -103,10 +79,9 @@ class App(TkinterDnD.Tk):
         except Exception:
             pass
 
-        self._cfg = _load_config()
-        self._out_dir = Path(self._cfg["out_dir"]) if self._cfg.get("out_dir") else None
+        self._settings = Settings(CONFIG)     # 저장 폴더·최근 제약사 표기·지운 제약사 (파일 키는 모두 여기)
         self._ledger = Ledger(BASE_EXCEL)     # 기본파일 이력 + 이번 달 작업 엑셀 (엑셀 규칙은 모두 여기)
-        self._ledger.hidden = set(self._cfg.get("hidden_pharma", []))
+        self._ledger.hidden = self._settings.hidden      # 지운 제약사 집합을 같이 쓴다
         self._xl_fail = []
         self._copy_dir = Path(tempfile.gettempdir()) / f"사진문구넣기_원본복사_{os.getpid()}"
         self._cv_img = None
@@ -115,7 +90,7 @@ class App(TkinterDnD.Tk):
         self._current_path = None
         self._photos = PhotoBook()    # 사진별 작업 기록 (병원·제약사·박스·통계기간·읽은 제약사)
         self._ocr_q = queue.Queue()
-        self._memos = self._load_memos()
+        self._memos = MemoStore(MEMO_FILE)
         self._notes_job = None
         self._apply_job = None
 
@@ -132,14 +107,15 @@ class App(TkinterDnD.Tk):
             self._thumb_panel, on_load=self._load_image, on_empty=self._on_files_empty,
             nav=self._nav, nav_label=self._nav_lbl, status=lambda t: self._st.config(text=t),
             on_removed=self._note_removed)
-        self._canvas.bind_keyboard(self, skip_types=INPUT_TYPES)
-        self._history.bind_keys(self, ignore_types=INPUT_TYPES,
-                                status_fn=self._history_status)
+        keys = Shortcuts(self, INPUT_TYPES)       # 글자 입력칸에서는 단축키를 무시하는 규칙은 여기서 한 번만
+        self._canvas.bind_keyboard(keys)
+        self._history.bind_keys(keys, status_fn=self._history_status)
+        keys.bind("<Control-KeyPress>", self._on_ctrl_key)       # Ctrl+C / Ctrl+V = 박스 복사·붙여넣기
+        keys.bind("<Delete>", self._on_key_delete_file)
 
         for w in (self, self._canvas, self._res_canvas):
             w.drop_target_register(DND_FILES)
             w.dnd_bind("<<Drop>>", self._on_drop)
-        self.bind("<Delete>", self._on_key_delete_file)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(200, self._poll_ocr)
         self._show_out_dir()
@@ -177,7 +153,7 @@ class App(TkinterDnD.Tk):
 
         form = tk.Frame(self, bg="#2e2e2e", pady=6)
         form.pack(fill="x")
-        self._month_var = tk.StringVar(value=f"{default_month()}월")
+        self._month_var = tk.StringVar(value=rxmonth.label(rxmonth.default_month()))
         self._hospital_var = tk.StringVar()
         self._pharma_var = tk.StringVar()
         self._thick_var = tk.IntVar(value=4)
@@ -266,18 +242,13 @@ class App(TkinterDnD.Tk):
 
     # ── 기준 엑셀 ────────────────────────────────────────────────────────
 
+    @property
+    def _out_dir(self):
+        return self._settings.out_dir
+
     def _work_excel(self):
-        """JPG 저장 폴더의 이번 달 작업 엑셀: 1.통계입력_yymm.xlsx (예전 이름 통계입력_yymm.xlsx 가 있으면 새 이름으로 바꿔 이어 쓴다)"""
-        if not self._out_dir:
-            return None
-        ym = f"{datetime.date.today():%y%m}"
-        new, old = self._out_dir / f"1.통계입력_{ym}.xlsx", self._out_dir / f"통계입력_{ym}.xlsx"
-        if old.exists() and not new.exists():
-            try:
-                old.rename(new)
-            except OSError:
-                return old                      # 열려 있어 못 바꾸면 이번에는 예전 이름 그대로 쓴다
-        return new
+        """JPG 저장 폴더의 이번 달 작업 엑셀 (폴더 미지정이면 None)."""
+        return ledger.work_excel_path(self._out_dir)
 
     @property
     def _master(self):
@@ -305,19 +276,12 @@ class App(TkinterDnD.Tk):
 
     # ── 특이사항 메모 ────────────────────────────────────────────────────
 
-    @staticmethod
-    def _load_memos():
-        try:
-            return json.loads(MEMO_FILE.read_text(encoding="utf-8-sig"))
-        except Exception:
-            return {}
-
     def _refresh_notes(self):
         h = self._hospital_var.get().strip()
         if not self._master or h not in set(self._master.hospitals()):
             self._notes.set_data(h if h else "", [], "")
             return
-        self._notes.set_data(h, self._master.notes_for(h, self._memos, self._month_var.get()),
+        self._notes.set_data(h, self._master.notes_for(h, self._memos.data, self._month_var.get()),
                              self._pharma_var.get())
         self._refresh_notes_done()
 
@@ -340,9 +304,8 @@ class App(TkinterDnD.Tk):
 
     def _on_note_edit(self, hospital, pharma, text):
         """메모를 고치면 ① 메모 파일에 저장(월이 바뀌어도 유지) ② 이번 달 작업 엑셀의 특이사항 열에도 반영."""
-        self._memos[memo_key(hospital, pharma)] = text
         try:
-            MEMO_FILE.write_text(json.dumps(self._memos, ensure_ascii=False, indent=1), encoding="utf-8")
+            self._memos.set(hospital, pharma, text)
         except Exception as e:
             messagebox.showwarning("메모", f"메모 저장 실패: {e}")
             return
@@ -355,9 +318,7 @@ class App(TkinterDnD.Tk):
         if not messagebox.askyesno("제약사 삭제", f"'{pharma}' 을(를) {hospital} 의 제약사 목록에서 삭제할까요?\n"
                                    "(엑셀 기록은 그대로이고, 나중에 이 제약사로 저장하면 다시 나타납니다)"):
             return False
-        self._ledger.hidden.add(memo_key(hospital, pharma))
-        self._cfg["hidden_pharma"] = sorted(self._ledger.hidden)
-        _save_config(self._cfg)
+        self._settings.hide_pharma(hospital, pharma)
         self._refresh_pharma_candidates()
         self._st.config(text=f"목록에서 삭제: {hospital} / {pharma}")
         return True
@@ -388,31 +349,20 @@ class App(TkinterDnD.Tk):
         messagebox.showinfo("통계완료(업데이트)", f"기본파일에 반영했습니다.\n상태 변경 {upd}건 / 새 행 추가 {add}건")
 
     def _refresh_pharma_candidates(self):
-        """병원이 엑셀에 있으면 그 병원에서 처방이 나왔던 제약사만 기본 후보로 (선택한 월 항목이 맨 앞).
-        글자를 입력하면 그 병원 후보 뒤에 다른 제약사 전체에서도 찾아준다 (새 제약사 대비)."""
+        """제약사 칸의 후보를 현재 병원·처방월에 맞게 갱신 (규칙은 suggest.candidates)."""
         if not self._master:
             return
-        hospital = self._hospital_var.get().strip()
-        if hospital in set(self._master.hospitals()):
-            pref = self._cfg.get("recent_pharma", {})
-            mine = self._master.names.dedupe(self._master.hospital_pharmas(hospital, self._month_var.get()), pref,
-                                       sort=True)
-            mine_norms = {norm(p) for p in mine}
-            self._pharma_cb.set_candidates(
-                mine, self._master.names.dedupe(self._master.all_pharmas(), pref, drop_norms=mine_norms, sort=True))
-        else:
-            self._pharma_cb.set_candidates(
-                self._master.names.dedupe(self._master.all_pharmas(), self._cfg.get("recent_pharma", {}), sort=True))
+        primary, secondary = suggest.candidates(self._master, self._hospital_var.get().strip(),
+                                                self._month_var.get(), self._settings.recent_pharma)
+        self._pharma_cb.set_candidates(primary, secondary)
 
     def _apply_ocr_pharma(self, path):
         """사진에서 읽은 제약사 글자와 비슷한 제약사를 찾아, 비어 있으면 일단 넣어 둔다 (틀리면 직접 수정)."""
-        if not path or path != self._current_path or not self._master or self._pharma_var.get().strip():
+        if not path or path != self._current_path or not self._master:
             return
         raw = self._photos.get(path).ocr_pharma
-        if not raw:
-            return
-        name, score = self._master.match_pharma(raw, self._hospital_var.get().strip(),
-                                                self._cfg.get("recent_pharma", {}))
+        name = suggest.autofill(self._master, self._hospital_var.get(), self._pharma_var.get(), raw,
+                                self._settings.recent_pharma)
         if name:
             self._pharma_var.set(name)
             self._st.config(text=f"사진에서 읽은 제약사 '{raw}' → '{name}' 자동 입력 (틀리면 고쳐 주세요)")
@@ -426,11 +376,12 @@ class App(TkinterDnD.Tk):
         self._refresh_pharma_candidates()
         self._apply_ocr_pharma(self._current_path)
         # 이번 월에 그 병원 제약사가 하나뿐이면 자동 입력
-        if self._master and not self._pharma_var.get().strip():
+        if self._master:
             month = self._month_var.get()
-            mine = self._master.pharmas_for(self._hospital_var.get().strip(), month, year_for(int(month[:-1])))
-            if len(mine) == 1:
-                self._pharma_var.set(mine[0])
+            name = suggest.sole_pharma(self._master, self._hospital_var.get(), month,
+                                       rxmonth.year_for(rxmonth.parse(month)), self._pharma_var.get())
+            if name:
+                self._pharma_var.set(name)
 
     # ── 파일 로드 / 상태 ─────────────────────────────────────────────────
 
@@ -454,7 +405,7 @@ class App(TkinterDnD.Tk):
         first_open = not ph.opened
         self._hospital_var.set(ph.hospital)
         self._pharma_var.set(ph.pharma)
-        self._month_var.set(ph.month or f"{default_month()}월")      # 처방월은 사진마다 따로 (처음 여는 사진은 지난달)
+        self._month_var.set(ph.month or self._default_month_label())      # 처방월은 사진마다 따로 (처음 여는 사진은 지난달)
         self._schedule_notes()
         guessed = ""
         if first_open and self._master:                    # 처음 여는 사진: 파일명에서 병원명 추측
@@ -491,12 +442,31 @@ class App(TkinterDnD.Tk):
         self._files.select(i)
         self._thumb_panel.canvas.focus_set()      # 목록을 눌렀으니 Delete는 파일 삭제용이 된다
 
+    def _on_ctrl_key(self, event):
+        """Ctrl+C: 선택한 박스 복사 / Ctrl+V: 복사한 박스를 사진 한가운데에 붙임.
+        글자 입력칸에서는 Shortcuts 가 걸러 주므로 원래의 복사·붙여넣기가 된다. 한글 자판에서도 되게 키코드(C=67, V=86)로 판별."""
+        if event.state & 0x20000:                  # Alt 조합은 제외 (0x8은 NumLock이라 보지 않는다)
+            return None
+        if event.keycode == 67:
+            n = self._canvas.copy_selected()
+            if n:
+                self._st.config(text=f"박스 {n}개 복사 — Ctrl+V로 가운데에 붙여넣기")
+                return "break"
+        elif event.keycode == 86:
+            if self._cv_img is None:
+                return None
+            n = self._canvas.paste()
+            if n:
+                self._st.config(text=f"박스 {n}개 붙여넣기")
+                self._canvas.focus_set()
+                return "break"
+            self._st.config(text="복사해 둔 박스가 없습니다 (박스를 선택하고 Ctrl+C)")
+        return None
+
     def _on_key_delete_file(self, event):
         """Delete: 박스가 선택돼 있으면 박스 삭제 / 화면(캔버스)에 포커스가 있으면 아무것도 안 지움 /
         파일 목록 쪽에 포커스가 있을 때만 파일을 목록에서 뺀다."""
         f = self.focus_get()
-        if isinstance(f, INPUT_TYPES):
-            return
         if self._canvas.selected_indices():
             n = len(self._canvas.selected_indices())
             self._canvas.delete_selected()
@@ -558,14 +528,18 @@ class App(TkinterDnD.Tk):
         self.after(200, self._poll_ocr)
 
     def _selected_ym(self):
-        m = int(self._month_var.get()[:-1])
-        return year_for(m), m
+        m = rxmonth.parse(self._month_var.get())
+        return rxmonth.year_for(m), m
+
+    @staticmethod
+    def _default_month_label():
+        return rxmonth.label(rxmonth.default_month())
 
     @staticmethod
     def _ym_of(ph):
         """사진 한 장의 (처방 연도, 월) — 그 사진에 정해 둔 월 기준."""
-        m = int((ph.month or f"{default_month()}월")[:-1])
-        return year_for(m), m
+        m = rxmonth.parse(ph.month or App._default_month_label())
+        return rxmonth.year_for(m), m
 
     def _update_warn(self):
         """좌측 화면 우측상단에 빨간 '통계기간확인'. OCR 전에는 숨기고, 못 읽거나 다르면 표시."""
@@ -716,34 +690,9 @@ class App(TkinterDnD.Tk):
     # ── 저장 ─────────────────────────────────────────────────────────────
 
     def _save_one(self, path, img, hospital, pharma, rects, status=ledger.DONE, month=None):
-        month = month or self._month_var.get()
-        label = labeling.build_label(hospital, month, pharma)
-        if norm(pharma):                      # 최근에 쓴 표기를 기억 -> 비슷한 이름 후보 중 이것만 보인다
-            self._cfg.setdefault("recent_pharma", {})[norm(pharma)] = pharma.strip()
-            _save_config(self._cfg)
-        stamp = ledger.NOSETTLE if status == ledger.NOSETTLE else None    # 정산불가는 사진 가운데 빨간 글씨
-        result = labeling.render(img, label, rects, stamp)
-        out_dir = self._out_dir
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out = labeling.numbered_path(out_dir, labeling.safe_filename(label), ".jpg")
-        if not labeling.save_jpg(result, out):
-            raise OSError("JPG 인코딩 실패")
-        return out, self._update_excel(path, hospital, pharma, status, month)
-
-    def _update_excel(self, path, hospital, pharma, status=ledger.DONE, month=None):
-        """저장한 사진을 장부에 반영하도록 맡긴다 (백그라운드). 같은 사진을 같은 이름으로 다시 저장하면 중복 반영하지 않는다."""
-        if not self._master:
-            return "엑셀 미연결"
-        month = month or self._month_var.get()
-        self._ledger.set_work_path(self._work_excel())
-        if memo_key(hospital, pharma) in self._ledger.hidden:           # 지웠던 제약사를 다시 저장하면 목록에 복귀
-            self._ledger.hidden.discard(memo_key(hospital, pharma))
-            self._cfg["hidden_pharma"] = sorted(self._ledger.hidden)
-            _save_config(self._cfg)
-        if not self._ledger.record_done(path, hospital, month, year_for(int(month[:-1])), pharma,
-                                        f"{datetime.date.today().month}월", status):
-            return "엑셀: 이미 반영됨"
-        return "엑셀 반영 중…"
+        """사진 한 장 저장 (JPG + 장부 반영 맡기기). 순서는 saving.save_photo. (저장 경로, 엑셀 상태 문구)를 돌려준다."""
+        return saving.save_photo(img, path, hospital, pharma, rects, month or self._month_var.get(),
+                                 out_dir=self._out_dir, ledger=self._ledger, settings=self._settings, status=status)
 
     def _poll_excel(self):
         for ev in self._ledger.poll():
@@ -789,9 +738,7 @@ class App(TkinterDnD.Tk):
                                     initialdir=str(self._out_dir) if self._out_dir else None)
         if not d:
             return False
-        self._out_dir = Path(d)
-        self._cfg["out_dir"] = d
-        _save_config(self._cfg)
+        self._settings.set_out_dir(d)
         self._show_out_dir()
         self._reload_source()
         return True
@@ -846,7 +793,7 @@ class App(TkinterDnD.Tk):
             img = self._cv_img if p == self._current_path else read_image(p)
             try:
                 _, xl = self._save_one(p, img, ph.hospital.strip(), ph.pharma.strip(), ph.rects,
-                                   month=ph.month or f"{default_month()}월")
+                                   month=ph.month or self._default_month_label())
                 done += 1
                 if "실패" in xl:
                     xl_fail.append(xl)

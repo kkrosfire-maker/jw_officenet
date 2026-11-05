@@ -118,10 +118,10 @@ def safe_filename(text: str) -> str:
 
 
 def numbered_path(directory, stem: str, suffix: str = ".jpg"):
-    """같은 이름이 있으면 맨 뒤에 ' 2', ' 3', ' 4' ... 를 붙인 경로를 돌려준다."""
+    """같은 이름이 있으면 맨 뒤에 띄어쓰기 없이 '2', '3', '4' ... 를 붙인 경로를 돌려준다. (이든파마 → 이든파마2)"""
     p = Path(directory) / (stem + suffix)
     n = 2
     while p.exists():
-        p = Path(directory) / f"{stem} {n}{suffix}"
+        p = Path(directory) / f"{stem}{n}{suffix}"
         n += 1
     return p
