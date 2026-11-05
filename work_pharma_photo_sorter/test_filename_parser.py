@@ -50,3 +50,32 @@ def test_similar_name_is_not_misrouted():
     lookup = {"오혜연산부인과의원": "H"}
     r = photo_sort.classify(["연세산부인과의원 9월 명문제약.png"], lookup)[0]
     assert r.match_type == "none"
+
+
+PAREN_LOOKUP = {
+    "하나삼성의원(김포)": "건스",
+    "다솜의원(양산)": "네오벤타",
+    "다솜의원(연제구)": "네오벤타",
+    "연세산부인과의원(김포)": "정원유니어스",
+    "연세산부인과의원(계양구)": "미래웰메디칼",
+}
+
+
+@pytest.mark.parametrize("name,manager", [
+    ("하나삼성의원 10월 알리코제약.jpg", "건스"),          # 파일명에 괄호 없음
+    ("하나삼성의원(경기) 10월 알리코제약.jpg", "건스"),    # 파일명 괄호가 엑셀과 다름
+    ("다솜의원 10월 명문제약.jpg", "네오벤타"),            # 지점은 달라도 담당자가 같으면 묶음
+    ("연세산부인과의원(김포) 10월 명문제약.jpg", "정원유니어스"),  # 동명 지점은 괄호로 구분
+    ("연세산부인과의원(계양구) 10월 명문제약.jpg", "미래웰메디칼"),
+])
+def test_parenthetical_ignored_unless_branches_differ(name, manager):
+    r = photo_sort.classify([name], PAREN_LOOKUP)[0]
+    assert r.match_type != "none" and r.manager == manager
+
+
+def test_ambiguous_branch_is_not_guessed():
+    """담당자가 갈리는 동명 지점은 괄호 없이는 섞지 않고 미분류로 남긴다."""
+    r = photo_sort.classify(["연세산부인과의원 10월 명문제약.jpg"], PAREN_LOOKUP)[0]
+    assert r.match_type == "none"
+    r = photo_sort.classify(["연세산부인과의원(인천) 10월 명문제약.jpg"], PAREN_LOOKUP)[0]
+    assert r.match_type == "none"

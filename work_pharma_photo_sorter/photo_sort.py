@@ -42,22 +42,42 @@ def _best_fuzzy_match(hospital: str, lookup: dict) -> tuple[str | None, float]:
     return None, best_ratio
 
 
-def _exact_key(candidate: str, lookup: dict) -> str | None:
-    # 괄호 포함 전체 이름(예: 다솜의원(연제구))을 먼저 시도해 동명 지점을 구분
-    if candidate in lookup:
-        return candidate
-    stripped = _strip_parenthetical(candidate)
-    return stripped if stripped in lookup else None
+def _group_by_base(lookup: dict[str, str]) -> dict[str, dict[str, str]]:
+    """괄호를 뗀 병원명 → {원래 거래처명: 담당자}. 괄호만 다른 같은 병원을 한 묶음으로 본다."""
+    groups: dict[str, dict[str, str]] = {}
+    for key, manager in lookup.items():
+        groups.setdefault(_strip_parenthetical(key), {})[key] = manager
+    return groups
+
+
+def _single_manager_key(group: dict[str, str] | None) -> str | None:
+    """묶음의 담당자가 한 명뿐일 때만 대표 거래처명을 돌려준다.
+
+    담당자가 갈리는 동명 지점(연세산부인과의원(김포)/(계양구) 등)은 괄호 없이는
+    어디로 보낼지 알 수 없으므로 None — 임의로 섞지 않고 미분류로 남긴다.
+    """
+    if group and len(set(group.values())) == 1:
+        return next(iter(group))
+    return None
 
 
 def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
-    """파일 목록을 거래처명 lookup으로 분류. 파일 이동 등 부수효과 없음."""
+    """파일 목록을 거래처명 lookup으로 분류. 파일 이동 등 부수효과 없음.
+
+    괄호 안 내용은 동명 지점 구분에만 쓴다: 괄호 포함 전체 이름이 엑셀에 있으면 그것을 쓰고,
+    없으면 괄호를 무시한 병원명으로 찾되 담당자가 한 명으로 정해질 때만 매칭한다.
+    """
+    groups = _group_by_base(lookup)
     results = []
     for filename in sorted(files):
         candidates = parse_filename(filename).hospital_candidates
 
-        # 1) 후보를 우선순위대로 정확 매칭
-        hit = next(((c, k) for c in candidates if (k := _exact_key(c, lookup))), None)
+        # 1) 괄호 포함 전체 이름 정확 매칭 (동명 지점 구분)
+        hit = next(((c, c) for c in candidates if c in lookup), None)
+        # 2) 괄호를 뗀 이름 매칭 (엑셀 쪽 괄호와 파일명 쪽 괄호가 달라도 같은 병원으로)
+        if not hit:
+            hit = next(((c, k) for c in candidates
+                        if (k := _single_manager_key(groups.get(_strip_parenthetical(c))))), None)
         if hit:
             candidate, key = hit
             results.append(MatchResult(
@@ -67,11 +87,12 @@ def classify(files: list[str], lookup: dict[str, str]) -> list[MatchResult]:
             ))
             continue
 
-        # 2) 모든 후보 중 유사도가 가장 높은 것
+        # 3) 모든 후보 중 유사도가 가장 높은 것 (괄호를 뗀 이름끼리 비교, 담당자 하나로 정해질 때만)
         best_candidate, best_key, best_ratio = candidates[0], None, 0.0
         for c in candidates:
-            key, ratio = _best_fuzzy_match(_strip_parenthetical(c), lookup)
-            if ratio > best_ratio:
+            base, ratio = _best_fuzzy_match(_strip_parenthetical(c), groups)
+            key = _single_manager_key(groups.get(base)) if base else None
+            if key and ratio > best_ratio:
                 best_candidate, best_key, best_ratio = c, key, ratio
         if best_key:
             results.append(MatchResult(
