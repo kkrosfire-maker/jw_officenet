@@ -155,10 +155,40 @@ class MasterExcel:
     def manager_of(self, hospital):
         return next((r["manager"] for r in self.rows if r["hospital"] == hospital and r["manager"]), None)
 
+    RECENT_MONTHS = 3      # 후보로 치는 기간: 엑셀에서 가장 최근 처방월부터 거슬러 3개월 (옛 자료의 끊긴 제약사 제외)
+
+    @staticmethod
+    def _period(r):
+        """처방 (연도, 월) 숫자 — '08월'·'8월' 모두 8. 읽을 수 없으면 None.
+        연도 열은 입력(정산) 연도라서, 처방월이 입력월보다 크면(12월분을 2월에 입력) 전년도로 본다."""
+        m = re.match(r"\d+", r["rx_month"] or "")
+        y = r["year"]
+        if not m or not isinstance(y, int):
+            return None
+        rx = int(m.group())
+        im = re.match(r"\d+", r["input_month"] or "")
+        if im and rx > int(im.group()):
+            y -= 1
+        return (y, rx)
+
+    def recent_periods(self):
+        """가장 최근 처방월부터 RECENT_MONTHS개월의 (연도, 월) 집합."""
+        latest = max((p for p in map(self._period, self.rows) if p), default=None)
+        if not latest:
+            return set()
+        y, m = latest
+        out = set()
+        for _ in range(self.RECENT_MONTHS):
+            out.add((y, m))
+            y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+        return out
+
     def hospital_pharmas(self, hospital: str, month: str = None):
-        """그 병원에서 (어느 달이든) 처방이 나온 적 있는 제약사. 해당 월 항목을 맨 앞에, 나머지는 빈도순."""
+        """그 병원에서 최근 3개월 안에 처방이 나온 제약사. 해당 월 항목을 맨 앞에, 나머지는 빈도순."""
+        recent = self.recent_periods()
         cnt = Counter(r["pharma"] for r in self.rows
-                      if r["hospital"] == hospital and not self._is_hidden(hospital, r["pharma"]))
+                      if r["hospital"] == hospital and self._period(r) in recent
+                      and not self._is_hidden(hospital, r["pharma"]))
         cur = list(dict.fromkeys(r["pharma"] for r in self.rows
                                  if r["hospital"] == hospital and r["rx_month"] == month
                                  and not self._is_hidden(hospital, r["pharma"])))
