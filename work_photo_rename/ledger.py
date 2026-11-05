@@ -136,7 +136,25 @@ class MasterExcel:
         wb.close()
         self._index()
 
+    @staticmethod
+    def _hospital_key(name):
+        """'라임비뇨기과' 와 '라임비뇨기과의원' 을 같은 병원으로 보는 기준: 공백·끝의 '의원' 제거."""
+        k = re.sub(r"\s+", "", name or "")
+        return k[:-2] if k.endswith("의원") and len(k) > 4 else k
+
+    def _merge_hospital_aliases(self):
+        """같은 병원의 다른 표기('X' / 'X의원')를 가장 최근 줄의 표기 하나로 통일한다 (원본 dict는 건드리지 않음)."""
+        latest = {}
+        for j, r in enumerate(self.rows):
+            per = self._period(r) or (0, 0)
+            k = self._hospital_key(r["hospital"])
+            if k not in latest or (per, j) >= latest[k][0]:
+                latest[k] = ((per, j), r["hospital"])
+        self.rows = [r if r["hospital"] == latest[self._hospital_key(r["hospital"])][1]
+                     else dict(r, hospital=latest[self._hospital_key(r["hospital"])][1]) for r in self.rows]
+
     def _index(self):
+        self._merge_hospital_aliases()
         order = sorted(range(len(self.rows)),
                        key=lambda j: (self.rows[j]["year"] if isinstance(self.rows[j]["year"], int) else 0, j))
         self.names = NameBook.from_names(self.rows[j]["pharma"] for j in order)   # 이름별 가장 최근 표기
@@ -157,7 +175,7 @@ class MasterExcel:
     def manager_of(self, hospital):
         return next((r["manager"] for r in self.rows if r["hospital"] == hospital and r["manager"]), None)
 
-    RECENT_MONTHS = 3      # 후보로 치는 기간: 엑셀에서 가장 최근 처방월부터 거슬러 3개월 (옛 자료의 끊긴 제약사 제외)
+    RECENT_MONTHS = 4      # 후보로 치는 기간: 엑셀에서 가장 최근 처방월부터 거슬러 4개월 (옛 자료의 끊긴 제약사 제외)
 
     @staticmethod
     def _period(r):
@@ -170,7 +188,7 @@ class MasterExcel:
         return rxmonth.recent_periods(latest, self.RECENT_MONTHS)
 
     def hospital_pharmas(self, hospital: str, month: str = None):
-        """그 병원에서 최근 3개월 안에 처방이 나온 제약사. 고른 처방월(그 처방 연도) 항목은 3개월이 지났어도 맨 앞에, 나머지는 빈도순.
+        """그 병원에서 최근 4개월 안에 처방이 나온 제약사. 고른 처방월(그 처방 연도) 항목은 4개월이 지났어도 맨 앞에, 나머지는 빈도순.
         (작년 같은 달 기록은 고른 월로 치지 않는다)"""
         recent = self.recent_periods()
         m = rxmonth.parse(month)

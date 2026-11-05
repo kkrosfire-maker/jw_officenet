@@ -240,6 +240,19 @@ class CleanNamesTest(LedgerTestCase):
 
 
 class MasterReadTest(LedgerTestCase):
+    def test_hospital_with_and_without_uiwon_are_one(self):
+        wb = openpyxl.load_workbook(self.base)
+        ws = wb[ledger.SHEET]
+        ws.append([2026, "담당B", "입력완료", "라임비뇨기과의원", "9월", "10월", "가제약", None, None, None])
+        ws.append([2026, "담당B", None, "라임비뇨기과", "10월", "11월", "나제약", None, None, None])
+        wb.save(self.base)
+        m = MasterExcel(str(self.base))
+        self.assertEqual([h for h in m.hospitals() if h.startswith("라임")], ["라임비뇨기과"])   # 가장 최근 줄의 표기
+        self.assertEqual(sorted(m.hospital_pharmas("라임비뇨기과", "10월")), ["가제약", "나제약"])
+
+    def test_recent_months_is_four(self):
+        self.assertEqual(MasterExcel.RECENT_MONTHS, 4)
+
     def test_hospital_pharmas_current_month_first(self):
         m = MasterExcel(str(self.base))
         self.assertEqual(m.hospital_pharmas("가온의원", "10월")[0], "코오롱제약")

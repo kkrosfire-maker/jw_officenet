@@ -11,7 +11,7 @@ from names import norm
 
 def candidates(master, hospital: str, month: str, prefer=None):
     """(기본 후보, 보조 후보).
-    엑셀에 있는 병원: 기본 = 그 병원에서 최근 3개월 안에 처방이 나온 제약사(선택한 월이 맨 앞, 가나다순),
+    엑셀에 있는 병원: 기본 = 그 병원에서 최근 4개월 안에 처방이 나온 제약사(선택한 월이 맨 앞, 가나다순),
                       보조 = 그 밖의 제약사 전체 (새 제약사 대비).
     엑셀에 없는 병원: 기본 = 제약사 전체, 보조 = 없음."""
     prefer = prefer or {}
