@@ -26,6 +26,7 @@ class Photo:
     period: object = None             # OCR로 읽은 ((년,월,일),(년,월,일)); None=못 읽음
     period_read: bool = False         # OCR이 끝났는가 (False면 아직 안 읽음)
     ocr_pharma: object = None         # 사진 상단에서 읽은 제약사 글자 (없으면 None)
+    nosettle: bool = False            # 정산불가로 표시했나 (저장할 때 가운데 빨간 글씨 + 파일명 _정산불가 + 엑셀 정산불가)
 
     @property
     def ready(self) -> bool:
@@ -46,12 +47,14 @@ class PhotoBook:
 
     # ── 입력 ────────────────────────────────────────────────────────────
 
-    def record(self, path, hospital, pharma, rects, month=None):
+    def record(self, path, hospital, pharma, rects, month=None, nosettle=None):
         """지금 화면에 입력된 내용을 그 사진의 기록으로 저장한다. 처방월도 사진마다 따로 기억한다."""
         ph = self.get(path)
         ph.hospital, ph.pharma, ph.rects, ph.opened = hospital, pharma, list(rects), True
         if month is not None:
             ph.month = month
+        if nosettle is not None:
+            ph.nosettle = bool(nosettle)
 
     def copy_of(self, src, dst):
         """src 사진의 복사본(dst) 기록: 병원명·통계기간·박스(같은 위치)를 이어받고, 제약사는 비운다 (같은 원본으로 다른 통계를 만들 용도)."""

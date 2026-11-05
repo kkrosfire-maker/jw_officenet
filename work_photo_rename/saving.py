@@ -24,7 +24,10 @@ def save_photo(img, source_path, hospital, pharma, rects, month, *, out_dir, led
     stamp = ledger_mod.NOSETTLE if status == ledger_mod.NOSETTLE else None     # 정산불가는 사진 가운데 빨간 글씨
     result = labeling.render(img, label, rects, stamp)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = labeling.numbered_path(out_dir, labeling.safe_filename(label), ".jpg")
+    stem = labeling.safe_filename(label)
+    if status == ledger_mod.NOSETTLE:      # 정산불가는 번호 대신 이름 뒤에 _정산불가 (겹치면 _정산불가2, 3 ...) — 일반 번호 세기에서 빠진다
+        stem += "_" + ledger_mod.NOSETTLE
+    out = labeling.numbered_path(out_dir, stem, ".jpg")
     if not labeling.save_jpg(result, out):
         raise OSError("JPG 인코딩 실패")
     return SaveResult(out, _record(source_path, hospital, pharma, month, status, out_dir, ledger, settings, today))

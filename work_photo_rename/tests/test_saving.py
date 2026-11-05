@@ -117,6 +117,15 @@ class SavePhotoTest(unittest.TestCase):
         status = {r[6].value: r[2].value for r in ws.iter_rows(min_row=2) if r[6].value in ("가제약", "나제약")}
         self.assertEqual(status, {"가제약": "입력완료", "나제약": "정산불가"})
 
+    def test_no_settlement_filename_suffix_and_not_counted(self):
+        names = [self._save(pharma="제뉴원사이언스", source=f"{i}.png", status=st).path.stem
+                 for i, st in enumerate([ledger.DONE, ledger.NOSETTLE, ledger.DONE, ledger.NOSETTLE, ledger.NOSETTLE])]
+        base = "다솜의원 10월 제뉴원사이언스"
+        self.assertEqual([n.replace("다솜의원 10월 ", "") for n in names],
+                         ["제뉴원사이언스", "제뉴원사이언스_정산불가", "제뉴원사이언스2",
+                          "제뉴원사이언스_정산불가2", "제뉴원사이언스_정산불가3"])      # 정산불가는 일반 번호를 쓰지 않는다
+        self._wait()
+
     def test_hidden_pharma_returns_after_saving_it_again(self):
         self.settings.hide_pharma("다솜의원", "명문제약")
         self.assertNotIn("명문제약", self.ledger.master.hospital_pharmas("다솜의원"))

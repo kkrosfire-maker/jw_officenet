@@ -22,6 +22,15 @@ class RecordTest(unittest.TestCase):
         self.assertEqual((ph.hospital, ph.pharma, ph.opened), ("다솜의원", "명문제약", True))
         self.assertEqual(ph.rects, [{"cx": 1}])
 
+    def test_nosettle_flag_is_remembered_per_photo_and_not_copied(self):
+        book = PhotoBook()
+        book.record("a.png", "다솜의원", "가제약", [], nosettle=True)
+        book.record("b.png", "다솜의원", "나제약", [])
+        self.assertEqual((book.get("a.png").nosettle, book.get("b.png").nosettle), (True, False))
+        book.record("a.png", "다솜의원", "가제약", [])                 # 값을 안 주면 유지
+        self.assertTrue(book.get("a.png").nosettle)
+        self.assertFalse(book.copy_of("a.png", "c.png").nosettle)     # 원본 복사본은 정산불가를 이어받지 않는다
+
     def test_ocr_results_do_not_mark_opened(self):
         book = PhotoBook()
         book.set_period("a.png", OCT)

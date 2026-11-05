@@ -190,8 +190,10 @@ class App(TkinterDnD.Tk):
         tk.Button(form2, text="저장 (JPG)", command=self._save_current, **B).pack(side="left", padx=10)
         tk.Button(form2, text="전체 저장", command=self._save_all, **B).pack(side="left", padx=4)
         tk.Button(form2, text="원본 복사", command=self._copy_original, **B).pack(side="left", padx=4)
-        tk.Button(form2, text="정산불가", command=lambda: self._save_current(ledger.NOSETTLE),
-                  **B).pack(side="left", padx=4)
+        self._nosettle = False
+        self._nosettle_btn_bg = B["bg"]
+        self._nosettle_btn = tk.Button(form2, text="정산불가", command=self._toggle_nosettle, **B)
+        self._nosettle_btn.pack(side="left", padx=4)
         tk.Button(form2, text="↶ 실행 취소", command=lambda: self._history_status("undo", self._history.undo()),
                   **B).pack(side="left", padx=(14, 4))
         tk.Button(form2, text="↷ 다시 실행", command=lambda: self._history_status("redo", self._history.redo()),
@@ -388,7 +390,21 @@ class App(TkinterDnD.Tk):
     def _remember(self):
         if self._current_path:
             self._photos.record(self._current_path, self._hospital_var.get(), self._pharma_var.get(),
-                                self._canvas.get_rects(), self._month_var.get())
+                                self._canvas.get_rects(), self._month_var.get(), self._nosettle)
+
+    def _set_nosettle(self, on):
+        """정산불가 표시 켜기/끄기: 버튼이 눌린 색으로 바뀌고 오른쪽 결과 미리보기 가운데에 빨간 글씨가 보인다 (저장은 따로)."""
+        self._nosettle = bool(on)
+        self._nosettle_btn.config(bg="#c0392b" if on else self._nosettle_btn_bg,
+                                  relief="sunken" if on else "flat", activebackground="#d9534f" if on else "#4e5255")
+        self._schedule_apply(now=True)
+
+    def _toggle_nosettle(self):
+        if self._cv_img is None:
+            return
+        self._set_nosettle(not self._nosettle)
+        self._remember()
+        self._st.config(text="정산불가 표시함 — 저장(JPG)을 누르면 반영됩니다." if self._nosettle else "정산불가 표시 해제")
 
     def _load_image(self, path):
         prev = self._current_path
@@ -406,6 +422,7 @@ class App(TkinterDnD.Tk):
         self._hospital_var.set(ph.hospital)
         self._pharma_var.set(ph.pharma)
         self._month_var.set(ph.month or self._default_month_label())      # 처방월은 사진마다 따로 (처음 여는 사진은 지난달)
+        self._set_nosettle(ph.nosettle)
         self._schedule_notes()
         guessed = ""
         if first_open and self._master:                    # 처음 여는 사진: 파일명에서 병원명 추측
@@ -431,6 +448,7 @@ class App(TkinterDnD.Tk):
 
     def _on_files_empty(self):
         self._current_path = self._cv_img = self._cv_result = None
+        self._set_nosettle(False)
         self._history.clear()
         self._canvas.clear()
         self._res_canvas.delete("all")
@@ -593,7 +611,8 @@ class App(TkinterDnD.Tk):
         label = self._label()
         self._label_lbl.config(text=label or "")
         text = label or "(병원명 / 제약사명을 입력하세요)"
-        self._cv_result = labeling.render(self._cv_img, text, self._canvas.get_rects())
+        self._cv_result = labeling.render(self._cv_img, text, self._canvas.get_rects(),
+                                          ledger.NOSETTLE if self._nosettle else None)
         self._render_result()
 
     def _render_result(self):
@@ -749,7 +768,8 @@ class App(TkinterDnD.Tk):
     def _ensure_out_dir(self):
         return bool(self._out_dir) or self._choose_out_dir()
 
-    def _save_current(self, status=ledger.DONE):
+    def _save_current(self):
+        status = ledger.NOSETTLE if self._nosettle else ledger.DONE
         if self._cv_img is None or not self._current_path:
             messagebox.showwarning("알림", "먼저 사진을 열어주세요.")
             return
@@ -793,7 +813,8 @@ class App(TkinterDnD.Tk):
             img = self._cv_img if p == self._current_path else read_image(p)
             try:
                 _, xl = self._save_one(p, img, ph.hospital.strip(), ph.pharma.strip(), ph.rects,
-                                   month=ph.month or self._default_month_label())
+                                       ledger.NOSETTLE if ph.nosettle else ledger.DONE,
+                                       month=ph.month or self._default_month_label())
                 done += 1
                 if "실패" in xl:
                     xl_fail.append(xl)
