@@ -1193,10 +1193,9 @@ class RateSheetApp:
             # (트리 위젯은 창 크기에 맞춰 늘어나므로, 행이 적으면 아래쪽에
             # 빈 여백이 그대로 캡쳐되는 문제가 있었다.)
             columns = self.tree["columns"]
+            content_w = 0
             if columns:
                 content_w = sum(self.tree.column(c, "width") for c in columns)
-                if content_w > 0:
-                    w = min(content_w, w)
 
             children = self.tree.get_children()
             if children:
@@ -1206,7 +1205,13 @@ class RateSheetApp:
                     content_h = last_bbox[1] + last_bbox[3]
                     h = min(content_h, h)
 
-            img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
+            if content_w <= w:
+                img = ImageGrab.grab(bbox=(x, y, x + content_w or w, y + h))
+            else:
+                # 1순위: 창을 잠깐 넓혀 한 번에 찍기, 모자라면 스크롤 이어붙이기
+                img = self._grab_widened(h, content_w)
+                if img is None:
+                    img = self._grab_full_width(x, y, w, h, content_w)
             self._image_to_clipboard(img)
             self.status_var.set("표를 이미지로 클립보드에 복사했습니다.")
         except Exception as e:
@@ -1214,6 +1219,70 @@ class RateSheetApp:
         finally:
             if scope == "checked":
                 self._refresh_rows(self.current_results, self.current_columns)
+
+    def _grab_widened(self, h, content_w):
+        """창을 표 전체 너비만큼 잠깐 넓혀 한 번에 찍는다.
+        최대화 상태이거나 화면보다 넓어 못 늘리면 None을 돌려준다(호출 측이 대체 방식 사용)."""
+        from PIL import ImageGrab
+
+        root = self.root
+        if root.state() != "normal":
+            return None
+        old_geo = root.geometry()  # "WxH+X+Y"
+        try:
+            rw, rh = root.winfo_width(), root.winfo_height()
+            rx, ry = root.winfo_x(), root.winfo_y()
+            need = content_w + 2 - self.tree.winfo_width()  # 테두리 2px 포함
+            new_w = rw + need
+            screen_w = root.winfo_screenwidth()
+            if new_w > screen_w:
+                return None
+            new_x = min(max(0, rx), screen_w - new_w)
+            root.geometry(f"{new_w}x{rh}+{new_x}+{ry}")
+            root.lift()
+            root.update()
+            time.sleep(0.2)
+            root.update()
+            if self.tree.winfo_width() < content_w + 2:
+                return None
+            self.tree.xview_moveto(0)
+            root.update()
+            x = self.tree.winfo_rootx() + 1
+            y = self.tree.winfo_rooty()
+            return ImageGrab.grab(bbox=(x, y, x + content_w, y + h)).convert("RGB")
+        finally:
+            root.geometry(old_geo)
+            root.update()
+
+    def _grab_full_width(self, x, y, w, h, content_w):
+        """가로 스크롤로 가려진 열까지 포함해, 스크롤을 옮겨가며 찍은 조각을 이어 붙인다."""
+        from PIL import Image, ImageGrab
+
+        orig = self.tree.xview()[0]
+        # 위젯 좌우 테두리(1px)가 조각 경계에 선으로 남지 않도록 안쪽만 찍는다.
+        x += 1
+        w -= 2
+        result = Image.new("RGB", (content_w, h), "white")
+        filled = 0  # 결과 이미지에서 이미 채운 너비
+        try:
+            while filled < content_w:
+                self.tree.xview_moveto(filled / content_w)
+                self.root.update()
+                time.sleep(0.1)
+                self.root.update()
+                # 실제 스크롤 위치(끝에서는 요청보다 덜 이동할 수 있음)
+                offset = round(self.tree.xview()[0] * content_w)
+                strip = ImageGrab.grab(bbox=(x, y, x + w, y + h)).convert("RGB")
+                skip = max(0, filled - offset)  # 이미 채운 부분은 건너뜀
+                result.paste(strip.crop((skip, 0, w, h)), (offset + skip, 0))
+                new_filled = offset + w
+                if new_filled <= filled:  # 더 이상 못 움직임 -> 무한루프 방지
+                    break
+                filled = new_filled
+        finally:
+            self.tree.xview_moveto(orig)
+            self.root.update()
+        return result
 
     @staticmethod
     def _image_to_clipboard(image):
