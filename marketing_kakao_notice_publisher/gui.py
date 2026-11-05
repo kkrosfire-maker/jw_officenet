@@ -262,17 +262,64 @@ class App(tk.Tk):
             lb.bind("<Button-1>", lambda e, p=path, n=i: self.open_full(p, n))
 
     def open_full(self, path, n):
+        """크게 보기. 좌우 삼각형(평소 반투명, 마우스 가까이 가면 선명)이나 ←/→ 키로 이전/다음 사진."""
+        paths = self.image_paths
         win = tk.Toplevel(self)
-        win.title(f"이미지 {n}/{len(self.image_paths)}  (클릭 또는 Esc로 닫기)")
-        im = Image.open(path)
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-        im.thumbnail((int(sw * 0.9), int(sh * 0.85)))
-        ph = ImageTk.PhotoImage(im)
-        lb = tk.Label(win, image=ph, cursor="hand2")
-        lb.image = ph
-        lb.pack()
-        lb.bind("<Button-1>", lambda e: win.destroy())
+        cv = tk.Canvas(win, highlightthickness=0, bd=0, cursor="hand2")
+        cv.pack()
+        st = {"i": n - 1, "ph": None, "w": 0, "h": 0}
+        NEAR = 110  # 화살표 중심에서 이 거리(px) 안이면 선명해진다
+
+        def arrow_center(side):
+            return (44 if side < 0 else st["w"] - 44), st["h"] // 2
+
+        def draw_arrows(mx=None, my=None):
+            cv.delete("arrow")
+            if len(paths) < 2:
+                return
+            for side in (-1, 1):
+                cx, cy = arrow_center(side)
+                near = mx is not None and abs(mx - cx) < NEAR and abs(my - cy) < NEAR * 1.5
+                tip = cx + side * 18
+                pts = [tip, cy, cx - side * 14, cy - 30, cx - side * 14, cy + 30]
+                kw = {} if near else {"stipple": "gray50"}
+                cv.create_polygon(pts, fill="white" if near else "#dddddd", outline="#333333" if near else "",
+                                  width=2, tags="arrow", **kw)
+
+        def show(i):
+            st["i"] = i % len(paths)
+            im = Image.open(paths[st["i"]])
+            im.thumbnail((int(sw * 0.9), int(sh * 0.85)))
+            st["ph"] = ImageTk.PhotoImage(im)
+            st["w"], st["h"] = im.size
+            cv.config(width=st["w"], height=st["h"])
+            cv.delete("all")
+            cv.create_image(0, 0, image=st["ph"], anchor="nw")
+            win.title(f"이미지 {st['i'] + 1}/{len(paths)}  (◀ ▶ 또는 ←/→ 키로 넘기기, Esc로 닫기)")
+            draw_arrows()
+
+        def hit(e):
+            for side in (-1, 1):
+                cx, cy = arrow_center(side)
+                if abs(e.x - cx) < NEAR * 0.5 and abs(e.y - cy) < NEAR * 0.75:
+                    return side
+            return 0
+
+        def on_click(e):
+            side = hit(e) if len(paths) > 1 else 0
+            if side:
+                show(st["i"] + side)
+            else:
+                win.destroy()
+
+        cv.bind("<Motion>", lambda e: draw_arrows(e.x, e.y))
+        cv.bind("<Leave>", lambda e: draw_arrows())
+        cv.bind("<Button-1>", on_click)
+        win.bind("<Left>", lambda e: show(st["i"] - 1))
+        win.bind("<Right>", lambda e: show(st["i"] + 1))
         win.bind("<Escape>", lambda e: win.destroy())
+        show(n - 1)
         win.focus_set()
 
     # --- 1단계: 추출
