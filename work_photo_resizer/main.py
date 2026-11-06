@@ -81,6 +81,7 @@ class ImageCanvas(tk.Canvas):
 
         self._pts: list[list[float]] = []
         self._drag_idx = None
+        self._free_drag = False
         self._resize_job = None
         self._grid_on = False
 
@@ -91,6 +92,9 @@ class ImageCanvas(tk.Canvas):
         self.bind("<Button-1>",        self._drag_start)
         self.bind("<B1-Motion>",       self._drag_motion)
         self.bind("<ButtonRelease-1>", self._drag_end)
+        self.bind("<Button-3>",        self._drag_start_free)
+        self.bind("<B3-Motion>",       self._drag_motion)
+        self.bind("<ButtonRelease-3>", self._drag_end)
         self.bind("<Double-Button-1>", self._on_double_click)
         self.bind("<Motion>",          self._hover)
         if self._pannable:
@@ -244,9 +248,12 @@ class ImageCanvas(tk.Canvas):
 
     # ── 드래그 ──────────────────────────────────────────────────────────
 
-    def _img_coord(self, cx, cy):
+    def _img_coord(self, cx, cy, clamp=True):
         if self._cv_img is None:
             return None
+        if not clamp:
+            # 우클릭 드래그: 사진 밖(검은 영역)으로도 점을 보낼 수 있다
+            return self._view.to_image(cx, cy) if self._view.scale > 0 else None
         h, w = self._cv_img.shape[:2]
         return self._view.to_image_clamped(cx, cy, w, h)
 
@@ -256,6 +263,11 @@ class ImageCanvas(tk.Canvas):
         if not pts:
             return None
         return min(range(len(pts)), key=lambda i: (cx - pts[i][0]) ** 2 + (cy - pts[i][1]) ** 2)
+
+    def _drag_start_free(self, event):
+        """우클릭 드래그: 왼쪽 버튼과 같지만 사진 밖으로도 나갈 수 있다."""
+        self._free_drag = True
+        self._drag_start(event)
 
     def _drag_start(self, event):
         # 더블클릭(뷰 초기화) 판별: 직전 클릭과 짧은 시간 안이면 같은 제스처로 보고
@@ -270,7 +282,7 @@ class ImageCanvas(tk.Canvas):
         if len(self._pts) == 4:
             # 어디를 클릭해도 가장 가까운 꼭짓점을 클릭 위치로 즉시 이동
             idx = self._closest_idx(event.x, event.y)
-            coord = self._img_coord(event.x, event.y)
+            coord = self._img_coord(event.x, event.y, clamp=not self._free_drag)
             if coord:
                 self._pts[idx] = list(coord)
                 self._redraw()
@@ -284,7 +296,7 @@ class ImageCanvas(tk.Canvas):
 
     def _drag_motion(self, event):
         if self._drag_idx is not None and self._pts:
-            coord = self._img_coord(event.x, event.y)
+            coord = self._img_coord(event.x, event.y, clamp=not self._free_drag)
             if coord:
                 self._pts[self._drag_idx] = list(coord)
                 self._redraw()
@@ -297,6 +309,7 @@ class ImageCanvas(tk.Canvas):
             self._render()
 
     def _drag_end(self, event):
+        self._free_drag  = False
         self._drag_idx   = None
         self._pan_anchor = None
         self._redraw()
