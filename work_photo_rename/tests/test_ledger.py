@@ -125,6 +125,20 @@ class MarkDoneTest(LedgerTestCase):
         self.assertEqual((sc.year, sc.hospital, sc.pharma, sc.note), (2, 5, 8, 11))
 
 
+class SafeSaveTest(LedgerTestCase):
+    def test_failed_save_keeps_original_file(self):
+        before = self.base.read_bytes()
+        wb = openpyxl.load_workbook(self.base)
+        def broken_save(path):                               # 저장 도중 실패: 파일만 비워 놓고 오류
+            Path(path).write_bytes(b"PK" + b"" * 18)
+            raise RuntimeError("저장 실패")
+        wb.save = broken_save
+        with self.assertRaises(RuntimeError):
+            ledger._save_safely(wb, self.base)
+        self.assertEqual(self.base.read_bytes(), before)
+        self.assertEqual([p.name for p in self.dir.iterdir() if ".tmp." in p.name], [])
+
+
 class WorkFileTest(LedgerTestCase):
     def test_contains_only_this_settlement_month_latest_year(self):
         work = self.dir / "work.xlsx"

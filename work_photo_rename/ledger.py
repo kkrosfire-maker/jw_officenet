@@ -29,6 +29,25 @@ NOSETTLE = "정산불가"
 FINISHED = (DONE, NOSETTLE)        # 처리가 끝난 줄로 치는 상태들
 
 
+def _save_safely(wb, path):
+    """엑셀을 임시 파일에 먼저 저장한 뒤 원본과 바꿔치기한다.
+    openpyxl의 wb.save는 원본을 먼저 비우고 그 자리에 쓰기 때문에, 저장 도중 실패하면 원본이 빈 파일로 남는다(실제로 발생)."""
+    path = Path(path)
+    tmp = path.with_name(f"{path.stem}.저장중.tmp{path.suffix}")   # openpyxl이 확장자(.xlsx)를 요구한다
+    try:
+        wb.save(tmp)
+        if not tmp.stat().st_size > 1000:
+            raise OSError("저장된 임시 파일이 비정상입니다")
+        openpyxl.load_workbook(tmp, read_only=True).close()      # 열리는 파일인지 확인한 뒤에만 교체
+        tmp.replace(path)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
 # ── 시트 구조 ────────────────────────────────────────────────────────────
 
 class Schema:
@@ -298,7 +317,7 @@ def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hin
     if note is not None:
         ws.cell(result[1], sc.note).value = note.strip() or None
     wb.calculation.fullCalcOnLoad = True
-    wb.save(path)
+    _save_safely(wb, path)
     wb.close()
     return result
 
@@ -366,7 +385,7 @@ def create_work_file(base_path, work_path, input_month, header_only=False):
         ws.add_data_validation(dv)
     ws.auto_filter.ref = f"A1:{get_column_letter(ncol)}{max(2, len(rows) + 1)}"
     wb.calculation.fullCalcOnLoad = True
-    wb.save(work_path)
+    _save_safely(wb, work_path)
     wb.close()
     return len(rows)
 
@@ -382,7 +401,7 @@ def set_notes(path, hospital, pharma, text):
             ws.cell(r, sc.note).value = text or None
             n += 1
     if n:
-        wb.save(path)
+        _save_safely(wb, path)
     wb.close()
     return n
 
@@ -452,7 +471,7 @@ def merge_into_base(work_path: str, base_path: str):
         if b and _text(bws, b, bs_sc.note) != text:
             bws.cell(b, bs_sc.note).value = text
     bwb.calculation.fullCalcOnLoad = True
-    bwb.save(base_path)
+    _save_safely(bwb, base_path)
     wwb.close()
     bwb.close()
     return updated, added
@@ -478,7 +497,7 @@ def clean_names(path: str, backup_dir=None) -> int:
     for r, name in todo:
         ws.cell(r, sc.pharma).value = name
     wb.calculation.fullCalcOnLoad = True
-    wb.save(path)
+    _save_safely(wb, path)
     wb.close()
     return len(todo)
 
