@@ -455,9 +455,9 @@ class App(TkinterDnD.Tk):
         self._learn_lbl.pack(side="left", padx=(2, 4))
         self._learn_lbl.bind("<Button-3>", self._learn_menu)
         _sep(tb)
+        tk.Button(tb, text="다음단계로 전송",      command=self._send_to_labeler,  **B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 저장",       command=self._save,             **B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 전체 저장",   command=self._save_all,         **B).pack(side="left", padx=4)
-        tk.Button(tb, text="문구넣기로 보내기",    command=self._send_to_labeler,  **B).pack(side="left", padx=4)
         tk.Button(tb, text="클립보드 복사",        command=self._copy_to_clipboard,**B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 폴더 열기",   command=self._open_output_folder,**B).pack(side="left", padx=4)
         _sep(tb)
@@ -836,7 +836,7 @@ class App(TkinterDnD.Tk):
                         how="사진별로 직접 조정한 꼭짓점·회전 그대로\n(조정 안 한 사진은 자동 감지로)")
 
     def _send_to_labeler(self):
-        self._run_batch("문구넣기로 보내기", use_edits=True, send=True,
+        self._run_batch("다음단계로 전송",use_edits=True, send=True,
                         how="사진별로 직접 조정한 꼭짓점·회전 그대로\n(조정 안 한 사진은 자동 감지로) 변환해서")
 
     def _run_batch(self, title, use_edits, how, send=False):
@@ -883,7 +883,7 @@ class App(TkinterDnD.Tk):
                     msg = {"sent": "사진문구넣기에 추가했습니다.", "launched": "사진문구넣기를 실행했습니다.",
                            None: "사진문구넣기를 찾지 못했습니다. (변환파일 폴더에는 저장됨)"}[result]
                     if result is None or fail:
-                        messagebox.showwarning("문구넣기로 보내기", f"성공 {ok}개, 실패 {fail}개\n{msg}")
+                        messagebox.showwarning("다음단계로 전송",f"성공 {ok}개, 실패 {fail}개\n{msg}")
                     else:
                         self._st.config(text=f"{len(saved)}장 저장 후 {msg}")
                     return
