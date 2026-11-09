@@ -14,8 +14,9 @@ class SuggestEntry(tk.Frame):
     MAX_ROWS = 12
 
     def __init__(self, parent, textvariable: tk.StringVar, width=22, font=("Segoe UI", 10),
-                 on_pick=None, bg="#2e2e2e", marked_fn=None):
+                 on_pick=None, bg="#2e2e2e", marked_fn=None, open_on_empty_click=False):
         super().__init__(parent, bg=bg)
+        self._open_on_empty_click = open_on_empty_click   # 빈 칸을 클릭하면 입력 커서와 함께 전체 목록도 연다
         self.var = textvariable
         self._on_pick = on_pick
         self._marked_fn = marked_fn          # () -> 정규화한 이름 집합: 목록에서 앞에 ✓를 붙일 항목
@@ -37,6 +38,11 @@ class SuggestEntry(tk.Frame):
         e.bind("<Tab>", self._accept_tab)
         e.bind("<Escape>", lambda ev: self.close())
         e.bind("<FocusOut>", lambda ev: self.after(150, self._focus_out))
+        e.bind("<ButtonRelease-1>", self._on_entry_click, add="+")
+
+    def _on_entry_click(self, ev):
+        if self._open_on_empty_click and self._popup is None and not self.var.get().strip():
+            self._show([(v, False) for v in self._primary])
 
     # ── 후보 ────────────────────────────────────────────────────────────
 

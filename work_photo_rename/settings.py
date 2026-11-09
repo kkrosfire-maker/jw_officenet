@@ -7,7 +7,7 @@ MemoStore : 병원×제약사별 특이사항 메모 (월이 바뀌어도 이어
 import json
 from pathlib import Path
 
-from names import memo_key, norm
+from names import memo_key, norm, rekey_memo_key
 
 
 def _read_json(path, default):
@@ -23,7 +23,8 @@ class Settings:
         self._d = _read_json(self.path, {})
         if not isinstance(self._d, dict):
             self._d = {}
-        self.hidden = set(self._d.get("hidden_pharma", []))     # memo_key 들 (Ledger.hidden 과 같은 집합을 같이 쓴다)
+        # memo_key 들 (Ledger.hidden 과 같은 집합을 같이 쓴다). 예전 열쇠는 현재 규칙으로 바꿔 읽는다
+        self.hidden = {rekey_memo_key(k) for k in self._d.get("hidden_pharma", [])}
 
     def save(self):
         """실패해도 프로그램은 계속 쓰게 조용히 넘어간다 (설정일 뿐이라). 성공 여부를 돌려준다."""
@@ -74,9 +75,13 @@ class Settings:
 class MemoStore:
     def __init__(self, path):
         self.path = Path(path)
-        self.data = _read_json(self.path, {})
-        if not isinstance(self.data, dict):
-            self.data = {}
+        raw = _read_json(self.path, {})
+        self.data = {}
+        if isinstance(raw, dict):
+            for k, v in raw.items():            # 예전 열쇠(병원명 그대로)는 현재 규칙으로 합친다 — 내용 있는 메모를 우선
+                nk = rekey_memo_key(k)
+                if v or nk not in self.data:
+                    self.data[nk] = v
 
     def set(self, hospital, pharma, text):
         """메모를 바꾸고 파일에 쓴다. 파일 쓰기에 실패하면 예외."""

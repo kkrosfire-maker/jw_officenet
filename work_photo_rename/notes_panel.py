@@ -142,6 +142,16 @@ class NotesPanel:
         row["labels"][2].config(text="")                    # 직접 고친 메모는 이월 표시 제거
         self._on_edit(self._hospital, row["pharma"], text)
 
+    def note_of(self, hospital, pharma):
+        """지금 패널에 보이는 그 병원·제약사의 메모 글자. 그 병원을 보여 주고 있지 않거나 칸이 없으면 None."""
+        if hospital != self._hospital:
+            return None
+        k = norm(pharma)
+        for r in self._rows:
+            if r["norm"] == k:
+                return r["text"].get("1.0", "end").strip()
+        return None
+
     def highlight(self, pharma):
         """지금 입력 중인 제약사 칸을 강조하고 보이는 위치로 스크롤."""
         k = norm(pharma)

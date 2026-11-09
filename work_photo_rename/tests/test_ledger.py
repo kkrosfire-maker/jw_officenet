@@ -136,6 +136,27 @@ class WorkFileTest(LedgerTestCase):
         self.assertNotIn("옛제약", col(ws, 7))                 # 2025년 입력월 11월은 제외
         self.assertNotIn("이월 메모", col(ws, 10))             # 지난 정산월(10월) 줄은 제외
 
+    def test_new_month_copies_previous_month_with_months_advanced(self):
+        work = self.dir / "work.xlsx"
+        n = ledger.create_work_file(str(self.base), str(work), "12월")     # 12월 입력분은 기본파일에 없음 → 11월 입력분 복사
+        ws = sheet(work)
+        self.assertEqual(n, 4)
+        self.assertEqual(col(ws, 4), ["다솜의원", "다솜의원", "다솜의원", "가온의원"])
+        self.assertEqual(set(col(ws, 5)), {"11월"})                          # 처방월 10→11
+        self.assertEqual(set(col(ws, 6)), {"12월"})                          # 입력월 11→12
+        self.assertEqual(col(ws, 3), [None] * 4)                             # 입력완료 표시는 비움
+        self.assertIn("정산불가 품목", col(ws, 10))                            # 특이사항 유지
+        self.assertEqual(ws.cell(3, 8).value, formula(3))
+
+    def test_year_rolls_when_copying_december_to_january(self):
+        wb = openpyxl.load_workbook(self.base)
+        wb[ledger.SHEET].append([2026, "담당A", "입력완료", "새의원", "11월", "12월", "A제약", None, None, None])
+        wb.save(self.base)
+        work = self.dir / "work.xlsx"
+        ledger.create_work_file(str(self.base), str(work), "1월")
+        ws = sheet(work)
+        self.assertEqual([ws.cell(2, c).value for c in (1, 4, 5, 6, 7)], [2027, "새의원", "12월", "1월", "A제약"])
+
     def test_formulas_and_validation_and_filter(self):
         work = self.dir / "work.xlsx"
         ledger.create_work_file(str(self.base), str(work), "11월")
@@ -249,6 +270,35 @@ class MasterReadTest(LedgerTestCase):
         m = MasterExcel(str(self.base))
         self.assertEqual([h for h in m.hospitals() if h.startswith("라임")], ["라임비뇨기과"])   # 가장 최근 줄의 표기
         self.assertEqual(sorted(m.hospital_pharmas("라임비뇨기과", "10월")), ["가제약", "나제약"])
+
+    def test_same_month_alias_tie_prefers_uiwon_and_mark_done_matches_either(self):
+        wb = openpyxl.load_workbook(self.base)
+        ws = wb[ledger.SHEET]
+        ws.append([2026, "담당B", None, "라임비뇨기과의원", "10월", "11월", "가제약", None, None, None])
+        ws.append([2026, "담당B", None, "라임비뇨기과", "10월", "11월", "가제약", None, None, None])
+        wb.save(self.base)
+        m = MasterExcel(str(self.base))
+        self.assertEqual([h for h in m.hospitals() if h.startswith("라임")], ["라임비뇨기과의원"])   # 같은 달이면 긴 표기
+        kind, row = ledger.mark_done(str(self.base), "라임비뇨기과의원", "10월", 2026, "가제약", "11월")
+        self.assertEqual(kind, "updated")          # 엑셀에 '의원' 없는 줄이 있어도 같은 병원으로 찾는다
+
+    def test_mark_done_puts_1_in_column_i(self):
+        kind, row = ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "명문제약", "11월")
+        ws = openpyxl.load_workbook(self.base)[ledger.SHEET]
+        self.assertEqual(ws.cell(row, 9).value, 1)                       # 기존 줄 갱신
+        kind, row = ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "신규제약", "11월", status="정산불가")
+        ws = openpyxl.load_workbook(self.base)[ledger.SHEET]
+        self.assertEqual((kind, ws.cell(row, 9).value), ("added", 1))    # 새 줄 (정산불가도)
+
+    def test_mark_done_writes_note_and_empty_clears(self):
+        kind, row = ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "명문제약", "11월", note="이월 메모")
+        ws = openpyxl.load_workbook(self.base)[ledger.SHEET]
+        self.assertEqual(ws.cell(row, 10).value, "이월 메모")
+        kind, row = ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "명문제약", "11월", note="  ")
+        ws = openpyxl.load_workbook(self.base)[ledger.SHEET]
+        self.assertEqual((kind, ws.cell(row, 10).value), ("added", None))      # 지운 채로 저장
+        kind, row = ledger.mark_done(str(self.base), "다솜의원", "10월", 2026, "신규제약", "11월")
+        self.assertIsNone(openpyxl.load_workbook(self.base)[ledger.SHEET].cell(row, 10).value)
 
     def test_recent_months_is_four(self):
         self.assertEqual(MasterExcel.RECENT_MONTHS, 4)

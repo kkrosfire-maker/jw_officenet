@@ -25,9 +25,21 @@ def same(a: str, b: str) -> bool:
     return bool(k) and k == norm(b)
 
 
+def hospital_key(name):
+    """'라임비뇨기과' 와 '라임비뇨기과의원' 을 같은 병원으로 보는 기준: 공백·끝의 '의원' 제거."""
+    k = re.sub(r"\s+", "", name or "")
+    return k[:-2] if k.endswith("의원") and len(k) > 4 else k
+
+
 def memo_key(hospital: str, pharma: str) -> str:
-    """병원×제약사 메모의 열쇠. (제약사는 표기가 달라도 같은 열쇠)"""
-    return f"{(hospital or '').strip()}|{norm(pharma)}"
+    """병원×제약사 메모의 열쇠. (제약사는 표기가 달라도, 병원은 '의원' 유무가 달라도 같은 열쇠)"""
+    return f"{hospital_key(hospital)}|{norm(pharma)}"
+
+
+def rekey_memo_key(key: str) -> str:
+    """예전 방식(병원명 그대로)으로 저장된 열쇠를 현재 규칙으로 바꾼다."""
+    h, sep, p = key.partition("|")
+    return f"{hospital_key(h)}|{p}" if sep else key
 
 
 def sort_key(name: str) -> str:

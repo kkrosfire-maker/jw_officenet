@@ -13,6 +13,7 @@ import cv2
 from PIL import Image, ImageTk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
+import handoff
 import labeling
 import ledger
 import period_check
@@ -22,6 +23,7 @@ import suggest
 from file_list_controller import FileListController
 from imageio_utils import make_copy, read_image, unique_path
 from ledger import Ledger, clean_names
+from names import norm
 from notes_panel import NotesPanel, PANEL_W as NOTES_W
 from photos import PhotoBook
 from rect_canvas import RectCanvas
@@ -118,6 +120,11 @@ class App(TkinterDnD.Tk):
             w.dnd_bind("<<Drop>>", self._on_drop)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(200, self._poll_ocr)
+        self._inbox = handoff.Inbox()                 # 사진 원근 보정에서 보낸 사진 받기
+        self.after(500, self._poll_inbox)
+        first = handoff.startup_files()               # 실행 인자로 받은 사진
+        if first:
+            self.after(300, lambda: self._files.add_files(first))
         self._show_out_dir()
 
         if not BASE_EXCEL.exists() and DEFAULT_EXCEL.exists():
@@ -171,7 +178,7 @@ class App(TkinterDnD.Tk):
 
         tk.Label(form, text="제약사명", **L).pack(side="left", padx=(12, 2))
         self._pharma_cb = SuggestEntry(form, self._pharma_var, width=22, font=("Segoe UI", 10),
-                                       marked_fn=self._checked_pharma_norms)
+                                       marked_fn=self._checked_pharma_norms, open_on_empty_click=True)
         self._pharma_cb.pack(side="left")
         for v in (self._hospital_var, self._pharma_var):
             v.trace_add("write", self._on_text_change)
@@ -180,10 +187,8 @@ class App(TkinterDnD.Tk):
         tk.Spinbox(form, from_=1, to=30, textvariable=self._thick_var, width=4, font=("Segoe UI", 10),
                    command=self._on_thickness_change).pack(side="left")
         self._thick_var.trace_add("write", self._on_thickness_change)
-        tk.Button(form, text="+ 박스 추가", command=self._add_rect, **B).pack(side="left", padx=(14, 4))
-        tk.Button(form, text="선택 박스 삭제", command=self._delete_selected_rect, **B).pack(side="left", padx=4)
-        tk.Button(form, text="⟲ 5°", command=lambda: self._rotate(-5), **B).pack(side="left", padx=(8, 2))
-        tk.Button(form, text="⟳ 5°", command=lambda: self._rotate(5), **B).pack(side="left", padx=2)
+        tk.Button(form, text="⟲ 3°", command=lambda: self._rotate(-3), **B).pack(side="left", padx=(8, 2))
+        tk.Button(form, text="⟳ 3°", command=lambda: self._rotate(3), **B).pack(side="left", padx=2)
 
         form2 = tk.Frame(self, bg="#2e2e2e", pady=4)
         form2.pack(fill="x")
@@ -194,12 +199,12 @@ class App(TkinterDnD.Tk):
         self._nosettle_btn_bg = B["bg"]
         self._nosettle_btn = tk.Button(form2, text="정산불가", command=self._toggle_nosettle, **B)
         self._nosettle_btn.pack(side="left", padx=4)
+        tk.Button(form2, text="원래대로", command=lambda: self._canvas.reset_view(), **B).pack(side="left", padx=(14, 4))
         tk.Button(form2, text="↶ 실행 취소", command=lambda: self._history_status("undo", self._history.undo()),
-                  **B).pack(side="left", padx=(14, 4))
+                  **B).pack(side="left", padx=4)
         tk.Button(form2, text="↷ 다시 실행", command=lambda: self._history_status("redo", self._history.redo()),
                   **B).pack(side="left", padx=4)
-        tk.Button(form2, text="박스 전체 지우기", command=self._clear_all_rects, **B).pack(side="left", padx=4)
-        tk.Button(form2, text="원래대로", command=lambda: self._canvas.reset_view(), **B).pack(side="left", padx=4)
+        tk.Button(form2, text="+ 박스 추가", command=self._add_rect, **B).pack(side="left", padx=4)
         tk.Button(form2, text="통계완료(업데이트)", command=self._complete_stats, **B).pack(side="left", padx=(14, 4))
         tk.Button(form2, text="저장 폴더 지정", command=self._choose_out_dir, **B).pack(side="left", padx=(14, 4))
         self._out_lbl = tk.Label(form2, text="", bg="#2e2e2e", fg="#aaa", font=("Segoe UI", 9))
@@ -684,6 +689,18 @@ class App(TkinterDnD.Tk):
 
     # ── 열기 / 드롭 ──────────────────────────────────────────────────────
 
+    def _poll_inbox(self):
+        """다른 프로그램이 보낸 사진을 목록에 추가하고 창을 앞으로 가져온다."""
+        paths = self._inbox.take()
+        if paths:
+            self._files.add_files(paths)
+            self.deiconify()
+            self.lift()
+            self.attributes("-topmost", True)
+            self.after(300, lambda: self.attributes("-topmost", False))
+            self._st.config(text=f"보정 프로그램에서 {len(paths)}장 받음")
+        self.after(500, self._poll_inbox)
+
     def _on_drop(self, event):
         files = self.tk.splitlist(event.data)
         imgs = [f for f in files if Path(f).suffix.lower() in IMAGE_EXT]
@@ -711,7 +728,20 @@ class App(TkinterDnD.Tk):
     def _save_one(self, path, img, hospital, pharma, rects, status=ledger.DONE, month=None):
         """사진 한 장 저장 (JPG + 장부 반영 맡기기). 순서는 saving.save_photo. (저장 경로, 엑셀 상태 문구)를 돌려준다."""
         return saving.save_photo(img, path, hospital, pharma, rects, month or self._month_var.get(),
-                                 out_dir=self._out_dir, ledger=self._ledger, settings=self._settings, status=status)
+                                 out_dir=self._out_dir, ledger=self._ledger, settings=self._settings, status=status,
+                                 note=self._note_for_save(hospital, pharma, month or self._month_var.get()))
+
+    def _note_for_save(self, hospital, pharma, month):
+        """저장하는 줄의 특이사항 칸에 옮길 글자: 패널에 보이는 메모(지웠으면 빈 글자) > 패널에 없는 병원이면 장부의 이월 메모.
+        어디에도 없으면 None(칸을 건드리지 않음)."""
+        text = self._notes.note_of(hospital, pharma)
+        if text is not None or not self._master:
+            return text
+        k = norm(pharma)
+        for g in self._master.notes_for(hospital, self._memos.data, month):
+            if norm(g["pharma"]) == k:
+                return g["note"]
+        return None
 
     def _poll_excel(self):
         for ev in self._ledger.poll():

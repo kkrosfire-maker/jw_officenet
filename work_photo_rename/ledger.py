@@ -21,7 +21,7 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 
 import rxmonth
-from names import NameBook, clean_pharma, memo_key, norm   # noqa: F401  (memo_key는 호출자 편의로 다시 내보냄)
+from names import NameBook, clean_pharma, hospital_key, memo_key, norm   # noqa: F401  (memo_key는 호출자 편의로 다시 내보냄)
 
 SHEET = "통계입력확인"
 DONE = "입력완료"
@@ -34,7 +34,7 @@ FINISHED = (DONE, NOSETTLE)        # 처리가 끝난 줄로 치는 상태들
 class Schema:
     """열 번호(1부터). 헤더 이름으로 찾고, 없으면 기본 위치."""
     DEFAULTS = dict(year=1, manager=2, status=3, hospital=4, rx_month=5, input_month=6,
-                    pharma=7, combined=8, note=10)
+                    pharma=7, combined=8, mark=9, note=10)   # mark = I열(헤더 없음): 입력완료·정산불가 저장 시 1
     HEADERS = {"연도": "year", "담당자명": "manager", "거래처명": "hospital", "처방월": "rx_month",
                "입력월": "input_month", "제약사명": "pharma", "통합": "combined", "특이사항": "note"}
 
@@ -58,7 +58,7 @@ class Schema:
     def copy_cols(self):
         """새 줄에 값을 옮길 열들 (통합 수식은 줄마다 새로 만든다)."""
         return [self.year, self.manager, self.status, self.hospital, self.rx_month,
-                self.input_month, self.pharma, self.note]
+                self.input_month, self.pharma, self.mark, self.note]
 
 
 def _sheet(wb):
@@ -72,13 +72,13 @@ def _text(ws, r, c):
 def row_key(ws, sc, r):
     """'같은 건' 판정 기준: (연도, 병원, 처방월, 제약사 정규화 이름)."""
     rx = _text(ws, r, sc.rx_month)
-    return (ws.cell(r, sc.year).value, _text(ws, r, sc.hospital), rxmonth.parse(rx) or rx,      # '8월'='08월'
+    return (ws.cell(r, sc.year).value, hospital_key(_text(ws, r, sc.hospital)), rxmonth.parse(rx) or rx,      # '8월'='08월'
             norm(clean_pharma(_text(ws, r, sc.pharma))))
 
 
 def pair_matches(ws, sc, r, hospital, pharma):
     """병원·제약사만 같은 줄인가 (월 무관 — 메모처럼 월을 넘어 이어지는 정보용)."""
-    return _text(ws, r, sc.hospital) == hospital and norm(clean_pharma(_text(ws, r, sc.pharma))) == norm(pharma)
+    return hospital_key(_text(ws, r, sc.hospital)) == hospital_key(hospital) and norm(clean_pharma(_text(ws, r, sc.pharma))) == norm(pharma)
 
 
 def insert_row_after(ws, sc, after_row):
@@ -136,22 +136,19 @@ class MasterExcel:
         wb.close()
         self._index()
 
-    @staticmethod
-    def _hospital_key(name):
-        """'라임비뇨기과' 와 '라임비뇨기과의원' 을 같은 병원으로 보는 기준: 공백·끝의 '의원' 제거."""
-        k = re.sub(r"\s+", "", name or "")
-        return k[:-2] if k.endswith("의원") and len(k) > 4 else k
+    _hospital_key = staticmethod(hospital_key)
 
     def _merge_hospital_aliases(self):
-        """같은 병원의 다른 표기('X' / 'X의원')를 가장 최근 줄의 표기 하나로 통일한다 (원본 dict는 건드리지 않음)."""
-        latest = {}
+        """같은 병원의 다른 표기('X' / 'X의원')를 하나로 통일한다 (원본 dict는 건드리지 않음).
+        표기는 가장 최근 처방월 줄의 것, 같은 달에 둘 다 있으면 더 긴 쪽('X의원')."""
+        best = {}          # 병원키 -> ((기간, 이름 길이, 줄번호), 표기)
         for j, r in enumerate(self.rows):
-            per = self._period(r) or (0, 0)
             k = self._hospital_key(r["hospital"])
-            if k not in latest or (per, j) >= latest[k][0]:
-                latest[k] = ((per, j), r["hospital"])
-        self.rows = [r if r["hospital"] == latest[self._hospital_key(r["hospital"])][1]
-                     else dict(r, hospital=latest[self._hospital_key(r["hospital"])][1]) for r in self.rows]
+            rank = (self._period(r) or (0, 0), len(r["hospital"]), j)
+            if k not in best or rank >= best[k][0]:
+                best[k] = (rank, r["hospital"])
+        self.rows = [r if r["hospital"] == best[self._hospital_key(r["hospital"])][1]
+                     else dict(r, hospital=best[self._hospital_key(r["hospital"])][1]) for r in self.rows]
 
     def _index(self):
         self._merge_hospital_aliases()
@@ -263,10 +260,11 @@ class MasterExcel:
 
 # ── 쓰기 ─────────────────────────────────────────────────────────────────
 
-def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hint=None, status=DONE):
+def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hint=None, status=DONE, note=None):
     """저장한 사진 1장을 엑셀 파일(path)에 반영한다. status는 '입력완료'(기본) 또는 '정산불가'.
     해당 병원·처방월·제약사의 '아직 입력완료/정산불가가 아닌' 첫 줄을 status로 바꾸고,
     없으면(새 제약사 / 같은 제약사 추가 사진) 같은 건의 마지막 줄 바로 아래에, 그런 줄도 없으면 맨 아래에 새 줄을 넣는다.
+    note: None이면 특이사항 칸을 건드리지 않고, 글자(빈 글자 포함)면 그대로 쓴다 (빈 글자 = 지움).
     반환: ("updated"|"added", 줄 번호)."""
     wb = openpyxl.load_workbook(path)                    # 수식·데이터검증 유지를 위해 read_only 아님
     ws = _sheet(wb)
@@ -277,7 +275,7 @@ def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hin
         if not host:
             continue
         last = r
-        if str(host).strip() != hospital:
+        if hospital_key(str(host).strip()) != hospital_key(hospital):
             continue
         manager = ws.cell(r, sc.manager).value or manager
         if (rxmonth.same(_text(ws, r, sc.rx_month), month) and ws.cell(r, sc.year).value == year
@@ -287,15 +285,18 @@ def mark_done(path, hospital, month, year, pharma, input_month=None, manager_hin
                 free = r
     if free is not None:
         ws.cell(free, sc.status).value = status
+        ws.cell(free, sc.mark).value = 1
         if not ws.cell(free, sc.input_month).value and input_month:
             ws.cell(free, sc.input_month).value = input_month
         result = ("updated", free)
     else:
         n = insert_row_after(ws, sc, last_same or last)
         for col, val in ((sc.year, year), (sc.manager, manager), (sc.status, status), (sc.hospital, hospital),
-                         (sc.rx_month, month), (sc.input_month, input_month), (sc.pharma, pharma)):
+                         (sc.rx_month, month), (sc.input_month, input_month), (sc.pharma, pharma), (sc.mark, 1)):
             ws.cell(n, col).value = val                  # 제약사명 끝에 번호는 붙이지 않는다 (줄 수 = 건수)
         result = ("added", n)
+    if note is not None:
+        ws.cell(result[1], sc.note).value = note.strip() or None
     wb.calculation.fullCalcOnLoad = True
     wb.save(path)
     wb.close()
@@ -315,6 +316,16 @@ def create_work_file(base_path, work_path, input_month, header_only=False):
     years = [ws.cell(r, sc.year).value for r in rows if isinstance(ws.cell(r, sc.year).value, int)]
     if years:
         rows = [r for r in rows if ws.cell(r, sc.year).value == max(years)]
+    carry = False
+    prev_label = rxmonth.label((rxmonth.parse(input_month) or 1) - 1 or 12)
+    if not rows and not header_only and rxmonth.parse(input_month):
+        # 이번 달 줄이 아직 없으면(새 달 첫 입력) 전월 입력분을 통째로 복사해 시작한다 (처방월·입력월만 한 달씩 올림)
+        rows = [r for r in range(2, ws.max_row + 1)
+                if ws.cell(r, sc.hospital).value and rxmonth.same(_text(ws, r, sc.input_month), prev_label)]
+        years = [ws.cell(r, sc.year).value for r in rows if isinstance(ws.cell(r, sc.year).value, int)]
+        if years:
+            rows = [r for r in rows if ws.cell(r, sc.year).value == max(years)]
+        carry = bool(rows)
     if header_only:
         rows = []
     ncol = ws.max_column
@@ -333,6 +344,18 @@ def create_work_file(base_path, work_path, input_month, header_only=False):
         v = ws.cell(i, sc.combined).value
         if isinstance(v, str) and v.startswith("=CONCATENATE"):
             ws.cell(i, sc.combined).value = sc.combined_formula(i)
+    if carry:
+        wrap = rxmonth.parse(prev_label) == 12              # 12월 → 1월이면 연도도 한 해 올림
+        for i in range(2, len(rows) + 2):
+            rx = rxmonth.parse(ws.cell(i, sc.rx_month).value)
+            if rx:
+                ws.cell(i, sc.rx_month).value = rxmonth.label(rx % 12 + 1)
+            ws.cell(i, sc.input_month).value = input_month
+            y = ws.cell(i, sc.year).value
+            if wrap and isinstance(y, int):
+                ws.cell(i, sc.year).value = y + 1
+            ws.cell(i, sc.status).value = None
+            ws.cell(i, sc.mark).value = None
     status_formula = next((dv.formula1 for dv in ws.data_validations.dataValidation
                            if dv.type == "list" and dv.formula1 and DONE in dv.formula1), None)
     ws.data_validations.dataValidation = []
@@ -403,6 +426,7 @@ def merge_into_base(work_path: str, base_path: str):
                 break
             w = todo.pop(0)
             bws.cell(b, bs_sc.status).value = wws.cell(w, ws_sc.status).value
+            bws.cell(b, bs_sc.mark).value = 1
             if not bws.cell(b, bs_sc.input_month).value:
                 bws.cell(b, bs_sc.input_month).value = wws.cell(wlist[0], ws_sc.input_month).value
             updated += 1
@@ -474,6 +498,13 @@ def work_excel_path(out_dir, today=None):
     return new
 
 
+def _carry_source(base, work):
+    """새 작업 엑셀의 원본. 지난달 작업 엑셀이 있으면 그것(통계완료 전이어도 전월 입력분이 다 들어 있다), 없으면 기본파일."""
+    first = datetime.date.today().replace(day=1)
+    prev = work_excel_path(Path(work).parent, first - datetime.timedelta(days=1))
+    return prev if prev.exists() and prev != Path(work) else base
+
+
 # ── 장부: 화면이 쓰는 단 하나의 입구 ─────────────────────────────────────
 
 LedgerEvent = namedtuple("LedgerEvent", "kind message")     # kind: "done" | "note" | "error"
@@ -525,7 +556,7 @@ class Ledger:
                 pass
 
     # 쓰기 (백그라운드)
-    def record_done(self, photo, hospital, month, year, pharma, input_month, status=DONE):
+    def record_done(self, photo, hospital, month, year, pharma, input_month, status=DONE, note=None):
         """사진 한 장을 입력완료(또는 정산불가)로 반영하도록 맡긴다. 이미 같은 내용으로 반영했으면 False."""
         key = (hospital, month, pharma, status)
         self.hidden.discard(memo_key(hospital, pharma))      # 지웠던 제약사도 새로 저장하면 다시 목록에 나타난다
@@ -534,7 +565,7 @@ class Ledger:
         self._marked[photo] = key
         mgr = self._master.manager_of(hospital) if self._master else None
         self.pending += 1
-        self._jobs.put(("done", photo, key, self.work, year, input_month, mgr))
+        self._jobs.put(("done", photo, key, self.work, year, input_month, (mgr, note)))
         return True
 
     def set_note(self, hospital, pharma, text):
@@ -592,8 +623,9 @@ class Ledger:
                     hospital, month, pharma, status = key
                     if not work.exists():
                         work.parent.mkdir(parents=True, exist_ok=True)
-                        create_work_file(str(self.base), str(work), input_month)   # 이번 달 정산분만 담아 시작
-                    result = mark_done(str(work), hospital, month, year, pharma, input_month, mgr, status)
+                        create_work_file(str(_carry_source(self.base, work)), str(work), input_month)   # 이번 달 정산분(없으면 전월분 복사)으로 시작
+                    mgr, note = mgr
+                    result = mark_done(str(work), hospital, month, year, pharma, input_month, mgr, status, note)
                     self._events.put(("done", photo, key, (result, MasterExcel(str(work)))))
             except PermissionError:
                 self._events.put(("error", photo, key, f"{Path(work).name} 이(가) 열려 있습니다. 닫고 다시 저장하세요."))

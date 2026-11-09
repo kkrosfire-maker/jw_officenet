@@ -217,7 +217,7 @@ class RectCanvas(tk.Canvas):
 
     def bind_keyboard(self, shortcuts):
         """선택된 박스를 방향키로 조작한다 (입력칸에 포커스가 있으면 shortcuts 가 알아서 무시).
-        방향키: 이동 / Shift+방향키: 크기(←→ 가로, ↑↓ 세로) / Alt+←→: 회전 15°(Ctrl+Alt 5°)
+        방향키: 이동 / Shift+방향키: 크기(←→ 가로, ↑↓ 세로) / Alt+←→: 회전 10°(Ctrl+Alt 3°)
         이동량: 기본 5단위, Ctrl을 누르면 1단위(미세 조정). 크기: 기본 3단위, Ctrl을 누르면 1단위.
         마우스 회전 스냅에도 같은 Alt/Ctrl 상태를 쓰므로, 이 위젯을 쓰는 앱은 반드시 호출해야 한다."""
         for key in ("Alt_L", "Alt_R"):
@@ -233,7 +233,7 @@ class RectCanvas(tk.Canvas):
             key = event.keysym
             if self._alt_held:
                 if key in ("Left", "Right"):
-                    step = 5 if self._ctrl_held else 15
+                    step = 3 if self._ctrl_held else 10
                     self.rotate_selected(-step if key == "Left" else step)
                 return "break"
             shift = bool(event.state & 0x1)
@@ -522,7 +522,7 @@ class RectCanvas(tk.Canvas):
             _, _, start_angle, start_mouse_angle = self._drag_mode
             ccx, ccy = self._to_canvas(r["cx"], r["cy"])
             cur_mouse_angle = math.degrees(math.atan2(event.y - ccy, event.x - ccx))
-            snap_step = (5 if self._ctrl_held else 15) if self._alt_held else None
+            snap_step = (3 if self._ctrl_held else 10) if self._alt_held else None
             r["angle"] = rotate_angle(start_angle, start_mouse_angle, cur_mouse_angle, snap_step)
         else:  # move
             _, _, start_ix, start_iy, ocx, ocy = self._drag_mode

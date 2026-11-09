@@ -24,6 +24,11 @@ class NormTest(unittest.TestCase):
         self.assertEqual(clean_pharma("명문제약2"), "명문제약")
         self.assertEqual(clean_pharma("(주)이든파마"), "(주)이든파마")
 
+    def test_memo_key_same_for_hospital_with_or_without_uiwon(self):
+        from names import rekey_memo_key
+        self.assertEqual(memo_key("연세예스내과의원", "유니메드"), memo_key("연세예스내과", "유니메드"))
+        self.assertEqual(rekey_memo_key("연세예스내과의원|유니메드"), memo_key("연세예스내과", "유니메드"))
+
     def test_memo_key_same_for_spelling_variants(self):
         self.assertEqual(memo_key("다솜의원", "안국뉴팜(주)"), memo_key(" 다솜의원 ", "안국뉴팜"))
 
