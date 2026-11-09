@@ -147,6 +147,8 @@ class OrderTab(ttk.Frame):
     def _create_line_from_input(self, raw_text: str, qty: float):
         resolved = self._resolve_item_for_text(raw_text)
         if resolved is None:
+            # 선택 없이 닫으면 다시 품목 입력칸으로
+            self.after(1, lambda: self.editor.begin(self.NEW_ROW_IID, "raw"))
             return
         item, match_type = resolved
         self.session.add_line(raw_text, qty, item, match_type)
@@ -334,10 +336,8 @@ class OrderTab(ttk.Frame):
 
         self._refresh_grid()
         self.tree.selection_set(row_iid)
-        # Enter로 넘어갈 다음 칸: 수량 → 특이사항 → 새 줄의 품목
-        if col_name == "qty":
-            return row_iid, "remark"
-        if col_name == "remark":
+        # Enter로 넘어갈 다음 칸: 수량 → 새 줄의 품목 (특이사항은 클릭으로 입력)
+        if col_name in ("qty", "remark"):
             return self.NEW_ROW_IID, "raw"
         return None
 
@@ -435,7 +435,7 @@ class OrderTab(ttk.Frame):
             return
         default_name = f"{self.date_var.get().strip()} 제너리스 주문.xlsx"
         path = filedialog.asksaveasfilename(
-            initialdir=str(EXPORT_DIR), initialfile=default_name,
+            initialdir=str(Path.home() / "Desktop"), initialfile=default_name,
             defaultextension=".xlsx", filetypes=[("Excel 파일", "*.xlsx")],
         )
         if not path:
