@@ -22,6 +22,7 @@ from undo_stack import HistoryController
 from view_transform import ViewTransform, layout_zoomable, pan_for_anchor
 from photo_edits import PhotoEdits
 from corner_resolver import resolve_corners, render_resolved, SAVED, LEARNED, FALLBACK
+import send_to_labeler
 from workbench import IMAGE_EXT, IMAGE_FILETYPES, images_in_folder
 
 SUPPORTED_EXT      = IMAGE_EXT
@@ -456,6 +457,7 @@ class App(TkinterDnD.Tk):
         _sep(tb)
         tk.Button(tb, text="변환파일 저장",       command=self._save,             **B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 전체 저장",   command=self._save_all,         **B).pack(side="left", padx=4)
+        tk.Button(tb, text="문구넣기로 보내기",    command=self._send_to_labeler,  **B).pack(side="left", padx=4)
         tk.Button(tb, text="클립보드 복사",        command=self._copy_to_clipboard,**B).pack(side="left", padx=4)
         tk.Button(tb, text="변환파일 폴더 열기",   command=self._open_output_folder,**B).pack(side="left", padx=4)
         _sep(tb)
@@ -833,7 +835,11 @@ class App(TkinterDnD.Tk):
         self._run_batch("변환파일 전체 저장", use_edits=True,
                         how="사진별로 직접 조정한 꼭짓점·회전 그대로\n(조정 안 한 사진은 자동 감지로)")
 
-    def _run_batch(self, title, use_edits, how):
+    def _send_to_labeler(self):
+        self._run_batch("문구넣기로 보내기", use_edits=True, send=True,
+                        how="사진별로 직접 조정한 꼭짓점·회전 그대로\n(조정 안 한 사진은 자동 감지로) 변환해서")
+
+    def _run_batch(self, title, use_edits, how, send=False):
         # 현재 화면의 조정 중인 상태도 반영되도록 저장소를 먼저 갱신
         if use_edits and self._cv_orig is not None:
             self._apply()
@@ -843,12 +849,15 @@ class App(TkinterDnD.Tk):
             return
         if not messagebox.askyesno(title,
                                     f"체크된 {len(targets)}개 파일을 {how}\n"
-                                    f"'변환파일' 폴더에 저장할까요?\n(기존 파일은 덮어쓰지 않습니다)"):
+                                    + ("'변환파일' 폴더에 저장하고 사진문구넣기로 보낼까요?" if send
+                                       else "'변환파일' 폴더에 저장할까요?")
+                                    + "\n(기존 파일은 덮어쓰지 않습니다)"):
             return
         edits = self._edits.copy() if use_edits else PhotoEdits()
 
         def worker():
             ok = fail = 0
+            saved = []
             for seq, (i, fpath) in enumerate(targets):
                 self.after(0, lambda s=seq: self._st.config(
                     text=f"처리 중... {s + 1}/{len(targets)}"))
@@ -864,10 +873,20 @@ class App(TkinterDnD.Tk):
                 out = unique_path(out_dir, p.stem, p.suffix)
                 if write_image(str(out), render_resolved(img, res)):
                     ok += 1
+                    saved.append(str(out))
                 else:
                     fail += 1
 
             def done():
+                if send and saved:
+                    result = send_to_labeler.send(saved)
+                    msg = {"sent": "사진문구넣기에 추가했습니다.", "launched": "사진문구넣기를 실행했습니다.",
+                           None: "사진문구넣기를 찾지 못했습니다. (변환파일 폴더에는 저장됨)"}[result]
+                    if result is None or fail:
+                        messagebox.showwarning("문구넣기로 보내기", f"성공 {ok}개, 실패 {fail}개\n{msg}")
+                    else:
+                        self._st.config(text=f"{len(saved)}장 저장 후 {msg}")
+                    return
                 messagebox.showinfo(
                     "완료", f"완료: 성공 {ok}개, 실패 {fail}개\n'변환파일' 폴더에 저장됨")
                 if ok:
