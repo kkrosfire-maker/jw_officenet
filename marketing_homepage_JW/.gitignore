@@ -1,0 +1,4 @@
+.vercel
+.env*
+
+supabase_db_password.txt

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
 <title>게시판 관리자 | 정원유니어스</title>
 <link rel="icon" href="assets/00_favicon_64.png">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" rel="stylesheet">
@@ -11,15 +12,16 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
 button{font:inherit;cursor:pointer}
-.top{background:var(--g);color:#fff;padding:26px 40px;display:flex;justify-content:space-between;align-items:center}
+.top{background:var(--g);color:#fff;padding:26px 40px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .top h1{font-size:22px;letter-spacing:-.03em}.top small{color:var(--lime);letter-spacing:.2em;font-weight:700;font-size:11px;display:block}
 .top a{color:#fff;font-size:14px;border:1px solid rgba(255,255,255,.4);padding:9px 18px;border-radius:99px;text-decoration:none}
 .top a:hover{background:#fff;color:var(--g)}
+.top .who{color:#cfe8d9;font-size:13px;margin-right:14px}
 .wrap{max-width:1180px;margin:34px auto;padding:0 28px;display:grid;grid-template-columns:420px 1fr;gap:28px;align-items:start}
 .card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px}
 .card h2{font-size:18px;letter-spacing:-.03em;margin-bottom:18px}
 label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px;color:#27332c}
-input[type=text],input[type=date],textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font:inherit;font-size:15px;background:#fff;transition:.2s}
+input[type=text],input[type=date],input[type=password],textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font:inherit;font-size:15px;background:#fff;transition:.2s}
 input:focus,textarea:focus{outline:0;border-color:var(--g)}
 textarea{resize:vertical;min-height:90px}
 .hint{font-size:12px;color:var(--mute);margin-top:4px}
@@ -31,89 +33,141 @@ textarea{resize:vertical;min-height:90px}
 .btn{flex:1;border:0;border-radius:99px;padding:14px;font-weight:800;font-size:15px;background:var(--g);color:#fff;transition:.25s}
 .btn:hover{background:var(--g2)}.btn.sub{background:#fff;color:var(--g);border:1.5px solid var(--g);flex:.6}
 .btn:disabled{opacity:.5;cursor:default}
+.chk{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:14px;font-weight:700}.chk input{width:18px;height:18px}
 .list .it{display:grid;grid-template-columns:96px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
 .list .it:first-of-type{border-top:0}
 .list img{width:96px;height:72px;object-fit:cover;border-radius:10px;background:var(--bg)}
 .list b{display:block;font-size:15.5px;letter-spacing:-.02em;line-height:1.4}.list small{color:var(--mute)}
 .tmp{display:inline-block;margin-left:8px;background:#fff3cd;color:#8a6100;border:1px solid #ffe08a;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700}
+.bdg{display:inline-block;margin-left:8px;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700;border:1px solid}
+.bdg.rv{background:#e8f1ff;color:#1a56b0;border-color:#b9d3ff}.bdg.au{background:#f1ebff;color:#5b34b0;border-color:#d4c4ff}
+.tabs{display:flex;gap:8px;margin:-4px 0 14px}
+.tabs button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:6px 16px;font-size:13px;font-weight:700}
+.tabs button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .acts button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700}
 .acts button:hover{border-color:var(--g);color:var(--g)}.acts .del:hover{border-color:#c0392b;color:#c0392b}
+.acts .pub{border-color:var(--g);color:var(--g)}.acts .pub.off{border-color:#b9770e;color:#b9770e}
+.login{max-width:420px;margin:90px auto;padding:0 20px}.login .card{padding:34px}
 .toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,30px);background:#111;color:#fff;padding:13px 24px;border-radius:99px;font-weight:700;opacity:0;transition:.35s;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}.toast.err{background:#b3261e}
-.warn{background:#fff3cd;border:1px solid #ffe08a;border-radius:14px;padding:16px 20px;margin:28px auto 0;max-width:1124px;font-size:14px}
-@media(max-width:900px){.wrap{grid-template-columns:1fr}.top{padding:20px}}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.top{padding:20px}.list .it{grid-template-columns:72px 1fr}.list .it img{width:72px;height:54px}.list .acts{grid-column:1/-1;justify-content:flex-start}}
 </style>
 </head>
 <body>
-<div class="top"><div><small>ADMIN</small><h1>CSO 업계 소식 · 게시판 관리</h1></div><a href="news.html" target="_blank">게시판 보기 ↗</a></div>
-<div class="warn" id="warn" style="display:none">이 페이지는 <b>admin_start.bat</b>으로 서버를 켠 뒤 열어야 저장됩니다. (지금은 파일로 직접 열려 있어 등록이 되지 않습니다.)</div>
+<div class="top"><div><small>ADMIN</small><h1>CSO 업계 소식 · 게시판 관리</h1></div>
+  <div><span class="who" id="who"></span><a href="news.html">게시판 보기 ↗</a> <a href="#" id="out" style="display:none;margin-left:6px">로그아웃</a></div></div>
 
-<div class="wrap">
+<div class="login" id="login" style="display:none"><form class="card" id="lf">
+  <h2>관리자 로그인</h2>
+  <label>이메일</label><input type="text" id="em" autocomplete="username" required>
+  <label>비밀번호</label><input type="password" id="pw" autocomplete="current-password" required>
+  <div class="row"><button class="btn" id="lb" type="submit">로그인</button></div>
+  <p class="hint" id="lmsg" style="margin-top:12px;color:#b3261e"></p>
+</form></div>
+
+<div class="wrap" id="app" style="display:none">
   <form class="card" id="f">
     <h2 id="ft">새 글 등록</h2>
     <label>제목 *</label><input type="text" id="title" maxlength="200" required>
     <label>날짜 *</label><input type="date" id="date" required>
-    <label>썸네일 이미지 <span id="thReq">*</span></label>
+    <label>썸네일 이미지</label>
     <div class="drop" id="drop"><img id="prev" alt=""><span id="dropTx">클릭해서 이미지 선택 (jpg·png·webp)</span><input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
-    <div class="hint">가로 1000px로 자동 축소되어 저장됩니다. 4:3 비율 권장.</div>
+    <div class="hint">가로 1000px로 자동 축소되어 저장됩니다. 4:3 권장. 없으면 기본 이미지가 쓰입니다.</div>
     <label>요약 (목록 카드에 표시, 500자 이내)</label><textarea id="summary" maxlength="500"></textarea>
     <label>본문 (상세 페이지에 표시)</label><textarea id="body" style="min-height:150px"></textarea>
+    <label>출처 (매체명, 선택)</label><input type="text" id="source" placeholder="예: 약사공론">
     <label>원문 링크 (선택)</label><input type="text" id="link" placeholder="https://...">
+    <label class="chk"><input type="checkbox" id="pub" checked> 바로 공개</label>
     <div class="row"><button class="btn" id="save" type="submit">등록하기</button><button class="btn sub" id="cancel" type="button" style="display:none">수정 취소</button></div>
   </form>
 
-  <div class="card list"><h2>등록된 글 <span id="cnt" style="color:var(--g3)"></span></h2><div id="items"></div></div>
+  <div class="card list"><h2>글 목록 <span id="cnt" style="color:var(--g3)"></span></h2>
+    <div class="tabs"><button class="on" data-f="all">전체</button><button data-f="draft">검토 대기</button></div>
+    <div id="items"></div></div>
 </div>
 <input type="file" id="tfile" accept="image/jpeg,image/png,image/webp" hidden>
 <div class="toast" id="toast"></div>
 
+<script src="news/config.js"></script>
+<script src="news/auth.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-if(location.protocol==='file:')$('warn').style.display='block';
-let posts=[],editId=null,thumbData=null;
-const isTemp=p=>!String(p.thumb||'').startsWith('assets/news/'); // 관리자에서 올린 이미지가 아니면 임시 이미지
-function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast on'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.className='toast',2600)}
-async function api(method,url,body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'요청 실패');return j}
-async function load(){try{posts=await api('GET','/api/posts')}catch(e){posts=window.POSTS||[]}
-  posts.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
-  const tc=posts.filter(isTemp).length;
-  $('cnt').innerHTML='('+posts.length+')'+(tc?' <span class="tmp" style="margin-left:6px">임시 이미지 '+tc+'개 · [썸네일 교체]로 바꿔 주세요</span>':'');
-  $('items').innerHTML=posts.length?posts.map(p=>`<div class="it"><img src="${esc(p.thumb)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}</small>${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">등록된 글이 없습니다.</p>'}
-function reset(){editId=null;thumbData=null;$('f').reset();$('date').value=new Date().toISOString().slice(0,10);
+const DEF='assets/news_thumbnail_default.webp';
+let posts=[],editId=null,thumbBlob=null,filter='all',thumbTarget=null;
+// Storage 에 올린 이미지가 아니면(기존 assets/ 임시 이미지) '임시 이미지' 배지 표시
+const isTemp=p=>!!p.thumb&&p.thumb.indexOf('/storage/v1/object/public/news-thumbs/')<0&&p.thumb!==DEF;
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast on'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.className='toast',2800)}
+const fields=()=>({title:$('title').value.trim(),date:$('date').value,summary:$('summary').value.trim(),body:$('body').value.trim(),source:$('source').value.trim(),link:$('link').value.trim(),published:$('pub').checked});
+function check(d){
+  if(!d.title||d.title.length>200)return'제목은 1~200자로 입력해 주세요.';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date))return'날짜를 입력해 주세요.';
+  if(d.summary.length>500)return'요약은 500자 이내로 입력해 주세요.';
+  if(d.body.length>20000)return'본문이 너무 깁니다.';
+  if(d.link&&!/^https?:\/\//i.test(d.link))return'원문 링크는 http:// 또는 https:// 로 시작해야 합니다.';
+  return''}
+function toBlob(file){return new Promise((ok,no)=>{const rd=new FileReader();rd.onerror=no;rd.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{
+  const W=Math.min(1000,im.width),H=Math.round(im.height*W/im.width),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);
+  c.toBlob(b=>b?ok(b):no(),'image/jpeg',.86)};im.src=rd.result};rd.readAsDataURL(file)})}
+const uploadThumb=blob=>NewsAuth.upload(Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.jpg',blob);
+
+// ---- 로그인 / 화면 전환
+async function enter(){
+  if(!NewsAuth.hasSession()){show(false);return}
+  if(!(await NewsAuth.isAdmin())){NewsAuth.signOut();show(false,'관리자 권한이 없는 계정이거나 로그인이 만료되었습니다.');return}
+  show(true);reset();await load()}
+function show(ok,msg){
+  $('login').style.display=ok?'none':'';$('app').style.display=ok?'':'none';$('out').style.display=ok?'':'none';
+  $('who').textContent=ok?NewsAuth.email():'';if(msg)$('lmsg').textContent=msg}
+$('lf').onsubmit=async e=>{e.preventDefault();$('lb').disabled=true;$('lmsg').textContent='';
+  try{await NewsAuth.signIn($('em').value.trim(),$('pw').value);$('pw').value='';await enter()}
+  catch(err){$('lmsg').textContent=err.message}finally{$('lb').disabled=false}};
+$('out').onclick=e=>{e.preventDefault();NewsAuth.signOut();show(false)};
+
+// ---- 목록
+async function load(){
+  try{posts=await NewsAuth.rest('GET','posts?select=*&order=date.desc,id.desc')||[]}catch(err){toast(err.message,1);posts=[]}
+  const drafts=posts.filter(p=>!p.published).length,tc=posts.filter(isTemp).length;
+  $('cnt').innerHTML='('+posts.length+')'+(drafts?' <span class="bdg rv" style="margin-left:6px">검토 대기 '+drafts+'</span>':'')+(tc?' <span class="tmp" style="margin-left:6px">임시 이미지 '+tc+'개</span>':'');
+  draw()}
+function draw(){
+  const list=posts.filter(p=>filter==='all'||!p.published);
+  $('items').innerHTML=list.length?list.map(p=>`<div class="it"><img src="${esc(p.thumb||DEF)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
+document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));draw()};
+
+// ---- 폼
+function reset(){
+  editId=null;thumbBlob=null;$('f').reset();$('date').value=today();$('pub').checked=true;
   $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭해서 이미지 선택 (jpg·png·webp)';
-  $('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none';$('thReq').style.display=''}
+  $('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none'}
 $('drop').onclick=()=>$('file').click();
-$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-  rd.onload=()=>{const im=new Image();im.onload=()=>{const W=Math.min(1000,im.width),H=Math.round(im.height*W/im.width);
-    const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);
-    thumbData=c.toDataURL('image/jpeg',.86);$('prev').src=thumbData;$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'};im.src=rd.result};rd.readAsDataURL(f)};
-$('f').onsubmit=async e=>{e.preventDefault();
-  if(!editId&&!thumbData)return toast('썸네일 이미지를 선택해 주세요.',1);
-  const body={title:$('title').value,date:$('date').value,summary:$('summary').value,body:$('body').value,link:$('link').value,thumb_data:thumbData};
-  $('save').disabled=true;
-  try{await api(editId?'PUT':'POST',editId?'/api/posts/'+editId:'/api/posts',body);toast(editId?'수정되었습니다.':'등록되었습니다.');reset();await load()}
-  catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
-// 목록에서 썸네일만 바로 교체
-function resizeToData(f){return new Promise((ok,no)=>{const rd=new FileReader();rd.onerror=no;rd.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{
-  const W=Math.min(1000,im.width),H=Math.round(im.height*W/im.width),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);ok(c.toDataURL('image/jpeg',.86))};im.src=rd.result};rd.readAsDataURL(f)})}
-let thumbTarget=null;
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{thumbBlob=await toBlob(f);$('prev').src=URL.createObjectURL(thumbBlob);$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'}catch(_){toast('이미지를 읽을 수 없습니다.',1)}};
+$('f').onsubmit=async e=>{e.preventDefault();const d=fields(),m=check(d);if(m)return toast(m,1);$('save').disabled=true;
+  try{
+    const cur=editId?posts.find(x=>x.id===editId):null;
+    if(thumbBlob){d.thumb=await uploadThumb(thumbBlob);if(cur)await NewsAuth.removeFile(cur.thumb)}
+    else if(!cur)d.thumb=DEF;
+    if(editId)await NewsAuth.rest('PATCH','posts?id=eq.'+editId,d);else await NewsAuth.rest('POST','posts',d);
+    toast(editId?'수정되었습니다.':(d.published?'등록되었습니다.':'비공개(검토 대기)로 저장되었습니다.'));reset();await load()
+  }catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
 $('tfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!thumbTarget)return;const p=posts.find(x=>x.id==thumbTarget);thumbTarget=null;
-  try{const data=await resizeToData(f);await api('PUT','/api/posts/'+p.id,{title:p.title,date:p.date,summary:p.summary||'',body:p.body||'',link:p.link||'',thumb_data:data});toast('썸네일이 교체되었습니다.');await load()}
+  try{const url=await uploadThumb(await toBlob(f));await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{thumb:url});await NewsAuth.removeFile(p.thumb);toast('썸네일이 교체되었습니다.');await load()}
   catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}};
 $('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.t){thumbTarget=b.dataset.t;$('tfile').click();return}
-  if(b.dataset.e){const p=posts.find(x=>x.id==b.dataset.e);editId=p.id;thumbData=null;
-    $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('body').value=p.body||'';$('link').value=p.link||'';
-    $('prev').src=p.thumb;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
-    $('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';$('thReq').style.display='none';scrollTo({top:0,behavior:'smooth'})}
+  if(b.dataset.p){const p=posts.find(x=>x.id==b.dataset.p);
+    try{await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{published:!p.published});toast(p.published?'비공개로 바꿨습니다.':'공개했습니다.');await load()}catch(err){toast(err.message,1)}return}
+  if(b.dataset.e){const p=posts.find(x=>x.id==b.dataset.e);editId=p.id;thumbBlob=null;
+    $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('body').value=p.body||'';$('source').value=p.source||'';$('link').value=p.link||'';$('pub').checked=!!p.published;
+    $('prev').src=p.thumb||DEF;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
+    $('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';scrollTo({top:0,behavior:'smooth'});return}
   if(b.dataset.d){const p=posts.find(x=>x.id==b.dataset.d);if(!confirm('“'+p.title+'” 글을 삭제할까요?'))return;
-    try{await api('DELETE','/api/posts/'+p.id);toast('삭제되었습니다.');if(editId===p.id)reset();await load()}catch(err){toast(err.message,1)}}};
+    try{await NewsAuth.rest('DELETE','posts?id=eq.'+p.id);await NewsAuth.removeFile(p.thumb);toast('삭제되었습니다.');if(editId===p.id)reset();await load()}catch(err){toast(err.message,1)}}};
 $('cancel').onclick=reset;
-reset();load();
+enter();
 </script>
-<script src="news/posts.js"></script>
 </body>
 </html>
