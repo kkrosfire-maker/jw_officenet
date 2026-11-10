@@ -37,6 +37,9 @@ textarea{resize:vertical;min-height:90px}
 .list .it{display:grid;grid-template-columns:96px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
 .list .it:first-of-type{border-top:0}
 .list img{width:96px;height:72px;object-fit:cover;border-radius:10px;background:var(--bg)}
+.list .it{border-radius:12px;transition:background .15s}
+.list .it.over{background:#eef7f1;outline:2px dashed var(--g3);outline-offset:-2px}
+.drop.over{border-color:var(--g);background:#eef7f1;color:var(--g)}
 .list b{display:block;font-size:15.5px;letter-spacing:-.02em;line-height:1.4}.list small{color:var(--mute)}
 .tmp{display:inline-block;margin-left:8px;background:#fff3cd;color:#8a6100;border:1px solid #ffe08a;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700}
 .bdg{display:inline-block;margin-left:8px;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700;border:1px solid}
@@ -72,7 +75,7 @@ textarea{resize:vertical;min-height:90px}
     <label>제목 *</label><input type="text" id="title" maxlength="200" required>
     <label>날짜 *</label><input type="date" id="date" required>
     <label>썸네일 이미지</label>
-    <div class="drop" id="drop"><img id="prev" alt=""><span id="dropTx">클릭해서 이미지 선택 (jpg·png·webp)</span><input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
+    <div class="drop" id="drop"><img id="prev" alt=""><span id="dropTx">클릭하거나 이미지를 끌어다 놓기 (jpg·png·webp)</span><input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
     <div class="hint">가로 1000px로 자동 축소되어 저장됩니다. 4:3 권장. 없으면 기본 이미지가 쓰입니다.</div>
     <label>요약 (목록 카드에 표시, 500자 이내)</label><textarea id="summary" maxlength="500"></textarea>
     <label>본문 (상세 페이지에 표시)</label><textarea id="body" style="min-height:150px"></textarea>
@@ -134,13 +137,13 @@ async function load(){
   draw()}
 function draw(){
   const list=posts.filter(p=>filter==='all'||!p.published);
-  $('items').innerHTML=list.length?list.map(p=>`<div class="it"><img src="${esc(p.thumb||DEF)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
+  $('items').innerHTML=list.length?list.map(p=>`<div class="it" data-id="${p.id}"><img src="${esc(p.thumb||DEF)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-c="${p.id}" title="ChatGPT에 붙여넣을 이미지 생성 문구를 복사합니다">프롬프트 복사</button><button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
 document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));draw()};
 
 // ---- 폼
 function reset(){
   editId=null;thumbBlob=null;$('f').reset();$('date').value=today();$('pub').checked=true;
-  $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭해서 이미지 선택 (jpg·png·webp)';
+  $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭하거나 이미지를 끌어다 놓기 (jpg·png·webp)';
   $('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none'}
 $('drop').onclick=()=>$('file').click();
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
@@ -153,10 +156,44 @@ $('f').onsubmit=async e=>{e.preventDefault();const d=fields(),m=check(d);if(m)re
     if(editId)await NewsAuth.rest('PATCH','posts?id=eq.'+editId,d);else await NewsAuth.rest('POST','posts',d);
     toast(editId?'수정되었습니다.':(d.published?'등록되었습니다.':'비공개(검토 대기)로 저장되었습니다.'));reset();await load()
   }catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
-$('tfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!thumbTarget)return;const p=posts.find(x=>x.id==thumbTarget);thumbTarget=null;
+async function replaceThumb(p,f){
   try{const url=await uploadThumb(await toBlob(f));await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{thumb:url});await NewsAuth.removeFile(p.thumb);toast('썸네일이 교체되었습니다.');await load()}
-  catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}};
+  catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}}
+$('tfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!thumbTarget)return;const p=posts.find(x=>x.id==thumbTarget);thumbTarget=null;await replaceThumb(p,f)};
+
+// ---- ChatGPT 이미지 생성용 문구 (글 제목·요약·분류로 만든다)
+function imgPrompt(p){
+  const sum=(p.summary||'').replace(/\s+/g,' ').trim();
+  return ['제약 업계(CSO) 뉴스 기사에 쓸 썸네일 이미지 1장을 만들어 주세요.','',
+    '[기사 제목] '+p.title,
+    sum?'[기사 요약] '+sum:'',
+    p.category?'[분류] '+p.category:'','',
+    '[스타일] 깔끔한 실사 사진 느낌, 밝고 신뢰감 있는 톤. 짙은 녹색(#003C24)을 포인트 색으로 은은하게 사용. 제약·의료·비즈니스 분위기.',
+    '[구도] 기사 내용을 상징하는 장면 하나만, 단순하고 여백 있는 구도. 가로형(4:3에 가깝게), 중요한 대상은 가운데에 배치.',
+    '[금지] 글자, 숫자, 로고, 워터마크, 실존 인물이나 특정 기업·제품을 알아볼 수 있는 요소는 넣지 마세요.'].filter((l,i,a)=>l!==''||a[i-1]!=='').join('\n')}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(_){}
+  const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(_){}a.remove();return ok}
+
+// ---- 이미지 끌어다 놓기: 목록의 글 위에 놓으면 썸네일 교체, 새 글 폼의 이미지 칸에 놓으면 첨부
+const isImg=f=>f&&/^image\/(jpeg|png|webp)$/.test(f.type);
+const hasFiles=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+['dragover','drop'].forEach(t=>addEventListener(t,e=>{if(hasFiles(e))e.preventDefault()})); // 빈 곳에 놓아도 브라우저가 이미지를 열어 버리지 않게
+$('items').addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();const it=e.target.closest('.it');document.querySelectorAll('.it.over').forEach(x=>x!==it&&x.classList.remove('over'));if(it)it.classList.add('over')});
+$('items').addEventListener('dragleave',e=>{const it=e.target.closest('.it');if(it&&!it.contains(e.relatedTarget))it.classList.remove('over')});
+$('items').addEventListener('drop',async e=>{if(!hasFiles(e))return;e.preventDefault();document.querySelectorAll('.it.over').forEach(x=>x.classList.remove('over'));
+  const it=e.target.closest('.it');if(!it)return;const f=e.dataTransfer.files[0];
+  if(!isImg(f))return toast('jpg·png·webp 이미지만 놓을 수 있습니다.',1);
+  const p=posts.find(x=>x.id==it.dataset.id);if(p)await replaceThumb(p,f)});
+$('drop').addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();$('drop').classList.add('over')});
+$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('over'));
+$('drop').addEventListener('drop',async e=>{if(!hasFiles(e))return;e.preventDefault();$('drop').classList.remove('over');const f=e.dataTransfer.files[0];
+  if(!isImg(f))return toast('jpg·png·webp 이미지만 놓을 수 있습니다.',1);
+  try{thumbBlob=await toBlob(f);$('prev').src=URL.createObjectURL(thumbBlob);$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'}catch(_){toast('이미지를 읽을 수 없습니다.',1)}});
+
 $('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.c){const p=posts.find(x=>x.id==b.dataset.c);toast(await copyText(imgPrompt(p))?'이미지 문구를 복사했습니다. ChatGPT에 붙여넣으세요.':'복사하지 못했습니다. 브라우저 권한을 확인해 주세요.',false);return}
   if(b.dataset.t){thumbTarget=b.dataset.t;$('tfile').click();return}
   if(b.dataset.p){const p=posts.find(x=>x.id==b.dataset.p);
     try{await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{published:!p.published});toast(p.published?'비공개로 바꿨습니다.':'공개했습니다.');await load()}catch(err){toast(err.message,1)}return}
