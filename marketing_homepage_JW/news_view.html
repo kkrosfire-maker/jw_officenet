@@ -52,6 +52,10 @@ const notFound=m=>{v.innerHTML='<div class="crumb"><a href="news.html">CSO 업�
   if(!r)return notFound('게시글을 찾을 수 없습니다.');
   const p=r.post,prev=r.prev,next=r.next;
   document.title=p.title+' | 정원유니어스';
+  // 요약 박스와 같은 문장이 본문에 또 나오지 않게 한다(자동 등록 글은 본문이 '요약 + 출처'로 저장되어 있음)
+  let body=(p.body||'').trim();const sm=(p.summary||'').trim();
+  if(sm&&body.startsWith(sm))body=body.slice(sm.length).trim();
+  if(p.source&&body==='출처: '+p.source)body=''; // 출처는 날짜 옆에 이미 표시됨
   const link=/^https?:\/\//i.test(p.link||'')?`<a class="btn-orig" href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">원문 보기 <i>›</i></a>`:'';
   const nav=(x,l,c)=>x?`<a class="${c}" href="news_view.html?id=${x.id}"><small>${l}</small><b>${esc(x.title)}</b></a>`:'<a class="none"></a>';
   v.innerHTML=`<div class="crumb"><a href="news.html">CSO 업계 소식</a> › 상세</div>
@@ -59,7 +63,7 @@ const notFound=m=>{v.innerHTML='<div class="crumb"><a href="news.html">CSO 업�
   <div class="meta">${esc((p.date||'').replace(/-/g,'.'))} · ${esc(p.source||'정원유니어스')}</div>
   <div class="hero-img"><img src="${esc(p.thumb)}" alt=""></div>
   ${p.summary?`<div class="sum">${esc(p.summary)}</div>`:''}
-  <div class="body">${esc(p.body)}</div>${link}
+  ${body?`<div class="body">${esc(body)}</div>`:''}${link}
   <div class="pn">${nav(prev,'← 이전 글','l')}${nav(next,'다음 글 →','r')}</div>
   <div class="tolist"><a href="news.html">목록으로</a></div>`;
 })();

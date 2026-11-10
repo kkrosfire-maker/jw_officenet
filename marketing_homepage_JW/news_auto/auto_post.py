@@ -93,7 +93,8 @@ def existing_posts(key):
 def to_post(n):
     src = (n.get("source") or "").strip()
     summary = (n.get("summary") or "").strip()[:500]
-    body = summary + (f"\n\n출처: {src}" if src else "")
+    # 요약은 상세 페이지의 요약 박스에, 출처는 날짜 옆에, 원문은 '원문 보기' 버튼에 이미 표시되므로 본문은 비워 둔다.
+    body = ""
     return {
         "date": datetime.now(KST).strftime("%Y-%m-%d"),
         "title": n["title"].strip()[:200],
