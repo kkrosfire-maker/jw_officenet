@@ -196,13 +196,19 @@ $('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.c){const p=posts.find(x=>x.id==b.dataset.c);toast(await copyText(imgPrompt(p))?'이미지 문구를 복사했습니다. ChatGPT에 붙여넣으세요.':'복사하지 못했습니다. 브라우저 권한을 확인해 주세요.',false);return}
   if(b.dataset.t){thumbTarget=b.dataset.t;$('tfile').click();return}
   if(b.dataset.p){const p=posts.find(x=>x.id==b.dataset.p);
-    try{await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{published:!p.published});toast(p.published?'비공개로 바꿨습니다.':'공개했습니다.');await load()}catch(err){toast(err.message,1)}return}
+    // 자동 등록 글은 '저장한 날'이 아니라 '공개한 날'로 보이도록, 공개하는 순간 날짜를 오늘로 바꾼다(비공개로 돌릴 때는 그대로)
+    const pubNow=!p.published,patch={published:pubNow};if(pubNow&&p.auto)patch.date=today();
+    try{await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,patch);toast(p.published?'비공개로 바꿨습니다.':(patch.date?'공개했습니다. (날짜: '+patch.date.replace(/-/g,'.')+')':'공개했습니다.'));await load()}catch(err){toast(err.message,1)}return}
   if(b.dataset.e){const p=posts.find(x=>x.id==b.dataset.e);editId=p.id;thumbBlob=null;
     $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('body').value=p.body||'';$('source').value=p.source||'';$('link').value=p.link||'';$('pub').checked=!!p.published;
     $('prev').src=p.thumb||DEF;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
     $('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';scrollTo({top:0,behavior:'smooth'});return}
   if(b.dataset.d){const p=posts.find(x=>x.id==b.dataset.d);if(!confirm('“'+p.title+'” 글을 삭제할까요?'))return;
-    try{await NewsAuth.rest('DELETE','posts?id=eq.'+p.id);await NewsAuth.removeFile(p.thumb);toast('삭제되었습니다.');if(editId===p.id)reset();await load()}catch(err){toast(err.message,1)}}};
+    // 삭제한 글이 자동 등록으로 다시 올라오지 않도록 원문 링크·제목을 먼저 기록해 둔다(이미 있으면 무시)
+    let noted=true;
+    if(p.src_key){try{await NewsAuth.rest('POST','rejected_posts',{src_key:p.src_key,title:p.title},{Prefer:'resolution=ignore-duplicates,return=minimal'})}catch(_){noted=false}}
+    try{await NewsAuth.rest('DELETE','posts?id=eq.'+p.id);await NewsAuth.removeFile(p.thumb);
+      toast(noted?'삭제되었습니다.':'삭제했지만 재등록 방지 기록은 실패했습니다(SQL 실행 여부 확인).',!noted);if(editId===p.id)reset();await load()}catch(err){toast(err.message,1)}}};
 $('cancel').onclick=reset;
 enter();
 </script>

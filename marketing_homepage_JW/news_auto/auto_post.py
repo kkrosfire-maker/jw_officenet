@@ -90,6 +90,16 @@ def existing_posts(key):
     return rows
 
 
+def rejected_posts(key):
+    """관리자가 삭제한 글(재등록 방지 목록). 표가 아직 없거나 읽지 못하면 빈 목록으로 계속한다."""
+    code, rows = http("GET", f"{SUPABASE_URL}/rest/v1/rejected_posts?select=src_key,title&limit=2000",
+                      {"apikey": key, "Authorization": f"Bearer {key}"})
+    if code != 200 or not isinstance(rows, list):
+        print(f"  (경고) 재등록 방지 목록을 읽지 못했습니다: {code} - news/supabase_rejected.sql 실행 여부를 확인하세요.")
+        return []
+    return rows
+
+
 def to_post(n):
     src = (n.get("source") or "").strip()
     summary = (n.get("summary") or "").strip()[:500]
@@ -121,8 +131,10 @@ def main():
     cands = fetch_candidates()
     print(f"후보 {len(cands)}건 (점수 {MIN_SCORE}+ · 최근 {MAX_AGE_DAYS}일)")
     have = existing_posts(key) if not dry else _anon_existing()
-    keys = {r.get("src_key") for r in have if r.get("src_key")}
-    titles = [r["title"] for r in have]
+    gone = rejected_posts(key)  # 삭제한 글: 같은 링크도, 비슷한 제목도 다시 올리지 않는다
+    keys = {r.get("src_key") for r in have + gone if r.get("src_key")}
+    titles = [r["title"] for r in have + gone if r.get("title")]
+    print(f"비교 대상: 기존 글 {len(have)}건 + 삭제한 글 {len(gone)}건")
 
     for n in cands:
         if n["link"] in keys:
