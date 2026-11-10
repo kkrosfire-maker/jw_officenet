@@ -1,0 +1,46 @@
+# 정원유니어스 크롤러 안내
+# 검색엔진과 AI 검색/답변 서비스가 사이트를 읽고 인용할 수 있도록 허용한다.
+# (학습 목적의 수집까지 막고 싶은 봇은 아래 목록에서 줄을 지우고 Disallow: / 로 바꾸면 된다.)
+
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+# AI 검색·답변 서비스
+User-agent: GPTBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin.html
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Claude-User
+Allow: /
+Disallow: /admin.html
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin.html
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://jungwon-unius-homepage.vercel.app/sitemap.xml
