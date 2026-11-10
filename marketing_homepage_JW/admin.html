@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>게시판 관리자 | 정원유니어스</title>
+<link rel="icon" href="assets/00_favicon_64.png">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" rel="stylesheet">
+<style>
+:root{--g:#003C24;--g2:#0a5a38;--g3:#1f8a5b;--lime:#c8f169;--ink:#0d1a14;--mute:#5d6b64;--bg:#f6f8f5;--line:#e3e9e4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+button{font:inherit;cursor:pointer}
+.top{background:var(--g);color:#fff;padding:26px 40px;display:flex;justify-content:space-between;align-items:center}
+.top h1{font-size:22px;letter-spacing:-.03em}.top small{color:var(--lime);letter-spacing:.2em;font-weight:700;font-size:11px;display:block}
+.top a{color:#fff;font-size:14px;border:1px solid rgba(255,255,255,.4);padding:9px 18px;border-radius:99px;text-decoration:none}
+.top a:hover{background:#fff;color:var(--g)}
+.wrap{max-width:1180px;margin:34px auto;padding:0 28px;display:grid;grid-template-columns:420px 1fr;gap:28px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px}
+.card h2{font-size:18px;letter-spacing:-.03em;margin-bottom:18px}
+label{display:block;font-size:13px;font-weight:700;margin:14px 0 6px;color:#27332c}
+input[type=text],input[type=date],textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font:inherit;font-size:15px;background:#fff;transition:.2s}
+input:focus,textarea:focus{outline:0;border-color:var(--g)}
+textarea{resize:vertical;min-height:90px}
+.hint{font-size:12px;color:var(--mute);margin-top:4px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:16px;text-align:center;color:var(--mute);font-size:14px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.drop:hover{border-color:var(--g);color:var(--g)}
+.drop img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:none;margin-bottom:10px}
+.drop.has img{display:block}
+.row{display:flex;gap:10px;margin-top:22px}
+.btn{flex:1;border:0;border-radius:99px;padding:14px;font-weight:800;font-size:15px;background:var(--g);color:#fff;transition:.25s}
+.btn:hover{background:var(--g2)}.btn.sub{background:#fff;color:var(--g);border:1.5px solid var(--g);flex:.6}
+.btn:disabled{opacity:.5;cursor:default}
+.list .it{display:grid;grid-template-columns:96px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.list .it:first-of-type{border-top:0}
+.list img{width:96px;height:72px;object-fit:cover;border-radius:10px;background:var(--bg)}
+.list b{display:block;font-size:15.5px;letter-spacing:-.02em;line-height:1.4}.list small{color:var(--mute)}
+.tmp{display:inline-block;margin-left:8px;background:#fff3cd;color:#8a6100;border:1px solid #ffe08a;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.acts button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700}
+.acts button:hover{border-color:var(--g);color:var(--g)}.acts .del:hover{border-color:#c0392b;color:#c0392b}
+.toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,30px);background:#111;color:#fff;padding:13px 24px;border-radius:99px;font-weight:700;opacity:0;transition:.35s;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}.toast.err{background:#b3261e}
+.warn{background:#fff3cd;border:1px solid #ffe08a;border-radius:14px;padding:16px 20px;margin:28px auto 0;max-width:1124px;font-size:14px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.top{padding:20px}}
+</style>
+</head>
+<body>
+<div class="top"><div><small>ADMIN</small><h1>CSO 업계 소식 · 게시판 관리</h1></div><a href="news.html" target="_blank">게시판 보기 ↗</a></div>
+<div class="warn" id="warn" style="display:none">이 페이지는 <b>admin_start.bat</b>으로 서버를 켠 뒤 열어야 저장됩니다. (지금은 파일로 직접 열려 있어 등록이 되지 않습니다.)</div>
+
+<div class="wrap">
+  <form class="card" id="f">
+    <h2 id="ft">새 글 등록</h2>
+    <label>제목 *</label><input type="text" id="title" maxlength="200" required>
+    <label>날짜 *</label><input type="date" id="date" required>
+    <label>썸네일 이미지 <span id="thReq">*</span></label>
+    <div class="drop" id="drop"><img id="prev" alt=""><span id="dropTx">클릭해서 이미지 선택 (jpg·png·webp)</span><input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
+    <div class="hint">가로 1000px로 자동 축소되어 저장됩니다. 4:3 비율 권장.</div>
+    <label>요약 (목록 카드에 표시, 500자 이내)</label><textarea id="summary" maxlength="500"></textarea>
+    <label>본문 (상세 페이지에 표시)</label><textarea id="body" style="min-height:150px"></textarea>
+    <label>원문 링크 (선택)</label><input type="text" id="link" placeholder="https://...">
+    <div class="row"><button class="btn" id="save" type="submit">등록하기</button><button class="btn sub" id="cancel" type="button" style="display:none">수정 취소</button></div>
+  </form>
+
+  <div class="card list"><h2>등록된 글 <span id="cnt" style="color:var(--g3)"></span></h2><div id="items"></div></div>
+</div>
+<input type="file" id="tfile" accept="image/jpeg,image/png,image/webp" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+if(location.protocol==='file:')$('warn').style.display='block';
+let posts=[],editId=null,thumbData=null;
+const isTemp=p=>!String(p.thumb||'').startsWith('assets/news/'); // 관리자에서 올린 이미지가 아니면 임시 이미지
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast on'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.className='toast',2600)}
+async function api(method,url,body){const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'요청 실패');return j}
+async function load(){try{posts=await api('GET','/api/posts')}catch(e){posts=window.POSTS||[]}
+  posts.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+  const tc=posts.filter(isTemp).length;
+  $('cnt').innerHTML='('+posts.length+')'+(tc?' <span class="tmp" style="margin-left:6px">임시 이미지 '+tc+'개 · [썸네일 교체]로 바꿔 주세요</span>':'');
+  $('items').innerHTML=posts.length?posts.map(p=>`<div class="it"><img src="${esc(p.thumb)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}</small>${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">등록된 글이 없습니다.</p>'}
+function reset(){editId=null;thumbData=null;$('f').reset();$('date').value=new Date().toISOString().slice(0,10);
+  $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭해서 이미지 선택 (jpg·png·webp)';
+  $('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none';$('thReq').style.display=''}
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{const W=Math.min(1000,im.width),H=Math.round(im.height*W/im.width);
+    const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);
+    thumbData=c.toDataURL('image/jpeg',.86);$('prev').src=thumbData;$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'};im.src=rd.result};rd.readAsDataURL(f)};
+$('f').onsubmit=async e=>{e.preventDefault();
+  if(!editId&&!thumbData)return toast('썸네일 이미지를 선택해 주세요.',1);
+  const body={title:$('title').value,date:$('date').value,summary:$('summary').value,body:$('body').value,link:$('link').value,thumb_data:thumbData};
+  $('save').disabled=true;
+  try{await api(editId?'PUT':'POST',editId?'/api/posts/'+editId:'/api/posts',body);toast(editId?'수정되었습니다.':'등록되었습니다.');reset();await load()}
+  catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
+// 목록에서 썸네일만 바로 교체
+function resizeToData(f){return new Promise((ok,no)=>{const rd=new FileReader();rd.onerror=no;rd.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{
+  const W=Math.min(1000,im.width),H=Math.round(im.height*W/im.width),c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(im,0,0,W,H);ok(c.toDataURL('image/jpeg',.86))};im.src=rd.result};rd.readAsDataURL(f)})}
+let thumbTarget=null;
+$('tfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!thumbTarget)return;const p=posts.find(x=>x.id==thumbTarget);thumbTarget=null;
+  try{const data=await resizeToData(f);await api('PUT','/api/posts/'+p.id,{title:p.title,date:p.date,summary:p.summary||'',body:p.body||'',link:p.link||'',thumb_data:data});toast('썸네일이 교체되었습니다.');await load()}
+  catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}};
+$('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.t){thumbTarget=b.dataset.t;$('tfile').click();return}
+  if(b.dataset.e){const p=posts.find(x=>x.id==b.dataset.e);editId=p.id;thumbData=null;
+    $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('body').value=p.body||'';$('link').value=p.link||'';
+    $('prev').src=p.thumb;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
+    $('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';$('thReq').style.display='none';scrollTo({top:0,behavior:'smooth'})}
+  if(b.dataset.d){const p=posts.find(x=>x.id==b.dataset.d);if(!confirm('“'+p.title+'” 글을 삭제할까요?'))return;
+    try{await api('DELETE','/api/posts/'+p.id);toast('삭제되었습니다.');if(editId===p.id)reset();await load()}catch(err){toast(err.message,1)}}};
+$('cancel').onclick=reset;
+reset();load();
+</script>
+<script src="news/posts.js"></script>
+</body>
+</html>

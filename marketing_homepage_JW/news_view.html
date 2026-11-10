@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSO 업계 소식 | 정원유니어스</title>
+<link rel="icon" href="assets/00_favicon_64.png">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" rel="stylesheet">
+<link rel="stylesheet" href="assets/board.css">
+</head>
+<body>
+<header><div class="in">
+  <a href="#" data-home="" class="logo"><img src="assets/logo_jw.png" alt="정원유니어스 로고"><span>정원유니어스<small>JUNGWON UNIUS</small></span></a>
+  <nav class="tnav"><a href="#" data-home="">HOME</a><a href="#" data-home="#services">SERVICE</a><a href="news.html" class="on keep">NEWS</a><a href="#" data-home="#contact" class="keep">CONTACT</a></nav>
+</div></header>
+
+<main class="view"><div class="wrap" id="v"></div></main>
+
+<footer><div class="wrap">
+  <div class="row">
+    <div><a href="#" data-home="" class="logo"><img src="assets/logo_jw.png" alt="" style="width:36px;height:36px;border-radius:9px"><span>정원유니어스(주)<small>JUNGWON UNIUS</small></span></a>
+    <p>경기 김포시 풍무로146번길 26 프라미스빌딩 4층 A01호<br>010-6498-0999 · jungwonunius@naver.com</p></div>
+    <div><p><a href="https://jwunius.imweb.me/?mode=policy">이용약관</a> &nbsp;|&nbsp; <a href="https://jwunius.imweb.me/?mode=privacy">개인정보처리방침</a></p></div>
+  </div>
+  <div class="copy">© 2026 JUNGWON UNIUS. ALL RIGHTS RESERVED.</div>
+</div></footer>
+
+<script src="news/config.js"></script>
+<script src="news/posts.js"></script>
+<script>
+document.querySelectorAll('[data-home]').forEach(a=>a.href=(window.HOME_URL||'index.html')+(a.dataset.home||''));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const posts=(window.POSTS||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+const id=parseInt(new URLSearchParams(location.search).get('id'));
+const i=posts.findIndex(p=>p.id===id),v=document.getElementById('v');
+if(i<0){v.innerHTML='<div class="crumb"><a href="news.html">CSO 업계 소식</a></div><h1>게시글을 찾을 수 없습니다.</h1><div class="tolist"><a href="news.html">목록으로</a></div>'}
+else{
+  const p=posts[i],prev=posts[i-1],next=posts[i+1];
+  document.title=p.title+' | 정원유니어스';
+  const link=/^https?:\/\//i.test(p.link||'')?`<a class="btn-orig" href="${esc(p.link)}" target="_blank" rel="noopener noreferrer">원문 보기 <i>›</i></a>`:'';
+  const nav=(x,l,c)=>x?`<a class="${c}" href="news_view.html?id=${x.id}"><small>${l}</small><b>${esc(x.title)}</b></a>`:'<a class="none"></a>';
+  v.innerHTML=`<div class="crumb"><a href="news.html">CSO 업계 소식</a> › 상세</div>
+  <div class="eyebrow">CSO news</div><h1>${esc(p.title)}</h1>
+  <div class="meta">${esc((p.date||'').replace(/-/g,'.'))} · 정원유니어스</div>
+  <div class="hero-img"><img src="${esc(p.thumb)}" alt=""></div>
+  ${p.summary?`<div class="sum">${esc(p.summary)}</div>`:''}
+  <div class="body">${esc(p.body)}</div>${link}
+  <div class="pn">${nav(prev,'← 이전 글','l')}${nav(next,'다음 글 →','r')}</div>
+  <div class="tolist"><a href="news.html">목록으로</a></div>`;
+}
+</script>
+</body>
+</html>

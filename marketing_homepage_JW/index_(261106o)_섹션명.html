@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정원유니어스 | 제약 CSO 파트너십</title>
+<meta name="description" content="정산은 계약서대로, 영업은 빠르게. 90개 이상 제약사와 함께하는 제약 CSO 파트너 정원유니어스.">
+<link rel="icon" href="assets/00_favicon_64.png">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" rel="stylesheet">
+<style>
+:root{--g:#003C24;--g2:#0a5a38;--g3:#1f8a5b;--lime:#c8f169;--ink:#0d1a14;--mute:#5d6b64;--bg:#f6f8f5;--line:#e3e9e4;--dark:#08150f}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,'Malgun Gothic',sans-serif;color:var(--ink);background:#fff;line-height:1.6;letter-spacing:-.01em;word-break:keep-all;overflow-x:hidden}
+a{color:inherit;text-decoration:none}img{max-width:100%;display:block}button{font:inherit;cursor:pointer}
+.wrap{max-width:1320px;margin:0 auto;padding:0 56px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--g3)}
+.h2{font-size:clamp(30px,4.6vw,64px);font-weight:800;line-height:1.18;letter-spacing:-.045em;margin-top:18px}
+section{position:relative}
+
+
+/* header */
+header{position:fixed;inset:0 0 auto 0;z-index:120;transition:background .3s,box-shadow .3s}header.sc2{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);box-shadow:0 1px 0 var(--line)}body.menu header.sc2{background:transparent;box-shadow:none;backdrop-filter:none}
+header .in{display:flex;align-items:center;justify-content:space-between;height:84px;padding:0 56px}
+.logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:20px;letter-spacing:-.03em;color:var(--g)}
+.logo img{width:42px;height:42px;border-radius:0}
+.logo small{display:block;font-size:9.5px;letter-spacing:.24em;font-weight:700;color:var(--g3);margin-top:-3px}
+.tnav{display:flex;gap:36px;align-items:center}
+.tnav a{font-size:14px;font-weight:700;letter-spacing:.08em;color:var(--ink);transition:.2s}
+.tnav a:hover{color:var(--g3)}
+.burger{width:44px;height:44px;border:0;background:none;position:relative;z-index:130}
+.burger i{position:absolute;left:10px;right:10px;height:2px;background:var(--ink);transition:.35s}
+.burger i:nth-child(1){top:16px}.burger i:nth-child(2){top:26px}
+body.menu .burger i{background:#fff}body.menu .burger i:nth-child(1){top:21px;transform:rotate(45deg)}body.menu .burger i:nth-child(2){top:21px;transform:rotate(-45deg)}
+body.menu .logo{color:#fff}body.menu .logo small{color:var(--lime)}
+body.menu .tnav{opacity:0;pointer-events:none}
+.menu-panel{position:fixed;inset:0;background:var(--g);z-index:110;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:120px 56px 56px;gap:40px;clip-path:circle(0 at calc(100% - 78px) 42px);transition:clip-path .8s cubic-bezier(.7,0,.2,1);color:#fff}
+body.menu .menu-panel{clip-path:circle(150% at calc(100% - 78px) 42px)}
+.menu-panel .col h6{font-size:12px;letter-spacing:.24em;color:var(--lime);margin-bottom:18px}
+.menu-panel .col a{display:flex;gap:18px;align-items:baseline;font-size:clamp(28px,3.6vw,52px);font-weight:800;letter-spacing:-.04em;padding:6px 0;opacity:.85;transition:.25s}
+.menu-panel .col a i{font-style:normal;font-size:13px;color:var(--lime);font-weight:700;letter-spacing:.1em}
+.menu-panel .col a:hover{opacity:1;transform:translateX(14px);color:var(--lime)}
+.menu-panel .side{border-left:1px solid rgba(255,255,255,.18);padding-left:56px;color:rgba(255,255,255,.7);line-height:2}
+.menu-panel .side b{color:#fff;font-size:22px;display:block;margin-bottom:12px}
+
+/* hero */
+.hero{min-height:100vh;padding:150px 0 70px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow:hidden}
+.hero .tag{font-size:13px;letter-spacing:.3em;font-weight:700;color:var(--g3);margin-bottom:28px;display:flex;align-items:center;gap:14px}
+.hero .tag::before,.hero .tag::after{content:"";width:48px;height:1px;background:var(--g3)}
+.mega{font-weight:900;text-transform:uppercase;letter-spacing:-.06em;line-height:.9;font-size:clamp(70px,16.5vw,300px)}
+.mega div{display:block;overflow:hidden;padding:.02em .05em}
+.mega div span{display:block;transform:translateY(105%);animation:up 1.1s cubic-bezier(.2,.8,.2,1) forwards;
+  background-image:linear-gradient(rgba(0,60,36,.3),rgba(0,60,36,.3)),url(assets/01_hero_desktop_1920x800.jpg);
+  background-repeat:no-repeat;
+  background-size:100% 100%,var(--bw,1400px) var(--bh,583px);
+  background-position:0 0,var(--px,0) var(--py,0);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.mega div:nth-child(2) span{animation-delay:.15s;background-position:0 0,var(--px,0) calc(var(--py,0px) - var(--dy,0px))}
+@keyframes up{to{transform:none}}
+.hero .lead{margin-top:44px;font-size:clamp(15px,1.5vw,19px);color:var(--mute);max-width:560px}
+.hero .meta{margin-top:56px;display:flex;gap:56px;font-size:13px;color:var(--mute);letter-spacing:.06em}
+.hero .meta b{color:var(--g);font-size:22px;display:block;letter-spacing:-.02em}
+
+/* statement (full image) */
+.statement{height:110vh;display:grid;place-items:center;text-align:center;color:#fff;background:var(--g) url(assets/02_company_about_1200x760.jpg) center/cover fixed}
+.statement::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,40,24,.7),rgba(0,60,36,.78))}
+.statement .c{position:relative;padding:0 28px}
+.statement .eyebrow{color:var(--lime)}
+.statement h2{font-size:clamp(34px,6.4vw,96px);font-weight:800;letter-spacing:-.05em;line-height:1.12;margin:22px 0 26px}
+.statement p{color:rgba(255,255,255,.82);font-size:clamp(15px,1.5vw,19px)}
+
+/* services h-scroll */
+.svc{padding:150px 0 130px;overflow:hidden}
+.svc .head{text-align:center;position:relative}
+.ghost{position:absolute;left:50%;top:50%;transform:translate(-50%,-30%);font-size:clamp(90px,17vw,260px);font-weight:900;letter-spacing:-.06em;color:#f3f6f3;white-space:nowrap;z-index:0;line-height:1;pointer-events:none}
+.svc .head>*:not(.ghost){position:relative;z-index:1}
+.track{display:flex;gap:26px;padding:70px 56px 20px;overflow-x:auto;scrollbar-width:none;cursor:grab;position:relative;z-index:1}
+.track::-webkit-scrollbar{display:none}.track.drag{cursor:grabbing}
+.sc{flex:none;width:min(380px,78vw);height:520px;border-radius:26px;overflow:hidden;position:relative;color:#fff;background:#222}
+.sc>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .8s}
+.sc:hover>img{transform:scale(1.07)}
+.sc::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,40,24,.1) 30%,rgba(0,40,24,.92))}
+.sc .tx{position:absolute;left:30px;right:30px;bottom:30px;z-index:2}
+.sc .no{font-size:13px;letter-spacing:.18em;font-weight:700;color:var(--lime)}
+.sc h3{font-size:28px;font-weight:800;letter-spacing:-.04em;margin:6px 0 10px}
+.sc p{font-size:14.5px;opacity:.82;line-height:1.7}
+.sc .ic{position:absolute;right:24px;top:24px;z-index:2;width:58px;height:58px;border-radius:18px;background:#fff;display:grid;place-items:center}
+.sc .ic img{width:38px;height:38px}
+.sc.now{background:var(--dark);display:flex;flex-direction:column;justify-content:center;padding:44px}
+.sc.now::after{display:none}
+.sc.now small{letter-spacing:.2em;font-weight:700;font-size:12px;color:#fff}
+.sc.now b{display:block;font-size:92px;font-weight:900;letter-spacing:-.06em;color:var(--lime);line-height:1;margin:8px 0 6px}
+.sc.now span{font-size:14px;opacity:.65}
+.sc.now hr{border:0;border-top:1px solid rgba(255,255,255,.14);margin:30px 0}
+
+/* process + ticker */
+.proc{background:var(--bg);padding:140px 0 0;overflow:hidden}
+.proc .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:70px;border-top:1px solid #cfd9d1;border-left:1px solid #cfd9d1;border-right:1px solid #cfd9d1}
+.pst{padding:46px 30px 56px;border-left:1px solid #cfd9d1;position:relative;transition:.35s;background:#e9eeea;display:flex;align-items:center;justify-content:center}
+.pst .in{text-align:left}
+.pst .in p{min-height:3.2em}
+.pst:first-child{border-left:0}
+.pst:hover{background:#fff}
+.pst .num{font-size:14px;color:var(--mute);letter-spacing:.14em}
+.pst img{width:76px;height:76px;margin:30px 0 24px;transition:.4s}
+.pst:hover img{transform:translateY(-8px) rotate(-4deg)}
+.pst h4{font-size:24px;font-weight:800;letter-spacing:-.04em}
+.pst p{color:var(--mute);margin-top:10px;font-size:15px}
+.pst em{display:block;margin-top:22px;font-style:normal;font-size:12px;letter-spacing:.22em;font-weight:800;color:var(--g3)}
+.ticker{background:var(--g);color:#f6f0dc;margin-top:120px;overflow:hidden;white-space:nowrap;padding:26px 0}
+.ticker div{display:inline-block;animation:tk 224s linear infinite;font-size:clamp(28px,4vw,56px);font-weight:900;letter-spacing:-.03em}
+.ticker span{margin:0 30px;color:rgba(246,240,220,.45)}
+@keyframes tk{to{transform:translateX(-50%)}}
+
+/* why (sticky split) */
+.why .top{padding:150px 0 90px}
+.panel{display:grid;grid-template-columns:3fr 2fr;min-height:100vh;align-items:stretch}
+.panel .im{position:sticky;top:0;height:100vh;overflow:hidden}
+.panel .im img{width:100%;height:100%;object-fit:cover;transform:scale(1.15);transition:transform 1.6s cubic-bezier(.2,.7,.2,1)}
+.panel.on .im img{transform:scale(1)}
+.panel .t{display:flex;flex-direction:column;justify-content:center;padding:0 7vw 0 6vw}
+.panel .t .c{font-size:14px;color:var(--mute);letter-spacing:.14em}
+.panel .t .k{margin-top:60px;font-size:13px;font-weight:800;letter-spacing:.24em;color:var(--g3)}
+.panel .t h3{font-size:clamp(30px,3.4vw,52px);font-weight:800;letter-spacing:-.045em;line-height:1.2;margin:14px 0 22px}
+.panel .t p{color:var(--mute);font-size:17px}
+.panel:nth-child(even){grid-template-columns:2fr 3fr}.panel:nth-child(even) .im{order:2}
+
+/* network */
+.net{background:var(--g);color:#fff;padding:150px 0;overflow:hidden;position:relative}
+.net .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:70px;align-items:center}
+.net .eyebrow{color:var(--lime)}
+.net .big{font-size:clamp(100px,18vw,280px);font-weight:900;letter-spacing:-.07em;line-height:.9;color:var(--lime);margin:20px 0 10px}
+.net .big{display:flex;align-items:baseline}
+.net .big .gae{font-size:clamp(30px,4.6vw,64px);font-weight:800;letter-spacing:-.045em;line-height:1;margin-left:12px;color:var(--lime)}
+.net p{color:rgba(255,255,255,.75);font-size:18px;max-width:460px;margin-top:22px}
+.net img{border-radius:28px;width:100%;aspect-ratio:1200/760;object-fit:cover}
+
+/* logo wall: 6 rows x 6 visible cols, each row scrolls left at its own speed */
+.lw{container-type:inline-size;background:#fff;border-radius:28px;overflow:hidden;padding:14px 0;--cw:calc(100cqw/6)}
+.lw .row{overflow:hidden;height:calc(var(--cw)*11*823/2371/6)}
+.lw .tk2{height:100%;display:flex;width:max-content;animation:lwm var(--d) linear infinite}
+.lw .tk2 i{flex:none;display:block;width:calc(var(--cw)*11);height:100%;background:url("assets/정원유니어스_제약사로고_11열_테두리없음.png") 0 calc(var(--r)*-1*var(--cw)*11*823/2371/6)/calc(var(--cw)*11) auto no-repeat}
+.lwfull{position:absolute;right:13px;top:13px;bottom:13px;width:50%;border-radius:0;padding:0;display:flex;flex-direction:column;justify-content:space-evenly}
+@media(max-width:900px){.lwfull{position:relative;width:auto;margin:50px 24px 0;border-radius:28px;padding:14px 0;justify-content:flex-start}}
+@keyframes lwm{to{transform:translateX(calc(var(--cw)*-11))}}
+@media(prefers-reduced-motion:reduce){.lw .tk2{animation:none}}
+
+/* visit (map) */
+.visit{background:#fff;padding:130px 0 120px}
+.visit .ttl{text-align:center}
+.visit .ttl h2{font-size:clamp(40px,5vw,68px);font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--ink)}
+.visit .ttl i{display:block;width:60px;height:4px;background:var(--g);margin:26px auto 0;border-radius:2px}
+.visit .vg{display:grid;grid-template-columns:1fr 400px;gap:64px;align-items:start;margin-top:70px}
+.visit .map{border-radius:22px;overflow:hidden;background:#e9eeea;aspect-ratio:4/3;box-shadow:0 20px 50px rgba(0,60,36,.12);justify-self:end;max-width:100%}
+.visit .map iframe,.visit .map .root_daum_roughmap{width:100%!important;height:100%!important;border:0;display:block}
+.visit .map .root_daum_roughmap .wrap_map{height:100%!important}
+.visit .info h3{font-size:clamp(34px,4vw,56px);font-weight:900;letter-spacing:-.05em;line-height:1.05;color:var(--g)}
+.visit .it{display:flex;gap:18px;margin-top:34px;align-items:flex-start}
+.visit .it:first-of-type{margin-top:44px}
+.visit .it svg{flex:none;width:34px;height:34px;stroke:var(--g3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+.visit .it b{display:block;font-size:19px;font-weight:800;letter-spacing:-.03em}
+.visit .it span{display:block;color:var(--mute);font-size:16px;margin-top:4px}
+.visit .btns{display:flex;gap:10px;margin-top:44px;flex-wrap:wrap}
+.visit .btns a{background:var(--g);color:#fff;font-weight:800;font-size:16px;padding:18px 30px;border-radius:12px;transition:.25s}
+.visit .btns a:hover{background:var(--g3)}
+@media(max-width:900px){.visit{padding:90px 0}.visit .vg{grid-template-columns:1fr;gap:40px;margin-top:50px}.visit .map{justify-self:stretch}}
+
+/* faq */
+.faq{padding:150px 0}
+.faq .grid{display:grid;grid-template-columns:1fr 1.4fr;gap:80px}
+.q{border-top:1px solid var(--line)}
+.q:last-child{border-bottom:1px solid var(--line)}
+.q button{width:100%;text-align:left;background:none;border:0;padding:30px 0;display:flex;gap:24px;align-items:center;font-size:20px;font-weight:700;letter-spacing:-.03em;color:var(--ink)}
+.q button i{font-style:normal;font-size:13px;color:var(--g3);letter-spacing:.12em;width:30px}
+.q button b{margin-left:auto;font-size:28px;font-weight:300;transition:.3s;color:var(--g3)}
+.q.open button b{transform:rotate(45deg)}
+.q .a{max-height:0;overflow:hidden;transition:max-height .45s ease;color:var(--mute);padding-left:54px}
+.q .a p{padding:0 0 30px;max-width:560px}
+.q.open .a{max-height:200px}
+
+/* news */
+.news{background:var(--bg);padding:140px 0}
+.news .head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:56px;gap:30px;flex-wrap:wrap}
+.nc{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.n{position:relative;aspect-ratio:4/5;border-radius:24px;overflow:hidden;color:#fff;display:block;background:#000}
+.n img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .8s;opacity:.85}
+.n:hover img{transform:scale(1.07)}
+.n::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,30,18,.94))}
+.n div{position:absolute;left:28px;right:28px;bottom:28px;z-index:2}
+.n small{font-size:12px;opacity:.7;letter-spacing:.1em}
+.n h5{font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1.4;margin-top:8px}
+
+/* contact + footer */
+.contact{background:var(--dark);color:#fff;padding:140px 0 0}
+.contact .row{display:flex;justify-content:space-between;align-items:center;gap:40px;padding-bottom:90px;border-bottom:1px solid rgba(255,255,255,.12)}
+.contact h2{font-size:clamp(54px,9vw,140px);font-weight:900;letter-spacing:-.06em;line-height:.95}
+.contact h2 em{font-style:normal;color:var(--lime)}
+.contact .sub{color:rgba(255,255,255,.55);font-size:18px;margin-top:28px;line-height:1.8}
+.spin{position:relative;flex:none;width:170px;height:170px;display:grid;place-items:center}
+.spin svg{position:absolute;inset:0;animation:rot 14s linear infinite reverse}
+.spin text{fill:rgba(255,255,255,.6);font-size:10.5px;font-weight:700}
+.spin a{width:70px;height:70px;border-radius:50%;background:var(--lime);color:var(--g);display:grid;place-items:center;font-size:26px;font-weight:800;transition:.3s}
+.spin:hover a{transform:scale(1.2) rotate(-45deg)}
+@keyframes rot{to{transform:rotate(360deg)}}
+.fi{padding:70px 0 40px;display:flex;flex-direction:column;align-items:center;gap:48px}
+.fi .logo{gap:24px;font-size:40px}.fi .logo img{width:84px;height:84px}.fi .logo small{font-size:19px;margin-top:-6px}
+.fi dl{width:max-content;max-width:100%}
+.fi dl{display:grid;grid-template-columns:90px 1fr;gap:10px 10px;font-size:14.5px}
+.fi dt{color:rgba(255,255,255,.4)}.fi dd{color:rgba(255,255,255,.88)}
+.copy{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:28px 0 36px;border-top:1px solid rgba(255,255,255,.1);font-size:12.5px;color:rgba(255,255,255,.4)}
+.copy a:hover{color:#fff}
+
+/* floating */
+.fab{position:fixed;right:24px;bottom:24px;z-index:90;display:flex;flex-direction:column;gap:10px}
+.fab a{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;box-shadow:0 10px 26px rgba(0,0,0,.18);font-weight:800;font-size:12px;transition:.25s}
+.fab a:hover{transform:translateY(-4px)}
+.fab .k{background:#fee500;color:#191600}.fab .p{background:var(--g);color:var(--lime)}.fab .t{background:#fff;color:var(--g);border:1px solid var(--line)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(40px);transition:opacity .9s,transform .9s cubic-bezier(.2,.7,.2,1)}
+.rv.on{opacity:1;transform:none}
+
+@media(max-width:900px){.hero .tag::before,.hero .tag::after{display:none}
+  .wrap{padding:0 24px}header .in{padding:0 24px;height:72px}.tnav{display:none}
+  .menu-panel{grid-template-columns:1fr;padding:100px 24px 40px;gap:30px;align-content:start;overflow:auto}.menu-panel .side{border:0;padding:0}
+  .hero .meta{gap:28px;flex-wrap:wrap;justify-content:center}
+  .statement{background-attachment:scroll}
+  .track{padding:50px 24px 20px}.sc{height:460px}
+  .proc .grid{grid-template-columns:1fr 1fr}.pst{border-top:1px solid var(--line)}.pst:nth-child(odd){border-left:0}
+  .panel,.panel:nth-child(even){grid-template-columns:1fr;min-height:auto}.panel .im{position:relative;height:56vh;order:0!important}.panel .t{padding:50px 24px 70px}.panel .t .k{margin-top:30px}
+  .net .grid,.faq .grid{grid-template-columns:1fr;gap:40px}
+  .nc{grid-template-columns:1fr}.n{aspect-ratio:16/11}
+  .contact .row{flex-direction:column;align-items:flex-start}
+}
+@media(max-width:520px){.proc .grid{grid-template-columns:1fr}.pst{border-left:0!important}}
+
+/* section labels (끄려면 우하단 '섹션명' 버튼 또는 L 키) */
+[data-label]{position:relative}
+[data-label]::after{content:attr(data-label);position:absolute;left:14px;top:98px;z-index:150;background:var(--lime);color:var(--g);font-size:13px;font-weight:800;letter-spacing:0;padding:7px 13px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;white-space:nowrap}
+.ticker[data-label]::after,.fi[data-label]::after{top:8px}
+.panel[data-label]::after{top:98px;left:14px}
+body.nolabels [data-label]::after{display:none}
+.lbtn{position:fixed;left:16px;bottom:16px;z-index:160;background:#111;color:#fff;border:0;border-radius:99px;padding:10px 16px;font-size:12px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+
+/* why slider card */
+.why{padding-bottom:140px}.why .top{padding-bottom:70px}
+.wsl{display:grid;grid-template-columns:3fr 2fr;height:min(640px,78vh);min-height:520px;border-radius:32px;overflow:hidden;background:var(--bg);box-shadow:0 30px 70px rgba(0,60,36,.12);position:relative}
+.wimgs{position:relative;overflow:hidden;background:#222}
+.wimgs img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.12);transition:opacity 1s ease,transform 5.5s ease}
+.wimgs img.on{opacity:1;transform:scale(1)}
+.wbody{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:48px 52px}
+.wcount{font-size:14px;color:var(--mute);letter-spacing:.14em}.wcount b{color:var(--g);font-size:22px}
+.wtxts{display:grid}
+.wtxts .tx{grid-area:1/1;opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s;pointer-events:none}
+.wtxts .tx.on{opacity:1;transform:none;pointer-events:auto}
+.wtxts .k{font-size:13px;font-weight:800;letter-spacing:.24em;color:var(--g3)}
+.wtxts h3{font-size:clamp(28px,3vw,46px);font-weight:800;letter-spacing:-.045em;line-height:1.22;margin:14px 0 20px}
+.wtxts p{color:var(--mute);font-size:17px}
+.wctl{display:flex;align-items:center;gap:12px}
+.wctl button{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--g);background:none;color:var(--g);font-size:18px;font-weight:700;transition:.25s}
+.wctl button:hover{background:var(--g);color:var(--lime)}
+.wbar{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-left:10px}
+.wbar i{display:block;height:100%;width:0;background:var(--g)}
+@media(max-width:900px){.wsl{grid-template-columns:1fr;grid-template-rows:300px auto;height:auto}.wbody{padding:32px 26px 36px;gap:24px}}
+
+/* full-screen slider overrides */
+.wsl{height:100vh;min-height:620px;border-radius:0;box-shadow:none;grid-template-columns:3fr 2fr}
+.wsl::before{content:"";position:absolute;left:0;bottom:0;width:60%;height:220px;background:linear-gradient(transparent,rgba(0,30,18,.45));z-index:2;pointer-events:none}
+.why{padding-bottom:13px}.wsl .wbody{padding-top:120px}
+.wdots{position:absolute;left:30%;bottom:44px;transform:translateX(-50%);z-index:5;display:flex;gap:12px;align-items:center}
+.wdots button{border:0;padding:0;width:11px;height:11px;border-radius:99px;background:rgba(255,255,255,.55);position:relative;overflow:hidden;transition:width .4s,background .3s;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.wdots button.on{width:44px;background:rgba(255,255,255,.4)}
+.wdots button i{position:absolute;left:0;top:0;bottom:0;width:0;background:#fff}
+.wdots button:hover{background:#fff}
+@media(max-width:900px){.wsl{height:auto;min-height:0;grid-template-rows:60vh auto}.wsl::before{width:100%;height:120px;top:calc(60vh - 120px);bottom:auto}.wdots{left:50%;bottom:auto;top:calc(60vh - 34px)}}
+
+/* slider arrows: solid, bodied */
+.warr{position:absolute;top:50%;z-index:6;width:68px;height:68px;margin-top:-34px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:linear-gradient(160deg,#0f6a42,var(--g) 60%);box-shadow:0 14px 30px rgba(0,40,24,.45),inset 0 2px 0 rgba(255,255,255,.22),inset 0 -4px 8px rgba(0,0,0,.25);display:grid;place-items:center;padding:0;transition:transform .25s,background .25s,box-shadow .25s}
+.warr svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transition:stroke .25s}
+.warr.prev{left:34px}.warr.next{right:34px}
+.warr:hover{background:var(--lime);transform:scale(1.1);box-shadow:0 18px 36px rgba(0,40,24,.5),inset 0 2px 0 rgba(255,255,255,.5)}
+.warr:hover svg{stroke:var(--g)}
+.warr:active{transform:scale(.96)}
+@media(max-width:900px){.warr{width:48px;height:48px;margin-top:0;top:calc(30vh - 24px)}.warr svg{width:20px;height:20px}.warr.prev{left:14px}.warr.next{right:14px}}
+/* news more button */
+.more{display:inline-flex;align-items:center;gap:12px;padding:14px 14px 14px 28px;border-radius:99px;background:var(--g);color:#fff;font-weight:700;font-size:16px;transition:.3s;box-shadow:0 10px 24px rgba(0,60,36,.22)}
+.more i{width:34px;height:34px;border-radius:50%;background:var(--lime);color:var(--g);display:grid;place-items:center;font-style:normal;font-size:24px;line-height:1;padding-bottom:3px;transition:.3s}
+.more:hover{background:var(--g2)}.more:hover i{transform:translateX(5px)}
+.n small{display:block}
+</style>
+</head>
+<body>
+<button class="lbtn" id="lbtn">섹션명 ON/OFF (L)</button>
+
+<header>
+  <div class="in">
+    <a href="#top" class="logo"><img src="assets/logo_jw.png" alt="정원유니어스 로고"><span>정원유니어스<small>JUNGWON UNIUS</small></span></a>
+    <div style="display:flex;align-items:center;gap:30px">
+      <nav class="tnav"><a href="#services">SERVICE</a><a href="#process">PROCESS</a><a href="#faq">FAQ</a><a href="#contact">CONTACT</a></nav>
+      <button class="burger" id="bg" aria-label="메뉴"><i></i><i></i></button>
+    </div>
+  </div>
+</header>
+
+<div class="menu-panel" id="mp">
+  <div class="col"><h6>MENU</h6>
+    <a href="#about"><i>01</i>회사소개</a><a href="#services"><i>02</i>파트너 서비스</a><a href="#process"><i>03</i>정산 프로세스</a><a href="#news"><i>04</i>CSO 소식</a><a href="#contact"><i>05</i>상담 신청</a></div>
+  <div class="side"><b>THE BEST MEDICAL PARTNER</b>경기 김포시 풍무로146번길 26<br>프라미스빌딩 4층 A01호<br>010-6498-0999<br>jungwonunius@naver.com</div>
+</div>
+
+<main id="top">
+<!-- HERO -->
+<section class="hero" data-label="1 · 히어로 (HERO)">
+  <div class="tag">THE BEST MEDICAL PARTNER</div>
+  <h1 class="mega"><div><span>Jungwon</span></div><div><span>Unius</span></div></h1>
+  <p class="lead">정직한 정산과 빠른 소통으로 제약 CSO 파트너의 성공을 함께 설계합니다.</p>
+  <div class="meta"><div><b>90+</b>함께하는 제약회사</div><div><b>0원</b>정산 수수료 차감</div><div><b>1 : 1</b>정보 보호 알림</div></div>
+</section>
+
+<!-- STATEMENT -->
+<section class="statement" id="about" data-label="2 · 소개 슬로건 (STATEMENT)"><div class="c rv">
+  <div class="eyebrow">A TRUSTED PARTNER, ALWAYS.</div>
+  <h2>믿을 수 있는 정산이<br>영업의 힘이 됩니다.</h2>
+  <p>우리는 단순한 파트너가 아닙니다.<br>지식과 자원, 경험이 자유롭게 흐르는 생태계를 만들어 갑니다.</p>
+</div></section>
+
+<!-- SERVICES -->
+<section class="svc" id="services" data-label="3 · 서비스 카드 (SERVICE)">
+  <div class="head rv"><div class="ghost">JW SERVICE</div>
+    <div class="eyebrow">Partner service</div><h2 class="h2">파트너를 위한<br>네 가지 약속</h2></div>
+  <div class="track" id="track">
+    <article class="sc"><img src="assets/04_settlement_800x560.jpg" alt=""><div class="ic"><img src="assets/icon_won.svg" alt=""></div><div class="tx"><div class="no">01</div><h3>빠르고 정직한 정산</h3><p>마감부터 정산까지 빠르게.<br>수수료 차감 없이 계약서대로, 상담 시 +α 수수료까지.</p></div></article>
+    <article class="sc"><img src="assets/05_sales_support_800x560.jpg" alt=""><div class="ic"><img src="assets/icon_sales_support.png" alt=""></div><div class="tx"><div class="no">02</div><h3>신속한 영업 지원</h3><p>카카오채널로 품절·제품 이슈를 즉시 공유하고 프로모션을 안내합니다.</p></div></article>
+    <article class="sc"><img src="assets/security.png" alt=""><div class="ic"><img src="assets/icon_privacy.png" alt=""></div><div class="tx"><div class="no">03</div><h3>철저한 정보 보호</h3><p>사내 보호 프로토콜과 1:1 알림으로 정보 유출 제로에 도전합니다.</p></div></article>
+    <article class="sc"><img src="assets/why_04_consulting.png" alt=""><div class="ic"><img src="assets/icon_consulting.png" alt=""></div><div class="tx"><div class="no">04</div><h3>전략 컨설팅</h3><p>CSO 동향과 매출 분석, 병·의원 영업 정보, 마케팅 전략을 제공합니다.</p></div></article>
+    <article class="sc now"><small>JW NOW</small><b data-n="90">90</b><span>함께하는 제약회사 (+)</span><hr><small>SETTLEMENT FEE</small><b style="font-size:70px">0<span style="font-size:.4em;opacity:1;color:var(--lime)">원</span></b><span>정산 수수료 차감</span></article>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="proc" id="process" data-label="4 · 정산 프로세스 (PROCESS)"><div class="wrap">
+  <div class="rv"><div class="eyebrow">How we settle</div><h2 class="h2">정산은,<br>이렇게 진행됩니다.</h2></div>
+  <div class="grid">
+    <div class="pst rv"><div class="in"><div class="num">01</div><img src="assets/icon_receipt.png" alt=""><h4>실적 접수·마감</h4><p>월별 실적 자료를 접수하고 마감합니다.</p><em>RECEIVE</em></div></div>
+    <div class="pst rv"><div class="in"><div class="num">02</div><img src="assets/icon_review.png" alt=""><h4>내역 검토</h4><p>계약서 기준으로 항목별 내역을 꼼꼼히 확인합니다.</p><em>REVIEW</em></div></div>
+    <div class="pst rv"><div class="in"><div class="num">03</div><img src="assets/icon_phone.svg" alt=""><h4>정산 안내</h4><p>확정된 내역을 1:1로 안내드립니다.</p><em>NOTICE</em></div></div>
+    <div class="pst rv"><div class="in"><div class="num">04</div><img src="assets/icon_cash.svg" alt=""><h4>수수료 지급</h4><p>차감 없이 확정 금액을 지급합니다.</p><em>PAYMENT</em></div></div>
+  </div></div>
+  <div class="ticker" data-label="4-1 · 티커 (TICKER)"><div id="tk"></div></div>
+</section>
+
+<!-- WHY -->
+<section class="why" data-label="5 · 선택 이유 (WHY)">
+  <div class="wrap top rv"><div class="eyebrow">Why Jungwon</div><h2 class="h2">정원유니어스를 선택하는<br>분명한 이유.</h2></div>
+  <div class="wsl" id="wsl" data-label="5-1 · 선택 이유 카드 1/4 (정산)">
+  <div class="wimgs"><img src="assets/why_01_settlement.png" alt="" class="on"><img src="assets/why_02_communication.png" alt="" class=""><img src="assets/why_03_security.png" alt="" class=""><img src="assets/07_consulting_800x560.jpg" alt="" class=""></div>
+  <div class="wbody">
+    <div class="wcount"><b id="wnum">01</b> / 04</div>
+    <div class="wtxts"><div class="tx on"><div class="k">HONEST</div><h3>숨김없는 정산</h3><p>수수료 차감 없이,<br>계약서에 적힌 그대로.</p></div><div class="tx"><div class="k">FAST</div><h3>실시간으로 닿는 소통</h3><p>품절과 제품 이슈는<br>카카오채널로 바로 알려드립니다.</p></div><div class="tx"><div class="k">SECURE</div><h3>믿고 맡기는 보안</h3><p>1:1 알림과 내부 프로토콜로<br>파트너의 정보를 지킵니다.</p></div><div class="tx"><div class="k">GROWTH</div><h3>성장까지 이어지는 컨설팅</h3><p>동향 분석부터 마케팅 전략까지,<br>영업력을 함께 키웁니다.</p></div></div>
+    
+    <div></div>
+  </div>
+  <div class="wdots" id="wdots"></div>
+  <button class="warr prev" id="wprev" aria-label="이전"><svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8"/></svg></button>
+  <button class="warr next" id="wnext" aria-label="다음"><svg viewBox="0 0 24 24"><path d="m9 4 8 8-8 8"/></svg></button>
+</div>
+</section>
+
+<!-- NETWORK -->
+<section class="net" data-label="6 · 제약사 네트워크 (NETWORK)"><div class="wrap grid">
+  <div class="rv"><div class="eyebrow">Pharma network</div><div class="big"><span data-n="90">90</span><span class="gae">개</span></div>
+  <h2 class="h2" style="margin-top:0">제약회사와<br>직·간접으로 함께합니다.</h2><p>폭넓은 제약사 네트워크를 바탕으로 파트너 여러분의 협업을 돕습니다.</p></div>
+  <div></div>
+</div>
+<div class="lw lwfull" role="img" aria-label="함께하는 제약사 로고"><div class="row"><div class="tk2" style="--d:46s"><i style="--r:0"></i><i style="--r:0"></i></div></div><div class="row"><div class="tk2" style="--d:34s"><i style="--r:1"></i><i style="--r:1"></i></div></div><div class="row"><div class="tk2" style="--d:58s"><i style="--r:2"></i><i style="--r:2"></i></div></div><div class="row"><div class="tk2" style="--d:40s"><i style="--r:3"></i><i style="--r:3"></i></div></div><div class="row"><div class="tk2" style="--d:30s"><i style="--r:4"></i><i style="--r:4"></i></div></div><div class="row"><div class="tk2" style="--d:52s"><i style="--r:5"></i><i style="--r:5"></i></div></div></div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq" data-label="7 · 자주 묻는 질문 (FAQ)"><div class="wrap grid">
+  <div class="rv"><div class="eyebrow">FAQ</div><h2 class="h2">시작하기 전에,<br>자주 묻는 질문.</h2></div>
+  <div class="rv">
+    <div class="q open"><button><i>01</i>정산 시 수수료가 차감되나요?<b>+</b></button><div class="a"><p>수수료 차감 없이 계약서에 따라 정산합니다. 상담을 통해 +α 추가 수수료를 지급해 드리기도 합니다.</p></div></div>
+    <div class="q"><button><i>02</i>제품 정보나 품절 소식은 어떻게 받나요?<b>+</b></button><div class="a"><p>카카오채널을 통해 최신 정보(품절·제품 이슈)와 프로모션을 안내하고, 실시간 응답 채널로 문제를 해결합니다.</p></div></div>
+    <div class="q"><button><i>03</i>개인정보는 안전하게 관리되나요?<b>+</b></button><div class="a"><p>사내 개인정보 보호 프로토콜을 가동하고, 1:1 알림을 통한 정보 유출 제로 프로그램을 운영합니다.</p></div></div>
+    <div class="q"><button><i>04</i>어떤 컨설팅을 받을 수 있나요?<b>+</b></button><div class="a"><p>CSO 최근 동향과 제품 매출 분석 자료, 병·의원 영업에 필요한 제품·학술 정보, 전략 마케팅 컨설팅을 제공합니다.</p></div></div>
+  </div>
+</div></section>
+
+<!-- NEWS -->
+<section class="news" id="news" data-label="8 · CSO 소식 (NEWS)"><div class="wrap">
+  <div class="head rv"><div><div class="eyebrow">CSO news</div><h2 class="h2">CSO 업계 소식</h2></div><a href="news.html" class="more">더보기 <i>›</i></a></div>
+  <div class="nc" id="nc"></div>
+</div></section>
+
+<!-- VISIT -->
+<section class="visit" id="visit" data-label="8-1 · 오시는 길 (VISIT)"><div class="wrap">
+  <div class="ttl rv"><h2>VISIT</h2><i></i></div>
+  <div class="vg">
+    <div class="map rv"><div id="daumRoughmapContainer1794209521809" class="root_daum_roughmap root_daum_roughmap_landing"></div>
+<script charset="UTF-8" class="daum_roughmap_loader_script" src="https://t1.kakaocdn.net/kakaomapweb/roughmap/loader/prod/roughmapLoader.js"></script>
+<script charset="UTF-8">(function(){var b=document.querySelector('.visit .map'),info,box=document.getElementById('daumRoughmapContainer1794209521809'),lw=0,lh=0;
+function size(){info=info||document.querySelector('.visit .info');if(!info)return;if(innerWidth>900){var h=info.offsetHeight,avail=b.parentNode.clientWidth-400-64,w=Math.round(h*4/3);if(w>avail){w=avail;h=Math.round(w*3/4)}b.style.width=w+'px';b.style.height=h+'px';b.style.aspectRatio='auto'}else{b.style.width=b.style.height=b.style.aspectRatio=''}}
+function draw(){if(!window.daum||!daum.roughmap)return;var w=Math.round(b.clientWidth),h=Math.round(b.clientHeight);if(w===lw&&h===lh)return;lw=w;lh=h;box.innerHTML='';new daum.roughmap.Lander({"timestamp":"1794209521809","key":"42jos26wgg7","mapWidth":String(w),"mapHeight":String(h)}).render()}
+function go(){size();draw()}
+document.addEventListener('DOMContentLoaded',go);addEventListener('load',go);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(go);
+var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(go,250)});
+/* file:// 로 열 때 //t1.kakaocdn.net 주소가 깨지는 것을 https 로 보정 (웹 호스팅에서는 영향 없음) */
+function fix(){b.querySelectorAll('img').forEach(function(i){var u=i.getAttribute('src')||'';if(/^file:\/\/t1\./.test(i.src)||/^\/\/t1\./.test(u)){i.src='https:'+u.replace(/^file:/,'').replace(/^\/\/{0,2}/,'//')}})}
+new MutationObserver(fix).observe(b,{childList:true,subtree:true});fix()})();</script></div>
+    <div class="info rv">
+      <h3>JUNGWON<br>UNIUS</h3>
+      <div class="it"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg><div><b>회사위치</b><span>경기 김포시 풍무로146번길 26 프라미스빌딩 4층 A01호</span></div></div>
+      <div class="it"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.6 2.2"/></svg><div><b>영업시간</b><span>평일 09:00 - 18:00</span></div></div>
+      <div class="it"><svg viewBox="-1 -1 26 26"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><div><b>문의</b><span>상담 문의: 010-6498-0999</span></div></div>
+      <div class="btns"><a href="https://map.kakao.com/?q=%EA%B2%BD%EA%B8%B0%20%EA%B9%80%ED%8F%AC%EC%8B%9C%20%ED%92%8D%EB%AC%B4%EB%A1%9C146%EB%B2%88%EA%B8%B8%2026%20%ED%94%84%EB%9D%BC%EB%AF%B8%EC%8A%A4%EB%B9%8C%EB%94%A9%204%EC%B8%B5%20A01%ED%98%B8" target="_blank" rel="noopener">카카오맵 길찾기</a><a href="tel:01064980999">문의전화 하기</a></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact" data-label="9 · 문의 (CONTACT US)"><div class="wrap">
+  <div class="row">
+    <div><h2>Contact <em>Us</em></h2><p class="sub">함께 성공할 파트너를 찾고 계신가요?<br>정원유니어스가 따뜻한 길잡이가 되겠습니다.</p></div>
+    <div class="spin"><svg viewBox="0 0 170 170"><defs><path id="c" d="M85,85 m-68,0 a68,68 0 1,1 136,0 a68,68 0 1,1 -136,0"/></defs><text><textPath href="#c" textLength="424" lengthAdjust="spacing">JUNGWON UNIUS · THE BEST MEDICAL PARTNER · </textPath></text></svg><a href="https://open.kakao.com/o/sW7nxsai" target="_blank" rel="noopener" aria-label="카카오톡 상담">→</a></div>
+  </div>
+  <div class="fi" data-label="10 · 푸터 정보 (FOOTER)">
+    <div class="logo" style="color:#fff"><img src="assets/logo_jw.png" alt=""><span>정원유니어스<small style="color:var(--lime)">JUNGWON UNIUS</small></span></div>
+    <dl><dt>상호명</dt><dd>정원유니어스(주)</dd><dt>주소</dt><dd>경기 김포시 풍무로146번길 26 프라미스빌딩 4층 A01호</dd><dt>전화</dt><dd>010-6498-0999</dd><dt>Email</dt><dd>jungwonunius@naver.com</dd></dl>
+  </div>
+  <div class="copy"><span>© 2026 JUNGWON UNIUS. ALL RIGHTS RESERVED.</span><span><a href="https://jwunius.imweb.me/?mode=policy">이용약관</a> &nbsp;|&nbsp; <a href="https://jwunius.imweb.me/?mode=privacy">개인정보처리방침</a></span></div>
+</div></section>
+</main>
+
+<div class="fab">
+  <a class="t" href="#top" aria-label="맨 위로">TOP</a>
+  <a class="p" href="tel:01064980999" aria-label="전화">TEL</a>
+  <a class="k" href="https://open.kakao.com/o/sW7nxsai" target="_blank" rel="noopener" aria-label="카카오톡">TALK</a>
+</div>
+
+<script src="news/posts.js"></script>
+<script>
+// ticker
+const w=['Jungwon Unius','The Best Medical Partner'];let s='';for(let i=0;i<16;i++)s+=w[i%2]+'<span>·</span>';document.getElementById('tk').innerHTML=s+s;
+// hero: 두 줄이 하나의 사진을 공유하도록 배경 크기/위치 계산
+(function(){const m=document.querySelector('.mega');if(!m)return;
+function fit(){const d=m.children,a=d[0].firstChild,b=d[1].firstChild;
+const t1=d[0].offsetTop+a.offsetTop,t2=d[1].offsetTop+b.offsetTop,W=a.offsetWidth,H=t2+b.offsetHeight-t1,r=1920/800;
+const k=1.7,bw=Math.max(W,H*r)*k,bh=bw/r;
+m.style.setProperty('--bw',bw+'px');m.style.setProperty('--bh',bh+'px');
+const px=Math.min(0,Math.max(W-bw,W*.5-bw*.78)),py=Math.min(0,Math.max(H-bh,H*.28-bh*.27));m.style.setProperty('--px',px+'px');m.style.setProperty('--py',py+'px');m.style.setProperty('--dy',(t2-t1)+'px')}
+fit();addEventListener('resize',fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);addEventListener('load',fit)})();
+// header bg on scroll
+const H=document.querySelector('header');const sc=()=>H.classList.toggle('sc2',scrollY>60);sc();addEventListener('scroll',sc,{passive:true});
+// menu
+const mp=document.getElementById('mp');
+document.getElementById('bg').onclick=()=>document.body.classList.toggle('menu');
+mp.querySelectorAll('a').forEach(a=>a.onclick=()=>document.body.classList.remove('menu'));
+// reveal + panel on
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.18});
+document.querySelectorAll('.rv,.panel').forEach((el,i)=>{if(el.classList.contains('rv'))el.style.transitionDelay=(i%4)*80+'ms';io.observe(el)});
+// faq
+document.querySelectorAll('.q button').forEach(b=>b.onclick=()=>{const q=b.parentElement,o=q.classList.contains('open');document.querySelectorAll('.q').forEach(x=>x.classList.remove('open'));if(!o)q.classList.add('open')});
+// drag scroll
+const tr=document.getElementById('track');let dn=false,sx=0,sl=0;
+(function(){const orig=[...tr.children];orig.forEach(c=>{const k=c.cloneNode(true);k.setAttribute('aria-hidden','true');tr.appendChild(k)});
+let pos=tr.scrollLeft,hover=false;tr.addEventListener('mouseenter',()=>hover=true);tr.addEventListener('mouseleave',()=>hover=false);
+(function run(){const half=tr.children[orig.length].offsetLeft-orig[0].offsetLeft;
+if(!hover&&!dn&&half>0){pos+=0.6}else{pos=tr.scrollLeft}
+if(half>0){if(pos>=half)pos-=half;if(pos<0)pos+=half}
+tr.scrollLeft=pos;requestAnimationFrame(run)})()})();
+tr.onmousedown=e=>{dn=true;sx=e.pageX;sl=tr.scrollLeft;tr.classList.add('drag')};
+addEventListener('mouseup',()=>{dn=false;tr.classList.remove('drag')});
+addEventListener('mousemove',e=>{if(dn){tr.scrollLeft=sl-(e.pageX-sx)}});
+
+const tl=()=>document.body.classList.toggle('nolabels');
+document.getElementById('lbtn').onclick=tl;
+addEventListener('keydown',e=>{if(e.key==='l'||e.key==='L')tl()});
+
+// why slider (3s, dots)
+(function(){const sl=document.getElementById('wsl');if(!sl)return;
+const im=[...sl.querySelectorAll('.wimgs img')],tx=[...sl.querySelectorAll('.tx')],nm=['정산','소통','보안','성장'];
+const num=document.getElementById('wnum'),dw=document.getElementById('wdots');const T=3000;let i=0,el=0,last=performance.now(),paused=false,vis=false;
+const dots=im.map((_,k)=>{const b=document.createElement('button');b.setAttribute('aria-label',(k+1)+'번 카드');b.innerHTML='<i></i>';b.onclick=()=>go(k);dw.appendChild(b);return b});
+function go(n){i=(n+im.length)%im.length;im.forEach((e,k)=>e.classList.toggle('on',k===i));tx.forEach((e,k)=>e.classList.toggle('on',k===i));
+ dots.forEach((b,k)=>{b.classList.toggle('on',k===i);b.firstChild.style.width='0'});
+ num.textContent='0'+(i+1);sl.dataset.label=`5-${i+1} · 선택 이유 카드 ${i+1}/4 (${nm[i]})`;el=0}
+
+new IntersectionObserver(es=>{vis=es[0].isIntersecting},{threshold:.1}).observe(sl);
+document.getElementById('wprev').onclick=()=>go(i-1);document.getElementById('wnext').onclick=()=>go(i+1);
+go(0);
+(function tick(now){const dt=Math.min(now-last,100);last=now;if(vis&&!paused){el+=dt;const p=Math.min(el/T,1);dots[i].firstChild.style.width=p*100+'%';if(p>=1)go(i+1)}requestAnimationFrame(tick)})(performance.now());
+})();
+
+// news (news/posts.js 의 최신 3개)
+(function(){const nc=document.getElementById('nc');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ps=(window.POSTS||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id).slice(0,3);
+nc.innerHTML=ps.length?ps.map(p=>'<a class="n" href="news_view.html?id='+p.id+'"><img src="'+esc(p.thumb)+'" alt=""><div><small>'+esc((p.date||'').replace(/-/g,'.'))+'</small><h5>'+esc(p.title)+'</h5></div></a>').join(''):'<p style="color:var(--mute)">등록된 소식이 없습니다.</p>';
+nc.querySelectorAll('.n').forEach(c=>{});
+})();
+</script>
+</body>
+</html>
