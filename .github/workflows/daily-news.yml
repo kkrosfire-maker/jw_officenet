@@ -1,0 +1,33 @@
+name: daily-news
+
+# 매일 오전 7시(KST) = 22:00 UTC 에 CSO 뉴스 1편을 '검토 대기'로 자동 등록.
+# 수동 실행: GitHub > Actions > daily-news > Run workflow
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true 면 저장하지 않고 고른 기사만 출력"
+        default: "false"
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: marketing_homepage_JW/news_auto
+      - name: 기사 선별 및 등록
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python3 marketing_homepage_JW/news_auto/auto_post.py --dry-run
+          else
+            python3 marketing_homepage_JW/news_auto/auto_post.py
+          fi

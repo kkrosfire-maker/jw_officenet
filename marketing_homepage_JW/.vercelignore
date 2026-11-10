@@ -18,3 +18,4 @@ supabase_db_password.txt
 admin_local.html
 news/seed_existing_posts.sql
 news/supabase_schema.sql
+news_auto
