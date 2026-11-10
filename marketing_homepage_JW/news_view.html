@@ -63,7 +63,7 @@ const notFound=m=>{setMeta('meta[name="robots"]','content','noindex');v.innerHTM
   const p=r.post,prev=r.prev,next=r.next;
   document.title=p.title+' | 정원유니어스';
   { // 이 글의 대표 주소·설명·공유 미리보기 정보로 head 를 맞춘다(주소는 접속한 도메인 기준)
-    const url=location.origin+location.pathname+'?id='+p.id,desc=(p.summary||p.title).replace(/\s+/g,' ').slice(0,160),img=new URL(p.thumb,location.href).href;
+    const url=location.origin+'/news/'+p.id,desc=(p.summary||p.title).replace(/\s+/g,' ').slice(0,160),img=new URL(p.thumb,location.href).href;
     setMeta('link[rel="canonical"]','href',url);setMeta('meta[name="description"]','content',desc);
     setMeta('meta[property="og:title"]','content',p.title);setMeta('meta[property="og:description"]','content',desc);
     setMeta('meta[property="og:url"]','content',url);setMeta('meta[property="og:image"]','content',img);
@@ -73,7 +73,7 @@ const notFound=m=>{setMeta('meta[name="robots"]','content','noindex');v.innerHTM
   try{
     const abs=u=>new URL(u,location.href).href,org={'@type':'Organization','name':'정원유니어스(주)','url':location.origin+'/'};
     const ld={'@context':'https://schema.org','@type':'NewsArticle','headline':p.title.slice(0,110),'inLanguage':'ko-KR',
-      'datePublished':p.date,'dateModified':p.date,'mainEntityOfPage':{'@type':'WebPage','@id':location.origin+location.pathname+'?id='+p.id},
+      'datePublished':p.date,'dateModified':p.date,'mainEntityOfPage':{'@type':'WebPage','@id':location.origin+'/news/'+p.id},
       'image':[abs(p.thumb)],'author':org,'publisher':org};
     if(p.summary)ld.description=p.summary;
     if(p.category)ld.articleSection=p.category;

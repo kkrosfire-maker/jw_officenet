@@ -99,3 +99,7 @@ footer .copy{margin-top:40px;padding-top:24px;border-top:1px solid rgba(255,255,
 @media(max-width:1180px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.wrap{padding:0 24px}header .in{padding:0 24px;height:72px}.tnav{display:none}.menu-panel{grid-template-columns:1fr;padding:100px 24px 40px;gap:30px;align-content:start;overflow:auto}.menu-panel .side{border:0;padding:0}.grid{grid-template-columns:repeat(2,1fr);gap:18px}.phead{padding:130px 0 70px}.board{padding:60px 0 90px}.pn{grid-template-columns:1fr}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}}
+/* 서버에서 미리 그린 목록(/news)의 페이지 번호: 링크로 만들어 크롤러가 따라갈 수 있게 한다 */
+.pager a{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:700;font-size:15px;transition:.25s;padding:0 4px}
+.pager a:hover{border-color:var(--g);color:var(--g)}
+.pager a.on{background:var(--g);border-color:var(--g);color:var(--lime);box-shadow:0 10px 22px rgba(0,60,36,.28)}

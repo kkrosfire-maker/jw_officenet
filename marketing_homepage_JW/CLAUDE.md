@@ -24,3 +24,10 @@
 - 테스트할 때는 `posts.json`을 건드리지 말고(가짜 글은 Playwright route로 주입), 시험 등록 글은 끝나면 삭제해 원상복구한다.
 
 - 브랜드: 메인색 #003C24, 로고는 `assets/logo.png`(대시보드 아이콘). 정산 4단계 문구는 임시.
+
+## 검색·AI 최적화(GEO) 구조 (2026-11-10)
+
+- 기사 상세·목록·사이트맵은 **Vercel 서버 함수**(`api/*.js`)가 서버에서 미리 그려 응답한다: `/news/번호`(article.js), `/news`(list.js), `/sitemap.xml`(sitemap.js). 연결은 `vercel.json`의 rewrites. 공용 코드는 `api/_lib.js`. 공개된 글만 공개용 키로 읽고 CDN이 5분 보관한다(공개해도 재배포 불필요, 최대 5분 지연).
+- 사용자가 보는 화면은 그대로 `news.html`/`news_view.html?id=`(자바스크립트 렌더링). 두 화면의 `canonical`은 `/news`, `/news/번호`로 서버 렌더 쪽에 모은다. 머리말/바닥글/메뉴를 바꾸면 `api/_lib.js`의 `layout()`도 같이 고칠 것.
+- 도메인을 연결하면 바꿀 곳: `api/_lib.js`의 `SITE`(또는 Vercel 환경변수 `SITE_URL`), 홈 모든 버전의 `index.html` og/canonical/JSON-LD, `news.html`·`news_view.html`의 정적 메타, `robots.txt`, `llms.txt`.
+- 로컬 시험: `api/`를 직접 Node로 불러 시험했다(`vercel dev` 불필요). 정적 `sitemap.xml` 파일을 두면 rewrites보다 파일이 우선될 수 있으니 만들지 말 것.

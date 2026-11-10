@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/news/:id(\\d+)", "destination": "/api/article?id=:id" },
+    { "source": "/news", "destination": "/api/list" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+  ]
+}
