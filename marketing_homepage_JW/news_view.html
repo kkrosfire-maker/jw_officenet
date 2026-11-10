@@ -52,6 +52,17 @@ const notFound=m=>{v.innerHTML='<div class="crumb"><a href="news.html">CSO 업�
   if(!r)return notFound('게시글을 찾을 수 없습니다.');
   const p=r.post,prev=r.prev,next=r.next;
   document.title=p.title+' | 정원유니어스';
+  // 검색엔진·AI가 기사 정보를 정확히 읽도록 구조화 데이터(NewsArticle)를 넣는다. 주소는 현재 접속 도메인 기준.
+  try{
+    const abs=u=>new URL(u,location.href).href,org={'@type':'Organization','name':'정원유니어스(주)','url':location.origin+'/'};
+    const ld={'@context':'https://schema.org','@type':'NewsArticle','headline':p.title.slice(0,110),'inLanguage':'ko-KR',
+      'datePublished':p.date,'dateModified':p.date,'mainEntityOfPage':{'@type':'WebPage','@id':location.origin+location.pathname+'?id='+p.id},
+      'image':[abs(p.thumb)],'author':org,'publisher':org};
+    if(p.summary)ld.description=p.summary;
+    if(p.category)ld.articleSection=p.category;
+    if(/^https?:\/\//i.test(p.link||''))ld.isBasedOn={'@type':'CreativeWork','url':p.link,...(p.source?{'publisher':{'@type':'Organization','name':p.source}}:{})};
+    const sc=document.createElement('script');sc.type='application/ld+json';sc.textContent=JSON.stringify(ld);document.head.appendChild(sc);
+  }catch(_){}
   // 요약 박스와 같은 문장이 본문에 또 나오지 않게 한다(자동 등록 글은 본문이 '요약 + 출처'로 저장되어 있음)
   let body=(p.body||'').trim();const sm=(p.summary||'').trim();
   if(sm&&body.startsWith(sm))body=body.slice(sm.length).trim();
