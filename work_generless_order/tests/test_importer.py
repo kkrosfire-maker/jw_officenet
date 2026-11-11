@@ -66,9 +66,38 @@ class MasterSyncTest(unittest.TestCase):
     def test_append_item_to_master_rejects_duplicate_name(self):
         with self.assertRaises(ValueError):
             importer.append_item_to_master(
-                self.xlsx, category="", order_name="23G needle", manufacturer="", product_name="",
+                self.xlsx, category="", order_name="23G needle", manufacturer="성심", product_name="",
                 spec="", base_date=None, buy_price=0, sell_price=0)
         self.assertEqual(len(importer.read_master_rows(self.xlsx)), 2)
+
+    def test_append_item_allows_same_name_with_other_manufacturer(self):
+        row = importer.append_item_to_master(
+            self.xlsx, category="", order_name="23G needle", manufacturer="정림", product_name="",
+            spec="", base_date=None, buy_price=1, sell_price=2)
+        self.assertEqual(row, 4)
+
+    def test_merge_keeps_same_name_items_with_different_manufacturers_apart(self):
+        write_master_xlsx(self.xlsx, [
+            {"order_name": "1cc syringe", "manufacturer": "성심", "buy": 6710, "sell": 8300},
+            {"order_name": "1cc syringe", "manufacturer": "정림", "buy": 7000, "sell": 7900},
+        ])
+        importer.sync_master(self.xlsx)
+        importer.sync_master(self.xlsx)  # 다시 불러와도 서로 덮어쓰지 않아야 한다
+        items = db.find_items_by_order_name("1cc syringe")
+        self.assertEqual(sorted((i["manufacturer"], i["buy_price"]) for i in items),
+                         [("성심", 6710), ("정림", 7000)])
+
+    def test_merge_restores_item_lost_by_old_name_only_matching(self):
+        # 예전 버그로 성심 품목이 정림 데이터로 덮어써진 DB를 흉내 낸다
+        db.insert_item("시린지", "1cc syringe", "정림", "정림주사기", "1cc", "2026-11-11", 7000, 7900, "", "")
+        db.insert_item("시린지", "1cc syringe", "정림", "정림주사기", "1cc", "2026-09-09", 7000, 7900, "", "")
+        write_master_xlsx(self.xlsx, [
+            {"order_name": "1cc syringe", "manufacturer": "성심", "buy": 6710, "sell": 8300},
+            {"order_name": "1cc syringe", "manufacturer": "정림", "buy": 7000, "sell": 7900},
+        ])
+        result = importer.sync_master(self.xlsx)
+        self.assertEqual(result["added"], 1)
+        self.assertIn("성심", [i["manufacturer"] for i in db.find_items_by_order_name("1cc syringe")])
 
     def test_merge_updates_existing_and_adds_new(self):
         importer.sync_master(self.xlsx)

@@ -110,8 +110,9 @@ def append_item_to_master(xlsx_path, *, category, order_name, manufacturer, prod
     while last > 1 and not _norm(ws.cell(last, COL_ORDER_NAME + 1).value):
         last -= 1
     for r in range(2, last + 1):
-        if _norm(ws.cell(r, COL_ORDER_NAME + 1).value) == order_name:
-            raise ValueError(f"마스터 엑셀에 같은 제너리스주문명이 이미 있습니다 ({r}행): {order_name}")
+        if (_norm(ws.cell(r, COL_ORDER_NAME + 1).value) == order_name
+                and _norm(ws.cell(r, COL_MANUFACTURER + 1).value) == manufacturer):
+            raise ValueError(f"마스터 엑셀에 같은 제너리스주문명·제조사 품목이 이미 있습니다 ({r}행): {order_name}")
 
     new = last + 1
     for col in range(1, ws.max_column + 1):
@@ -176,11 +177,23 @@ def sync_master(xlsx_path, replace: bool = False) -> dict:
             db.insert_item(**parsed)
         return {"added": len(rows), "updated": 0, "total": len(rows)}
 
+    # 제너리스주문명이 같아도 제조사가 다른 품목(예: 1cc syringe 성심/정림)은 별개 품목이다.
+    # 이름만 보고 짝지으면 한 품목을 두 엑셀 행이 번갈아 덮어써 한쪽이 사라진다.
+    name_counts: dict[str, int] = {}
+    for parsed in rows:
+        name_counts[parsed["order_name"]] = name_counts.get(parsed["order_name"], 0) + 1
+    claimed: set[int] = set()
+
     added = updated = 0
     for parsed in rows:
-        existing = db.find_item_by_order_name(parsed["order_name"])
+        candidates = [c for c in db.find_items_by_order_name(parsed["order_name"]) if c["id"] not in claimed]
+        existing = next((c for c in candidates if (c["manufacturer"] or "") == parsed["manufacturer"]), None)
+        if existing is None and name_counts[parsed["order_name"]] == 1 and len(candidates) == 1:
+            existing = candidates[0]  # 앱에서 제조사를 고친 품목도 이름이 유일하면 같은 품목으로 본다
+        if existing is not None:
+            claimed.add(existing["id"])
         if existing is None:
-            db.insert_item(**parsed)
+            claimed.add(db.insert_item(**parsed))
             added += 1
             continue
 

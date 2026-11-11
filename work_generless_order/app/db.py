@@ -225,6 +225,20 @@ def find_item_by_order_name(order_name: str) -> Optional[dict]:
         return dict(row) if row else None
 
 
+def find_items_by_order_name(order_name: str) -> list[dict]:
+    """같은 제너리스주문명을 가진 품목 전부(제조사만 다른 품목이 있을 수 있다)."""
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM items WHERE order_name=? ORDER BY id", (order_name,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def find_item_by_name_and_manufacturer(order_name: str, manufacturer: str) -> Optional[dict]:
+    for item in find_items_by_order_name(order_name):
+        if (item["manufacturer"] or "") == (manufacturer or ""):
+            return item
+    return None
+
+
 def delete_all_items() -> None:
     """마스터를 통째로 교체할 때 사용. 별칭/가격이력/주문라인 연결도 함께 정리된다."""
     with connect() as conn:

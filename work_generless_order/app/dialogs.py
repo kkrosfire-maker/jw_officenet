@@ -223,8 +223,8 @@ class NewItemDialog(tk.Toplevel):
             category=self.vars["category"].get().strip(),
         )
         if self.master_path is not None:
-            if db.find_item_by_order_name(order_name):
-                messagebox.showwarning("중복", f"이미 등록된 제너리스주문명입니다:\n{order_name}", parent=self)
+            if db.find_item_by_name_and_manufacturer(order_name, fields["manufacturer"]):
+                messagebox.showwarning("중복", f"이미 등록된 제너리스주문명·제조사 품목입니다:\n{order_name}", parent=self)
                 return
             fields["welfare_type"] = self.vars["welfare_type"].get().strip()
             fields["note"] = self.vars["note"].get().strip() or "신규 등록(품목 마스터 관리 화면에서 추가)"
