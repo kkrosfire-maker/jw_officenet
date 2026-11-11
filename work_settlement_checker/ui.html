@@ -266,7 +266,7 @@ function mgrHtml() {
   if (!showDoneMgrs) list = list.filter(o => o.pend);
   let html = `<div class="bar"><b>미처리가 남은 담당자 ${list.filter(o => o.pend).length}명</b>
     <label style="color:var(--sub)"><input type="checkbox" id="showDone" ${showDoneMgrs ? "checked" : ""}> 모두 완료한 담당자(${hidden}명)도 보기</label>
-    <span class="hint">담당자를 더블클릭하면 오른쪽에 상세가 열립니다</span></div>`;
+    <span class="hint">담당자를 누르면 오른쪽에 상세가 열립니다</span></div>`;
   if (!list.length) return html + `<div class="empty">미처리 담당자가 없습니다 ✔</div>`;
   return html + `<div class="mgrs">` + list.map(o => `<div class="mcard ${o.pend ? "" : "zero"} ${F && F.manager === o.name ? "sel" : ""}" data-mgr="${esc(o.name)}">
     <h3>${esc(o.name)}</h3>
@@ -437,13 +437,10 @@ document.addEventListener("click", e => {
   else if (t.dataset.scope) { F.scope = t.dataset.scope; render(); }
   else if (t.dataset.clr) { F[t.dataset.clr] = null; render(); }
   else if (t.dataset.close) { F = null; render(); }
-  else if (t.dataset.mgr) { document.querySelectorAll(".mcard").forEach(c => c.classList.toggle("sel", c === t)); }
-});
-document.addEventListener("dblclick", e => {
-  const t = e.target.closest("[data-mgr]");
-  if (!t) return;
-  order = "mgr"; try { localStorage.setItem("order", order); } catch (x) {}      // 담당자 > 제약사 > 병원으로 열고, 이후 자유롭게 변경
-  openPanel({manager: t.dataset.mgr});
+  else if (t.dataset.mgr) {      // 담당자 카드 한 번 클릭 → 담당자 > 제약사 > 병원으로 열고, 이후 자유롭게 변경
+    order = "mgr"; try { localStorage.setItem("order", order); } catch (x) {}
+    openPanel({manager: t.dataset.mgr});
+  }
 });
 document.addEventListener("change", e => {
   const id = e.target.id;
