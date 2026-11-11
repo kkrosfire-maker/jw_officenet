@@ -1,8 +1,10 @@
 """보조 팝업 다이얼로그들: 후보 선택, 신규 품목 등록, 가격 이력."""
 import tkinter as tk
+from datetime import date
+from pathlib import Path
 from tkinter import messagebox, ttk
 
-from app import db, matching, theme
+from app import db, importer, matching, theme
 
 
 def _margin_rate(item) -> float | None:
@@ -126,11 +128,18 @@ class CandidatePickerDialog(tk.Toplevel):
 
 
 class NewItemDialog(tk.Toplevel):
-    """마스터 DB에 없는 신규 품목 등록 폼."""
+    """마스터 DB에 없는 신규 품목 등록 폼.
 
-    def __init__(self, parent, default_order_name: str = ""):
+    master_path를 주면(품목 마스터 관리 화면) 급여구분·비고 입력이 추가되고,
+    등록할 때 그 마스터 엑셀 파일에도 한 줄을 실제로 써 넣는다.
+    """
+
+    CATEGORIES = ("시린지", "니들", "캐뉼라/카테터", "수액", "앰플", "약품", "장갑", "소독/위생용품", "드레싱/기타소모품")
+
+    def __init__(self, parent, default_order_name: str = "", master_path=None):
         super().__init__(parent)
-        self.title("신규 품목 등록")
+        self.master_path = master_path
+        self.title("신규 품목 등록" if master_path is None else "품목 추가 (마스터 엑셀에도 저장)")
         self.configure(bg=theme.APP_BG)
         self.resizable(True, True)
         self.transient(parent)
@@ -146,6 +155,8 @@ class NewItemDialog(tk.Toplevel):
             "spec": tk.StringVar(),
             "buy_price": tk.StringVar(value="0"),
             "sell_price": tk.StringVar(value="0"),
+            "welfare_type": tk.StringVar(),
+            "note": tk.StringVar(),
         }
         labels = {
             "order_name": "제너리스주문명(병원 표현)*",
@@ -156,6 +167,9 @@ class NewItemDialog(tk.Toplevel):
             "buy_price": "매입가",
             "sell_price": "매출가",
         }
+        if master_path is not None:
+            labels["welfare_type"] = "급여구분"
+            labels["note"] = "비고"
 
         body = ttk.Frame(self, padding=16)
         body.pack(fill="both", expand=True)
@@ -163,7 +177,14 @@ class NewItemDialog(tk.Toplevel):
             row = ttk.Frame(body)
             row.pack(fill="x", pady=4)
             ttk.Label(row, text=label, width=20).pack(side="left")
-            ttk.Entry(row, textvariable=self.vars[key]).pack(side="left", fill="x", expand=True)
+            if key == "category" and master_path is not None:
+                widget = ttk.Combobox(row, textvariable=self.vars[key], values=self.CATEGORIES)
+            elif key == "welfare_type":
+                widget = ttk.Combobox(row, textvariable=self.vars[key], values=("급여", "비급여"),
+                                      state="readonly")
+            else:
+                widget = ttk.Entry(row, textvariable=self.vars[key])
+            widget.pack(side="left", fill="x", expand=True)
 
         btn_row = ttk.Frame(body)
         btn_row.pack(fill="x", pady=(16, 0))
@@ -171,6 +192,11 @@ class NewItemDialog(tk.Toplevel):
                    command=self._cancel).pack(side="right")
         ttk.Button(btn_row, text="등록", style="Accent.TButton",
                    command=self._submit).pack(side="right", padx=8)
+
+        if master_path is not None:
+            ttk.Label(body, text=f"등록하면 마스터 엑셀({Path(master_path).name})에도 한 줄이 추가됩니다.\n"
+                                 "엑셀이 열려 있으면 닫은 뒤 등록하세요.",
+                      style="Secondary.TLabel").pack(anchor="w", pady=(8, 0))
 
         theme.autosize(self, min_w=420, min_h=380)
 
@@ -188,7 +214,7 @@ class NewItemDialog(tk.Toplevel):
         if buy > sell:
             if not messagebox.askyesno("역마진 경고", "매입가가 매출가보다 큽니다. 그대로 등록할까요?", parent=self):
                 return
-        item_id = db.insert_new_item_from_order(
+        fields = dict(
             order_name=order_name,
             manufacturer=self.vars["manufacturer"].get().strip(),
             product_name=self.vars["product_name"].get().strip(),
@@ -196,6 +222,24 @@ class NewItemDialog(tk.Toplevel):
             buy_price=buy, sell_price=sell,
             category=self.vars["category"].get().strip(),
         )
+        if self.master_path is not None:
+            if db.find_item_by_order_name(order_name):
+                messagebox.showwarning("중복", f"이미 등록된 제너리스주문명입니다:\n{order_name}", parent=self)
+                return
+            fields["welfare_type"] = self.vars["welfare_type"].get().strip()
+            fields["note"] = self.vars["note"].get().strip() or "신규 등록(품목 마스터 관리 화면에서 추가)"
+            try:  # 엑셀 저장이 실패하면 DB에도 넣지 않아 둘이 어긋나지 않게 한다
+                importer.append_item_to_master(
+                    self.master_path, base_date=date.today(), **fields)
+            except PermissionError:
+                messagebox.showerror("엑셀 저장 실패",
+                                     "마스터 엑셀이 열려 있어 저장할 수 없습니다.\n엑셀을 닫고 다시 등록하세요.",
+                                     parent=self)
+                return
+            except Exception as exc:
+                messagebox.showerror("엑셀 저장 실패", f"마스터 엑셀에 쓰지 못했습니다:\n{exc}", parent=self)
+                return
+        item_id = db.insert_new_item_from_order(**fields)
         self.result = db.get_item(item_id)
         self.destroy()
 

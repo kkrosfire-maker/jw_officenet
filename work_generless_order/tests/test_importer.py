@@ -50,6 +50,26 @@ class MasterSyncTest(unittest.TestCase):
         self.assertEqual(result, {"added": 2, "updated": 0, "total": 2})
         self.assertEqual(len(db.all_items()), 2)
 
+    def test_append_item_to_master_writes_row_and_reads_back(self):
+        import datetime as dt
+        row = importer.append_item_to_master(
+            self.xlsx, category="약품", order_name="신규약", manufacturer="제약사", product_name="신규정",
+            spec="10정", base_date=dt.date(2026, 11, 11), buy_price=1000, sell_price=1500,
+            welfare_type="급여", note="메모")
+        self.assertEqual(row, 4)
+        last = importer.read_master_rows(self.xlsx)[-1]
+        self.assertEqual((last["order_name"], last["buy_price"], last["sell_price"], last["base_date"]),
+                         ("신규약", 1000, 1500, "2026-11-11"))
+        self.assertEqual(len(importer.read_master_rows(self.xlsx)), 3)
+        self.assertFalse(self.xlsx.with_name(self.xlsx.name + ".tmp").exists())
+
+    def test_append_item_to_master_rejects_duplicate_name(self):
+        with self.assertRaises(ValueError):
+            importer.append_item_to_master(
+                self.xlsx, category="", order_name="23G needle", manufacturer="", product_name="",
+                spec="", base_date=None, buy_price=0, sell_price=0)
+        self.assertEqual(len(importer.read_master_rows(self.xlsx)), 2)
+
     def test_merge_updates_existing_and_adds_new(self):
         importer.sync_master(self.xlsx)
         item = db.find_item_by_order_name("23G needle")

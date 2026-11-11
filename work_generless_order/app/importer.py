@@ -1,5 +1,8 @@
 """엑셀 마스터 파일을 DB로 이관/갱신."""
+import copy
 import datetime as dt
+import os
+import re
 from pathlib import Path
 
 import openpyxl
@@ -85,6 +88,75 @@ def read_master_rows(xlsx_path) -> list[dict]:
             "aliases": aliases,
         })
     return parsed
+
+
+def append_item_to_master(xlsx_path, *, category, order_name, manufacturer, product_name, spec,
+                          base_date, buy_price, sell_price, welfare_type="", note="") -> int:
+    """마스터 엑셀의 품목 시트 맨 아래에 품목 한 줄을 추가해 파일에 저장한다. 추가된 행 번호를 반환.
+
+    - 마지막 데이터 행의 서식을 그대로 복사하고 이익금액·이익률·마진율 수식을 채운다.
+    - 요약 시트의 '품목별 단가'!...$마지막행 범위 수식과 필터·드롭다운 범위도 새 행까지 늘린다.
+    - 엑셀로 파일이 열려 있으면 PermissionError, 같은 제너리스주문명이 이미 있으면 ValueError.
+    - 임시 파일에 먼저 저장한 뒤 교체하므로 중간에 실패해도 원본이 깨지지 않는다.
+    """
+    xlsx_path = Path(xlsx_path)
+    with open(xlsx_path, "r+b"):  # 엑셀이 잠가 둔 파일이면 여기서 PermissionError
+        pass
+
+    wb = openpyxl.load_workbook(xlsx_path)  # 수식을 보존하려고 data_only 사용 안 함
+    ws = wb[SOURCE_MASTER_SHEET] if SOURCE_MASTER_SHEET in wb.sheetnames else wb[wb.sheetnames[0]]
+
+    last = ws.max_row
+    while last > 1 and not _norm(ws.cell(last, COL_ORDER_NAME + 1).value):
+        last -= 1
+    for r in range(2, last + 1):
+        if _norm(ws.cell(r, COL_ORDER_NAME + 1).value) == order_name:
+            raise ValueError(f"마스터 엑셀에 같은 제너리스주문명이 이미 있습니다 ({r}행): {order_name}")
+
+    new = last + 1
+    for col in range(1, ws.max_column + 1):
+        src, dst = ws.cell(last, col), ws.cell(new, col)
+        if src.has_style:
+            dst._style = copy.copy(src._style)
+    if ws.row_dimensions[last].height:
+        ws.row_dimensions[new].height = ws.row_dimensions[last].height
+
+    base = dt.date.fromisoformat(base_date) if isinstance(base_date, str) and base_date else base_date
+    values = {
+        COL_CATEGORY: category, COL_ORDER_NAME: order_name, COL_MANUFACTURER: manufacturer,
+        COL_PRODUCT_NAME: product_name, COL_SPEC: spec, COL_BASE_DATE: base,
+        COL_BUY: buy_price, COL_SELL: sell_price,
+        8: f"=H{new}-G{new}",
+        9: f"=IFERROR((H{new}-G{new})/H{new},0)",
+        10: f"=IFERROR((H{new}-G{new})/G{new},0)",
+        COL_WELFARE: welfare_type or None, COL_NOTE: note or None,
+    }
+    for idx, value in values.items():
+        ws.cell(new, idx + 1).value = value
+
+    # 범위를 마지막 행까지만 잡고 있는 수식(요약 시트 등)을 새 행까지 늘린다.
+    pattern = re.compile(r"(\$[A-Z]{1,3}\$)%d(?!\d)" % last)
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                v = cell.value
+                if isinstance(v, str) and v.startswith("=") and ws.title in v:
+                    cell.value = pattern.sub(lambda m: f"{m.group(1)}{new}", v)
+    if ws.auto_filter.ref:
+        ws.auto_filter.ref = re.sub(r"\d+$", str(new), ws.auto_filter.ref)
+    for dv in ws.data_validations.dataValidation:  # 항목(A열)·급여구분(L열) 드롭다운
+        cols = {r.min_col for r in dv.sqref.ranges if r.min_col == r.max_col}
+        for col in cols & {1, COL_WELFARE + 1}:
+            dv.sqref.add(f"{openpyxl.utils.get_column_letter(col)}{new}")
+
+    tmp = xlsx_path.with_name(xlsx_path.name + ".tmp")
+    try:
+        wb.save(tmp)
+        os.replace(tmp, xlsx_path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+    return new
 
 
 def sync_master(xlsx_path, replace: bool = False) -> dict:

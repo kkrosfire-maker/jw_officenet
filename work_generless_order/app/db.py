@@ -267,11 +267,12 @@ def get_price_history(item_id: int):
 
 
 def insert_new_item_from_order(order_name: str, manufacturer="", product_name="",
-                                spec="", buy_price=0, sell_price=0, category="") -> int:
+                                spec="", buy_price=0, sell_price=0, category="",
+                                welfare_type="", note="신규 등록(주문 화면에서 추가)") -> int:
     today = date.today().isoformat()
     return insert_item(
         category, order_name, manufacturer, product_name, spec,
-        today, buy_price, sell_price, "", "신규 등록(주문 화면에서 추가)",
+        today, buy_price, sell_price, welfare_type, note,
     )
 
 

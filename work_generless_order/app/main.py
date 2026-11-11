@@ -498,6 +498,8 @@ class MasterTab(ttk.Frame):
                    command=self._search).pack(side="left")
         ttk.Button(search_card, text="전체보기", style="Secondary.TButton",
                    command=lambda: self._load(db.all_items())).pack(side="left", padx=8)
+        ttk.Button(search_card, text="+ 품목 추가", style="Accent.TButton",
+                   command=self._add_item).pack(side="right")
 
         detail_card = theme.card(self)
         detail_card.pack(side="bottom", fill="x")
@@ -586,6 +588,26 @@ class MasterTab(ttk.Frame):
         self.master_hint_label.configure(
             text=status + " · 경로를 클릭하면 엑셀이 열립니다 · 엑셀 파일을 이 영역에 끌어다 놓아도 교체됩니다."
         )
+
+    def _add_item(self):
+        """새 품목을 DB에 등록하면서 마스터 엑셀 파일에도 한 줄을 써 넣는다."""
+        path = importer.current_master_path()
+        if not path.exists():
+            messagebox.showwarning("안내", f"마스터 엑셀을 찾을 수 없어 추가할 수 없습니다:\n{path}")
+            return
+        dialog = NewItemDialog(self, master_path=path)
+        self.wait_window(dialog)
+        item = dialog.result
+        if item is None:
+            return
+        self.search_var.set("")
+        self._load(db.all_items())
+        self._refresh_master_card()
+        iid = str(item["id"])
+        if self.tree.exists(iid):
+            self.tree.selection_set(iid)
+            self.tree.see(iid)
+        messagebox.showinfo("추가 완료", f'"{item["order_name"]}" 을(를) 등록했고 마스터 엑셀에도 저장했습니다.')
 
     def _open_master_file(self):
         path = importer.current_master_path()
