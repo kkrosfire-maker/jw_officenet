@@ -265,9 +265,9 @@ function render(){
   const late=S.tasks.filter(t=>t.section==='late').sort((a,b)=>ord(a,b)||a.due.localeCompare(b.due));
   const upcoming=S.tasks.filter(t=>t.section==='upcoming').sort((a,b)=>ord(a,b)||a.due.localeCompare(b.due));
   const today=S.tasks.filter(t=>t.section==='today').sort(ord);
-  // 반복 루틴: 매일 → 매주 → 매월, 같은 종류 안에서는 가나다순
+  // 반복 루틴: 남은 일수가 적은 순(다음 회차 날짜 빠른 순), 같으면 매일 → 매주 → 매월, 그다음 가나다순
   const KO={day:0,week:1,month:2},kindOf=t=>KO[t.repeat.split(':')[0]]??3;
-  const daily=S.tasks.filter(t=>t.section==='routine').sort((a,b)=>ord(a,b)||kindOf(a)-kindOf(b)||a.text.localeCompare(b.text,'ko'));
+  const daily=S.tasks.filter(t=>t.section==='routine').sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||kindOf(a)-kindOf(b)||a.text.localeCompare(b.text,'ko'));
   const dueR=daily.filter(t=>t.done_at||t.due<=S.today);  // 완료 개수·진행률은 회차가 온 루틴만 센다
   const doneN=today.filter(t=>t.done_at).length+dueR.filter(t=>t.done_at).length, all=today.length+late.length+dueR.length;
   $('prog').style.width=(all?(doneN/all*100):0)+'%';
