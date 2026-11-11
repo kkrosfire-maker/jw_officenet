@@ -80,9 +80,13 @@ textarea{resize:vertical;min-height:90px}
     <div class="drop" id="drop"><img id="prev" alt=""><span id="dropTx">클릭하거나 이미지를 끌어다 놓기 (jpg·png·webp)</span><input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
     <div class="hint">가로 1000px로 자동 축소되어 저장됩니다. 4:3 권장. 없으면 기본 이미지가 쓰입니다.</div>
     <label>요약 (목록 카드에 표시, 500자 이내)</label><textarea id="summary" maxlength="500"></textarea>
-    <label>본문 (상세 페이지에 표시)</label><textarea id="body" style="min-height:150px"></textarea>
+    <label>썸네일 이미지 프롬프트 (제목·요약으로 자동 생성)</label><textarea id="gprompt" readonly style="min-height:190px;background:var(--bg);font-size:13px"></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn sub" id="copyp" type="button">프롬프트 복사</button></div>
+    <div class="hint">ChatGPT에 붙여넣어 이미지를 만든 뒤, 위 썸네일 칸에 끌어다 놓으세요.</div>
     <label>출처 (매체명, 선택)</label><input type="text" id="source" placeholder="예: 약사공론">
     <label>원문 링크 (선택)</label><input type="text" id="link" placeholder="https://...">
+    <div class="row" style="margin-top:8px"><button class="btn sub" id="ogb" type="button">원문에서 이미지 가져오기</button></div>
+    <div class="hint">원문 기사의 대표 이미지를 썸네일로 가져옵니다. 저작권은 직접 확인해 주세요.</div>
     <label class="chk"><input type="checkbox" id="pub" checked> 바로 공개</label>
     <div class="row"><button class="btn" id="save" type="submit">등록하기</button><button class="btn sub" id="cancel" type="button" style="display:none">수정 취소</button></div>
   </form>
@@ -105,12 +109,11 @@ let posts=[],editId=null,thumbBlob=null,filter='all',thumbTarget=null;
 const isTemp=p=>!!p.thumb&&p.thumb.indexOf('/storage/v1/object/public/news-thumbs/')<0&&p.thumb!==DEF;
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast on'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.className='toast',2800)}
-const fields=()=>({title:$('title').value.trim(),date:$('date').value,summary:$('summary').value.trim(),body:$('body').value.trim(),source:$('source').value.trim(),link:$('link').value.trim(),published:$('pub').checked});
+const fields=()=>({title:$('title').value.trim(),date:$('date').value,summary:$('summary').value.trim(),source:$('source').value.trim(),link:$('link').value.trim(),published:$('pub').checked});
 function check(d){
   if(!d.title||d.title.length>200)return'제목은 1~200자로 입력해 주세요.';
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date))return'날짜를 입력해 주세요.';
   if(d.summary.length>500)return'요약은 500자 이내로 입력해 주세요.';
-  if(d.body.length>20000)return'본문이 너무 깁니다.';
   if(d.link&&!/^https?:\/\//i.test(d.link))return'원문 링크는 http:// 또는 https:// 로 시작해야 합니다.';
   return''}
 function toBlob(file){return new Promise((ok,no)=>{const rd=new FileReader();rd.onerror=no;rd.onload=()=>{const im=new Image();im.onerror=no;im.onload=()=>{
@@ -139,14 +142,14 @@ async function load(){
   draw()}
 function draw(){
   const list=posts.filter(p=>filter==='all'||!p.published);
-  $('items').innerHTML=list.length?list.map(p=>`<div class="it" data-id="${p.id}"><img src="${esc(p.thumb||DEF)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-c="${p.id}" title="ChatGPT에 붙여넣을 이미지 생성 문구를 복사합니다">프롬프트 복사</button><button data-t="${p.id}">썸네일 교체</button><button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
+  $('items').innerHTML=list.length?list.map(p=>`<div class="it" data-id="${p.id}"><img src="${esc(p.thumb||DEF)}" alt=""><div><b>${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-c="${p.id}" title="ChatGPT에 붙여넣을 이미지 생성 문구를 복사합니다">프롬프트 복사</button><button data-t="${p.id}">썸네일 교체</button>${p.link?`<button data-o="${p.id}" title="원문 기사의 대표 이미지를 썸네일로 가져옵니다">원문 이미지</button>`:''}<button data-e="${p.id}">수정</button><button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
 document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));draw()};
 
 // ---- 폼
 function reset(){
   editId=null;thumbBlob=null;$('f').reset();$('date').value=today();$('pub').checked=true;
   $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭하거나 이미지를 끌어다 놓기 (jpg·png·webp)';
-  $('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none'}
+  refreshPrompt();$('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none'}
 $('drop').onclick=()=>$('file').click();
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{thumbBlob=await toBlob(f);$('prev').src=URL.createObjectURL(thumbBlob);$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'}catch(_){toast('이미지를 읽을 수 없습니다.',1)}};
@@ -155,9 +158,21 @@ $('f').onsubmit=async e=>{e.preventDefault();const d=fields(),m=check(d);if(m)re
     const cur=editId?posts.find(x=>x.id===editId):null;
     if(thumbBlob){d.thumb=await uploadThumb(thumbBlob);if(cur)await NewsAuth.removeFile(cur.thumb)}
     else if(!cur)d.thumb=DEF;
-    if(editId)await NewsAuth.rest('PATCH','posts?id=eq.'+editId,d);else await NewsAuth.rest('POST','posts',d);
+    if(editId)await NewsAuth.rest('PATCH','posts?id=eq.'+editId,d);else await NewsAuth.rest('POST','posts',{...d,body:''});
     toast(editId?'수정되었습니다.':(d.published?'등록되었습니다.':'비공개(검토 대기)로 저장되었습니다.'));reset();await load()
   }catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
+// ---- 원문 링크의 대표 이미지 가져오기 (서버 함수 /api/og-image 가 대신 내려받는다. 로컬 화면에서는 배포 주소로 부른다)
+const OG_API=/^(127\.0\.0\.1|localhost)$/.test(location.hostname)?'https://jungwon-unius-homepage.vercel.app':'';
+async function fetchOg(link){
+  const t=await NewsAuth.token();
+  const r=await fetch(OG_API+'/api/og-image?url='+encodeURIComponent(link),{headers:{Authorization:'Bearer '+t}});
+  if(!r.ok){let m='이미지를 가져오지 못했습니다.';try{m=(await r.json()).error||m}catch(_){}throw new Error(m)}
+  return r.blob()}
+$('ogb').onclick=async()=>{const link=$('link').value.trim();
+  if(!/^https?:\/\//i.test(link))return toast('먼저 원문 링크를 입력해 주세요.',1);
+  $('ogb').disabled=true;$('ogb').textContent='가져오는 중…';
+  try{thumbBlob=await toBlob(await fetchOg(link));$('prev').src=URL.createObjectURL(thumbBlob);$('drop').classList.add('has');$('dropTx').textContent='원문 이미지를 가져왔습니다 (다른 이미지로 바꾸려면 클릭)';toast('원문 이미지를 가져왔습니다. 등록하면 썸네일로 저장됩니다.')}
+  catch(err){toast(err.message||'이미지를 가져오지 못했습니다.',1)}finally{$('ogb').disabled=false;$('ogb').textContent='원문에서 이미지 가져오기'}};
 async function replaceThumb(p,f){
   try{const url=await uploadThumb(await toBlob(f));await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{thumb:url});await NewsAuth.removeFile(p.thumb);toast('썸네일이 교체되었습니다.');await load()}
   catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}}
@@ -173,6 +188,9 @@ function imgPrompt(p){
     '[스타일] 깔끔한 실사 사진 느낌, 밝고 신뢰감 있는 톤. 짙은 녹색(#003C24)을 포인트 색으로 은은하게 사용. 제약·의료·비즈니스 분위기.',
     '[구도] 기사 내용을 상징하는 장면 하나만, 단순하고 여백 있는 구도. 가로형(4:3에 가깝게), 중요한 대상은 가운데에 배치.',
     '[금지] 글자, 숫자, 로고, 워터마크, 실존 인물이나 특정 기업·제품을 알아볼 수 있는 요소는 넣지 마세요.'].filter((l,i,a)=>l!==''||a[i-1]!=='').join('\n')}
+function refreshPrompt(){const t=$('title').value.trim(),s=$('summary').value;$('gprompt').value=t?imgPrompt({title:t,summary:s}):'제목을 입력하면 이미지 프롬프트가 여기에 자동으로 만들어집니다.'}
+$('title').addEventListener('input',refreshPrompt);$('summary').addEventListener('input',refreshPrompt);
+$('copyp').onclick=async()=>{if(!$('title').value.trim())return toast('먼저 제목을 입력해 주세요.',1);toast(await copyText($('gprompt').value)?'프롬프트를 복사했습니다. ChatGPT에 붙여넣으세요.':'복사하지 못했습니다. 브라우저 권한을 확인해 주세요.',!1)};
 async function copyText(t){
   try{await navigator.clipboard.writeText(t);return true}catch(_){}
   const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();
@@ -195,6 +213,8 @@ $('drop').addEventListener('drop',async e=>{if(!hasFiles(e))return;e.preventDefa
   try{thumbBlob=await toBlob(f);$('prev').src=URL.createObjectURL(thumbBlob);$('drop').classList.add('has');$('dropTx').textContent='다른 이미지로 바꾸려면 클릭'}catch(_){toast('이미지를 읽을 수 없습니다.',1)}});
 
 $('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.o){const p=posts.find(x=>x.id==b.dataset.o);b.disabled=true;toast('원문 이미지를 가져오는 중…');
+    try{await replaceThumb(p,await fetchOg(p.link))}catch(err){toast(err.message,1)}finally{b.disabled=false}return}
   if(b.dataset.c){const p=posts.find(x=>x.id==b.dataset.c);toast(await copyText(imgPrompt(p))?'이미지 문구를 복사했습니다. ChatGPT에 붙여넣으세요.':'복사하지 못했습니다. 브라우저 권한을 확인해 주세요.',false);return}
   if(b.dataset.t){thumbTarget=b.dataset.t;$('tfile').click();return}
   if(b.dataset.p){const p=posts.find(x=>x.id==b.dataset.p);
@@ -202,9 +222,9 @@ $('items').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
     const pubNow=!p.published,patch={published:pubNow};if(pubNow&&p.auto)patch.date=today();
     try{await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,patch);toast(p.published?'비공개로 바꿨습니다.':(patch.date?'공개했습니다. (날짜: '+patch.date.replace(/-/g,'.')+')':'공개했습니다.'));await load()}catch(err){toast(err.message,1)}return}
   if(b.dataset.e){const p=posts.find(x=>x.id==b.dataset.e);editId=p.id;thumbBlob=null;
-    $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('body').value=p.body||'';$('source').value=p.source||'';$('link').value=p.link||'';$('pub').checked=!!p.published;
+    $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('source').value=p.source||'';$('link').value=p.link||'';$('pub').checked=!!p.published;
     $('prev').src=p.thumb||DEF;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
-    $('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';scrollTo({top:0,behavior:'smooth'});return}
+    refreshPrompt();$('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';scrollTo({top:0,behavior:'smooth'});return}
   if(b.dataset.d){const p=posts.find(x=>x.id==b.dataset.d);if(!confirm('“'+p.title+'” 글을 삭제할까요?'))return;
     // 삭제한 글이 자동 등록으로 다시 올라오지 않도록 원문 링크·제목을 먼저 기록해 둔다(이미 있으면 무시)
     let noted=true;

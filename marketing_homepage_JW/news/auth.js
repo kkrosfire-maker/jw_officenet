@@ -25,6 +25,7 @@
   function hdr(t, extra) { var h = { apikey: cfg.anonKey, Authorization: 'Bearer ' + t }; for (var k in (extra || {})) h[k] = extra[k]; return h; }
   window.NewsAuth = {
     hasSession: function () { return !!read(); },
+    token: token,
     email: function () { return (read() || {}).email || ''; },
     signIn: function (email, pw) { return authCall('password', { email: email, password: pw }).then(function (j) { write(pack(j)); }); },
     signOut: function () { write(null); },
