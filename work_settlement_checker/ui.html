@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정산 알림</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f8f5; --card:#fff; --ink:#0d1a14; --sub:#5d6b64; --line:#e3e9e4;
+  --brand:#003C24; --brand-soft:#e6efe9; --g2:#0a5a38; --g3:#1f8a5b; --lime:#c8f169;
+  --blue:#1565c0; --late:#c62828; --late-soft:#fdecec; --today:#e65100; --today-soft:#fff3e6;
+  --ok:#2e7d32; --ok-soft:#e8f5e9; --warn:#8a6d00; --warn-soft:#fff8dc;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Pretendard Variable",Pretendard,"Malgun Gothic","Segoe UI",sans-serif;letter-spacing:-.01em;display:flex;flex-direction:column}
+select,button{font:inherit}
+select{padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:#fff}
+button{padding:7px 16px;border:1px solid var(--line);border-radius:99px;background:#fff;cursor:pointer}
+button:hover{background:var(--brand-soft)}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+button.primary:hover{background:var(--g2)}
+button.primary{color:var(--lime);font-weight:700}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px 0;flex:none}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:6px}
+.brand img{width:40px;height:40px;border-radius:8px}
+.brand b{display:block;font-size:18px;line-height:1.1;font-weight:800;color:var(--brand)}
+.brand small{display:block;font-size:10px;letter-spacing:.2em;font-weight:700;color:var(--g3)}
+h1{font-size:15px;margin:0 10px 0 0;padding-left:14px;border-left:2px solid var(--line);font-weight:800;letter-spacing:.02em}
+.eyebrow{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.28em;font-weight:800;color:var(--g3)}
+.eyebrow:before{content:"";width:28px;height:2px;background:var(--g3)}
+.spacer{flex:1}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{padding:5px 14px;border-radius:999px;font-weight:700;background:var(--bg);border:2px solid transparent;cursor:pointer}
+.chip:hover{filter:brightness(.96)}
+.chip.on{border-color:currentColor}
+.chip.late{background:var(--late-soft);color:var(--late)}
+.chip.today{background:var(--today-soft);color:var(--today)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.mid{background:var(--brand);color:var(--lime)}
+.chip.mid{background:var(--brand-soft);color:var(--brand)}
+nav{display:flex;gap:4px;margin-top:6px}
+nav button{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:7px 16px;color:var(--sub);font-weight:700}
+nav button.on{color:var(--brand);border-bottom-color:var(--g3)}
+nav .badge{background:var(--late);color:#fff;border-radius:999px;padding:0 7px;margin-left:4px;font-size:12px}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:1fr;gap:0}
+.body.open{grid-template-columns:1fr 470px}
+main{padding:14px 20px;overflow:auto;min-width:0;display:flex;flex-direction:column}
+aside{display:none;background:var(--card);border-left:1px solid var(--line);overflow:hidden;padding:14px 16px 0;min-height:0}
+.body.open aside{display:flex;flex-direction:column}
+.body{overflow:hidden}
+.tree{flex:1;min-height:0;overflow:auto;padding:0 4px 16px 0}
+.imgbtn{margin-left:6px;padding:1px 8px;font-size:12px;border-radius:99px;display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+.imgbtn svg{width:14px;height:14px;flex:none}
+.order .imgbtn{margin:0;white-space:nowrap;padding:5px 12px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--brand);color:var(--lime);padding:10px 18px;border-radius:99px;font-weight:700;z-index:9;display:none;max-width:90vw}
+body.dragging::after{content:"작업 엑셀(.xlsx) 또는 마감표 이미지(.png·.jpg)를 여기에 놓으세요";position:fixed;inset:12px;border:3px dashed var(--g3);border-radius:18px;background:rgba(230,239,233,.92);color:var(--brand);font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:50;pointer-events:none}
+.alert{background:var(--late-soft);color:var(--late);padding:10px 14px;border-radius:8px;margin-bottom:12px}
+.alert.info{background:var(--brand-soft);color:var(--brand)}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.bar .hint{color:var(--sub);font-size:13px}
+
+/* 달력 */
+.cal{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal .h{text-align:center;font-weight:700;color:var(--sub);padding:2px}
+
+.cell{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 10px;min-height:150px;cursor:default;overflow:hidden}
+.cell.has{cursor:pointer}
+.cell.has:hover{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+.cell.sel{outline:3px solid var(--brand)}
+.cell.off{background:transparent;border:1px dashed var(--line)}
+.cell{display:flex;flex-direction:column;padding:0;border:1.5px solid #cfdcd2}
+.cell .hd{background:#eaf2ec;border-bottom:1.5px solid #cfdcd2;padding:6px 10px;flex:none}
+.cell .bd{padding:8px 10px;flex:1;min-height:0;overflow:hidden;background:#fff}
+.cell.off{border:1px dashed var(--line);background:transparent}
+.cell.today .hd{background:var(--lime)}
+.cal .h{background:var(--brand);color:#fff;border-radius:99px;padding:6px;letter-spacing:.1em}
+.cell .n{font-size:17px;font-weight:800;display:inline-block}
+.cell.today .n{color:var(--lime);background:var(--brand);border-radius:999px;display:inline-block;min-width:28px;text-align:center}
+.cell.sun .n{color:var(--late)} .cell.sat .n{color:var(--brand)}
+.cell.today.sun .n,.cell.today.sat .n{color:var(--lime)}
+.cell .se{margin-left:6px;font-size:12px;font-weight:800;color:var(--g3);letter-spacing:.02em} .cell .se.end{color:var(--late)}
+.cell .pend,.cell .ml,.cell .dn,.cell .allok{display:block;margin-top:4px;padding:5px 9px;border-radius:6px}
+.cell .pend{font-weight:800;font-size:14px}
+.cell .pend .late-tag{font-size:70%;font-weight:400}      /* (기한지남): 미처리 글자의 70% 크기, 볼드 없음 */
+.cell .fr{font-size:12px;font-weight:600;color:var(--sub);margin-left:6px}
+.cell .pend.p{color:var(--today);background:#ffe8d2} .cell .pend.l{color:var(--late);background:#fcd9d6}
+.cell .ml{font-size:14px;color:var(--ink);background:#fdecea;margin-top:2px}
+.cell .ml b{color:var(--late)}
+.cell .ml.p{background:#fff2e4} .cell .ml.p b{color:var(--today)}
+.cell .dn{font-size:13px;color:var(--ok);font-weight:700;background:#e6f4e8}
+.cell .nt{margin-top:4px;font-size:12px;background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:1px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .allok{color:var(--ok);font-weight:800;background:#d6ecd9}
+
+/* 담당자별 */
+.mgrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer;user-select:none}
+.mcard:hover{border-color:var(--brand)}
+.mcard.sel{outline:3px solid var(--brand)}
+.mcard h3{margin:0 0 6px;font-size:17px}
+.mcard .big{font-size:26px;font-weight:800;color:var(--today)}
+.mcard .big small{font-size:13px;font-weight:600;color:var(--sub)}
+.mcard .row{color:var(--sub);font-size:13px}
+.mcard .row b.late{color:var(--late)} .mcard .row b.today{color:var(--today)}
+.mcard.zero .big{color:var(--ok)}
+
+/* 상세 패널 */
+.dh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dh h2{font-size:16px;margin:0;flex:1}
+.x{padding:2px 9px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tag{background:var(--brand-soft);color:var(--brand);border-radius:999px;padding:2px 6px 2px 10px;font-size:12px;font-weight:700}
+.tag button{border:none;background:none;padding:0 4px;color:inherit}
+.scopes{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.scopes button{padding:3px 9px;font-size:12px}
+.scopes button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.order{display:flex;gap:8px;align-items:center;margin-bottom:10px;color:var(--sub);font-size:13px}
+.order select{flex:1}
+.notice{padding:6px 10px;background:var(--warn-soft);color:var(--warn);border-radius:6px;margin-bottom:8px}
+details.g{border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
+details.g details.g{margin:4px 8px 6px;border-color:#eef1f5}
+details.g>summary{cursor:pointer;padding:6px 10px;font-weight:700;list-style:none;display:flex;gap:8px;align-items:baseline}
+details.g>summary::-webkit-details-marker{display:none}
+details.g>summary::before{content:"▸";color:var(--sub)}
+details.g[open]>summary::before{content:"▾"}
+summary .cnt{margin-left:auto;font-weight:600;color:var(--sub);font-size:12px;white-space:nowrap}
+summary .cnt em{font-style:normal;color:var(--today);font-weight:800}
+summary .cnt em.l{color:var(--late)}
+summary .meta{font-weight:600;color:var(--sub);font-size:12px}
+.leaf{display:flex;gap:8px;padding:3px 12px;align-items:baseline;border-top:1px dashed var(--line)}
+.leaf .st{width:14px;flex:none;text-align:center}
+.leaf .nm{flex:1}
+.leaf .mt{color:var(--sub);font-size:12px;white-space:nowrap}
+.leaf.done{color:var(--sub)} .leaf.done .st{color:var(--ok)}
+.leaf.p .st{color:var(--today)} .leaf.l .st{color:var(--late)}
+.leaf .hr{background:var(--today-soft);color:var(--today);border-radius:4px;padding:0 5px;font-weight:700}
+.leaf .hr.past{background:var(--late-soft);color:var(--late)}
+.leaf .lg{color:var(--late);font-size:12px;font-weight:700}
+.leaf .lg.full{color:var(--blue)}
+.leaf .carry{padding:0 8px;font-size:11px;border-radius:99px;line-height:20px;white-space:nowrap}
+.mini.cr{color:var(--g2);background:var(--brand-soft);font-weight:700}
+.mini{color:var(--sub);font-size:12px;background:var(--bg);border-radius:4px;padding:0 5px}
+.empty{color:var(--sub);padding:24px;text-align:center}
+
+/* 확인 필요 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:15px}
+table{border-collapse:collapse;width:100%}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="brand"><img alt="" src="data:image/png;base64,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"><div><b>정원유니어스</b><small>JUNGWON UNIUS</small></div></div><h1>정산 알림</h1>
+    <select id="month"></select>
+    <button class="primary" id="btnImport">마감표 이미지 불러오기</button>
+    <button id="btnExport" title="원본 마감표 이미지의 제목 '지에스파마'를 '정원유니어스(주)'로 바꿔 저장하고 클립보드에 복사">마감표 이미지 내보내기</button>
+    <button id="btnRefresh">새로고침</button>
+    <button id="btnWork" title="작업 엑셀 선택 (엑셀·마감표 이미지는 창에 끌어다 놓아도 됩니다)">작업 엑셀</button>
+    <span class="spacer"></span>
+    <span id="stamp" style="color:var(--sub)"></span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <nav id="nav"></nav>
+</header>
+<div class="body" id="body">
+  <main id="main"></main>
+  <aside id="side"></aside>
+  <div id="toast"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DOW = ["일","월","화","수","목","금","토"];
+const COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M8 8V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-3"/></svg>`;   // 복사 아이콘(네모 두 개가 대각선으로 겹침)
+const ORDERS = {mgr: "담당자 > 제약사 > 병원", pharma: "제약사 > 병원", hosp: "병원 > 제약사"};
+const SCOPES = [["all","전체"],["pending","미처리"],["done","완료"]];     // 버튼 순서(클릭하면 기본으로 미처리가 먼저 열린다)
+let S = null, tab = "cal", mgr = "", busy = false, showDoneMgrs = false;
+let F = null;            // 상세 패널 조건 {scope, date, manager}. null이면 패널 닫힘
+let order = (() => { try { return localStorage.getItem("order") || "mgr"; } catch (e) { return "mgr"; } })();
+if (!ORDERS[order]) order = "mgr";
+
+async function call(name, ...args) {
+  if (window.pywebview) {
+    while (!window.pywebview.api) await new Promise(r => setTimeout(r, 50));
+    return await window.pywebview.api[name](...args);
+  }
+  const r = await fetch("/api/" + name, {method: "POST", body: JSON.stringify(args)});
+  return await r.json();
+}
+let lastJson = "";
+async function load(y, m, quiet) {
+  const ns = await call("state", y || null, m || null);
+  const j = JSON.stringify(ns);
+  S = ns;
+  if (quiet && j === lastJson) return;          // 자동 새로고침: 바뀐 게 없으면 화면(열어둔 목록)을 건드리지 않음
+  lastJson = j;
+  $("#stamp").textContent = new Date().toLocaleTimeString("ko-KR", {hour: "2-digit", minute: "2-digit"}) + " 기준";
+  render();
+}
+
+const pad = n => String(n).padStart(2, "0");
+const isoOf = d => `${S.year}-${pad(S.month)}-${pad(d)}`;
+function d2(iso) { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); }
+function diffDays(iso) { return Math.round((d2(iso) - d2(S.today)) / 86400000); }
+function dlabel(iso) { const d = d2(iso); return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]})`; }
+function ddText(n) { return n === 0 ? "오늘" : n === 1 ? "내일" : n > 0 ? `D-${n}` : `${-n}일 지남`; }
+const isLate = i => !i.done && i.date < S.today;
+const isToday = i => !i.done && i.date === S.today;
+const SCOPE_FN = {all: () => true, pending: i => !i.done, done: i => i.done, overdue: isLate, today: isToday};
+const base = () => S.view.items.filter(i => !mgr || i.manager === mgr);
+
+/* ---------- 머리말 ---------- */
+function renderHead() {
+  const v = S.view, s = v.summary, cur = F && !F.date && !F.manager ? F.scope : null;
+  $("#month").innerHTML = S.months.map(([y, m]) => `<option value="${y}-${m}" ${y === S.year && m === S.month ? "selected" : ""}>${y}년 ${m}월</option>`).join("");
+  const chip = (scope, cls, text) => `<span class="chip ${cls} ${cur === scope ? "on" : ""}" data-chip="${scope}">${text}</span>`;
+  $("#chips").innerHTML = S.has_deadlines ? chip("pending", s.pending ? "today" : "ok", `미처리 ${s.pending}`) + chip("all", "mid", `이번 달 ${s.total}건`) + chip("done", "ok", `완료 ${s.done}`) : "";
+  const need = v.unlinked.filter(u => u.garbled).length + v.missing.filter(m => m.pending).length;
+  $("#nav").innerHTML = [["cal", "달력"], ["mgr", "담당자별"], ["fix", "확인 필요" + (need ? `<span class="badge">${need}</span>` : "")]]
+    .map(([k, t]) => `<button class="${tab === k ? "on" : ""}" data-tab="${k}">${t}</button>`).join("");
+}
+
+/* ---------- 달력 ---------- */
+function calHtml() {
+  const items = base(), v = S.view;
+  const first = new Date(S.year, S.month - 1, 1), dim = new Date(S.year, S.month, 0).getDate();
+  const lastDay = v.last_day || dim;                      // 마지막 마감이 든 주까지만 그린다
+  const weeks = Math.ceil((first.getDay() + lastDay) / 7);
+  const wk = v.items.map(i => i.day).some(d => [0, 6].includes(new Date(S.year, S.month - 1, d).getDay()));  // 주말에 마감이 있을 때만 토·일 칸을 둔다
+  const cols = wk ? 7 : 5, show = c => wk || (c % 7 !== 0 && c % 7 !== 6);
+  const mgrSel = `<select id="mgrSel"><option value="">담당자 전체</option>${v.managers.map(m => `<option ${m === mgr ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>`;
+  let html = `<div class="bar"><span class="eyebrow">DEADLINE CALENDAR</span>${mgrSel}<span class="hint">날짜 칸을 누르면 오른쪽에 상세가 열립니다</span></div><div class="cal" style="grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:auto repeat(${weeks},minmax(170px,1fr))">` +
+    DOW.map((d, i) => show(i) ? `<div class="h ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${d}</div>` : "").join("");
+  for (let c = 0; c < weeks * 7; c++) {
+    if (!show(c)) continue;
+    const d = c - first.getDay() + 1;
+    if (d < 1 || d > dim) { html += `<div class="cell off"></div>`; continue; }
+    const iso = isoOf(d), it = items.filter(i => i.date === iso), pend = it.filter(i => !i.done), dn = it.length - pend.length;
+    const dow = c % 7, n = diffDays(iso);
+    const byM = {}; pend.forEach(i => byM[i.manager] = (byM[i.manager] || 0) + 1);
+    const ml = Object.entries(byM).sort((a, b) => b[1] - a[1]);
+    const has = it.length;
+    const cls = [iso === S.today ? "today" : "", dow === 0 ? "sun" : dow === 6 ? "sat" : "", has ? "has" : "", F && F.date === iso ? "sel" : ""].join(" ");
+    html += `<div class="cell ${cls}" ${has ? `data-day="${iso}"` : ""}><div class="hd"><div class="n">${d}</div>${it.length ? `<span class="fr" title="완료 / 전체">${dn}/${it.length}</span>` : ""}${d === v.first_day ? `<span class="se">(통계시작)</span>` : ""}${d === v.last_day ? `<span class="se end">(통계끝)</span>` : ""}</div><div class="bd">` +
+      (pend.length ? `<div class="pend ${n < 0 ? "l" : "p"}">미처리 ${pend.length}${n < 0 ? ` <span class="late-tag">(기한지남)</span>` : ""}</div>` +
+        ml.slice(0, 4).map(([m, k]) => `<div class="ml ${n < 0 ? "" : "p"}">${esc(m)} <b>${k}</b></div>`).join("") + (ml.length > 4 ? `<div class="ml">외 ${ml.length - 4}명…</div>` : "")
+        : (dn ? `<div class="allok">모두 완료 ✔</div>` : "")) +
+      (dn && pend.length ? `<div class="dn">완료 ${dn}</div>` : dn ? `<div class="dn">${dn}건</div>` : "") +
+      `</div></div>`;
+  }
+  return html + `</div>`;
+}
+
+/* ---------- 담당자별 ---------- */
+function mgrHtml() {
+  const items = S.view.items, g = {};
+  items.forEach(i => { const o = g[i.manager] = g[i.manager] || {name: i.manager, pend: 0, late: 0, today: 0, pharmas: new Set(), first: null, done: 0};
+    if (i.done) o.done++; else { o.pend++; o.pharmas.add(i.pharma); if (isLate(i)) o.late++; if (isToday(i)) o.today++; if (!o.first || i.date < o.first) o.first = i.date; } });
+  let list = Object.values(g).sort((a, b) => b.late - a.late || b.pend - a.pend || a.name.localeCompare(b.name, "ko"));
+  const hidden = list.filter(o => !o.pend).length;
+  if (!showDoneMgrs) list = list.filter(o => o.pend);
+  let html = `<div class="bar"><b>미처리가 남은 담당자 ${list.filter(o => o.pend).length}명</b>
+    <label style="color:var(--sub)"><input type="checkbox" id="showDone" ${showDoneMgrs ? "checked" : ""}> 모두 완료한 담당자(${hidden}명)도 보기</label>
+    <span class="hint">담당자를 더블클릭하면 오른쪽에 상세가 열립니다</span></div>`;
+  if (!list.length) return html + `<div class="empty">미처리 담당자가 없습니다 ✔</div>`;
+  return html + `<div class="mgrs">` + list.map(o => `<div class="mcard ${o.pend ? "" : "zero"} ${F && F.manager === o.name ? "sel" : ""}" data-mgr="${esc(o.name)}">
+    <h3>${esc(o.name)}</h3>
+    <div class="big">${o.pend ? o.pend : "✔"}<small> ${o.pend ? "건 미처리" : "모두 완료"}</small></div>
+    <div class="row">제약사 ${o.pharmas.size}곳${o.late ? ` · <b class="late">기한 지남 ${o.late}</b>` : ""}${o.today ? ` · <b class="today">오늘 ${o.today}</b>` : ""}</div>
+    <div class="row">${o.first ? `가장 빠른 마감 ${dlabel(o.first)}` : ""}${o.done ? ` · 완료 ${o.done}` : ""}</div></div>`).join("") + `</div>`;
+}
+
+/* ---------- 상세 패널 ---------- */
+function groupBy(arr, key) { const m = new Map(); arr.forEach(x => { const k = key(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }); return [...m.entries()]; }
+function counts(items) { const p = items.filter(i => !i.done).length, l = items.filter(isLate).length; return `<span class="cnt">${p ? `미처리 <em class="${l ? "l" : ""}">${p}</em>${items.length - p ? ` · 완료 ${items.length - p}` : ""}` : `완료 ✔ ${items.length}`}</span>`; }
+const hourTag = i => i.hour == null ? "" : `<span class="hr ${i.date < S.today || (i.date === S.today && i.hour <= S.hour) ? "past" : ""}">${i.hour}시</span>`;
+const dateTag = i => `${dlabel(i.date)}`;
+const part = i => i.total > 1 ? `<span class="lg ${i.done_n >= i.total ? "full" : ""}">${i.done_n}/${i.total}장</span>` : "";   // 다 들어오면 파랑, 모자라면 빨강
+const fixed = i => i.how === "fixed" ? `<span class="mini" title="마감표 글자: ${esc(i.raw)}">자동보정</span>` : "";
+function leaf(i, name, meta) {
+  const st = i.done ? "✔" : isLate(i) ? "!" : "●", cls = i.done ? "done" : isLate(i) ? "l" : "p";
+  const cr = i.carried_n ? `<span class="mini cr">${i.carried_n >= i.total ? "통계이월" : `이월 ${i.carried_n}`}</span>` : "";
+  const btn = i.done ? "" : `<button class="carry" data-carry="${S.view.items.indexOf(i)}" title="이번 달 통계를 내지 않고 다음 달로 넘김 (엑셀 상태=통계이월, 특이사항 기록)">통계이월</button>`;
+  return `<div class="leaf ${cls}"><span class="st">${st}</span><span class="nm">${name} ${part(i)} ${cr}</span><span class="mt">${meta} ${hourTag(i)}</span>${btn}</div>`;
+}
+function treeHtml(items) {
+  const big = items.length > 60;
+  const sortI = (a, b) => a.date.localeCompare(b.date) || (a.hour ?? 99) - (b.hour ?? 99) || a.pharma.localeCompare(b.pharma, "ko");
+  items = items.slice().sort(sortI);
+  const det = (open, head, cnt, body) => `<details class="g" ${open ? "open" : ""}><summary>${head}${cnt}</summary>${body}</details>`;
+  if (order === "mgr") {
+    return groupBy(items, i => i.manager).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([m, mi]) => det(!big, esc(m), counts(mi),
+      groupBy(mi, i => i.pharma + "|" + i.date).map(([, pi]) => det(true, `${esc(pi[0].pharma)} ${fixed(pi[0])}<span class="meta">${dateTag(pi[0])} ${hourTag(pi[0])}</span>`, counts(pi),
+        pi.map(i => leaf(i, esc(i.hospital), "")).join(""))).join(""))).join("");
+  }
+  if (order === "pharma") {
+    return groupBy(items, i => i.pharma + "|" + i.date).map(([, pi]) => det(!big, `${esc(pi[0].pharma)} ${fixed(pi[0])}<span class="meta">${dateTag(pi[0])} ${hourTag(pi[0])}</span>`, counts(pi),
+      pi.map(i => leaf(i, esc(i.hospital), esc(i.manager))).join(""))).join("");
+  }
+  return groupBy(items, i => i.hospital).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([h, hi]) => det(!big, `${esc(h)}<span class="meta">${esc([...new Set(hi.map(i => i.manager))].join(", "))}</span>`, counts(hi),
+    hi.map(i => leaf(i, `${esc(i.pharma)} ${fixed(i)}`, dateTag(i))).join(""))).join("");
+}
+function sideHtml() {
+  const f = F, scopeName = Object.fromEntries(SCOPES);
+  let items = S.view.items.filter(SCOPE_FN[f.scope]);
+  if (f.date) items = items.filter(i => i.date === f.date);
+  if (f.manager) items = items.filter(i => i.manager === f.manager);
+  const tags = [f.date ? `<span class="tag">${dlabel(f.date)} <button data-clr="date">✕</button></span>` : "",
+    f.manager ? `<span class="tag">${esc(f.manager)} <button data-clr="manager">✕</button></span>` : ""].join("");
+  const nts = "";                                         // 마감표의 안내 문구(코드등록도 마감 등)는 어느 제약사인지 알 수 없어 표시하지 않는다
+  const title = f.date ? `${dlabel(f.date)} ${ddText(diffDays(f.date))}` : f.manager ? `${f.manager}` : scopeName[f.scope];
+  return `<div class="dh"><h2>${esc(title)} <small style="color:var(--sub);font-weight:600">${items.length}건</small></h2><button class="x" data-close="1">✕</button></div>
+    ${tags ? `<div class="tags">${tags}</div>` : ""}
+    <div class="scopes">${SCOPES.map(([k, t]) => `<button class="${f.scope === k ? "on" : ""}" data-scope="${k}">${t}</button>`).join("")}</div>
+    <div class="order"><span>표기 순서</span><select id="orderSel">${Object.entries(ORDERS).map(([k, t]) => `<option value="${k}" ${order === k ? "selected" : ""}>${t}</option>`).join("")}</select>${items.length ? `<button class="imgbtn" data-img="all" title="오른쪽 내용 전체를 이미지 한 장으로 복사">${COPY_ICON} 전체 이미지</button>` : ""}</div>
+    <div class="tree" id="tree">${nts}${items.length ? treeHtml(items) : `<div class="empty">해당하는 건이 없습니다.</div>`}</div>`;
+}
+
+/* ---------- 이미지 내보내기 (카톡용) ---------- */
+function toast(msg, ms = 4500) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", ms); }
+function collectLines(det, depth, out) {            // 화면의 묶음(details)을 줄 목록으로 푼다
+  const sm = det.querySelector(":scope > summary").cloneNode(true);
+  const cnt = sm.querySelector(".cnt"), right = cnt ? cnt.textContent.trim() : "";
+  sm.querySelectorAll(".cnt,.imgbtn").forEach(x => x.remove());
+  out.push({kind: "g", depth, left: sm.textContent.replace(/\s+/g, " ").trim(), right});
+  [...det.children].forEach(c => {
+    if (c.matches("details.g")) collectLines(c, depth + 1, out);
+    else if (c.classList.contains("leaf")) out.push({kind: "leaf", depth: depth + 1, st: c.classList.contains("done") ? "done" : c.classList.contains("l") ? "l" : "p",
+      left: c.querySelector(".nm").textContent.replace(/\s+/g, " ").trim(), right: c.querySelector(".mt").textContent.replace(/\s+/g, " ").trim()});
+  });
+  return out;
+}
+async function exportImage(which) {
+  const tops = [...document.querySelectorAll("#tree > details.g")];
+  const sel = which === "all" ? tops : [tops[+which]];
+  const lines = []; sel.forEach(d => collectLines(d, 0, lines));
+  const f = F, scopeName = Object.fromEntries(SCOPES);
+  const sub = [f.date ? dlabel(f.date) : "", f.manager || "", scopeName[f.scope], ORDERS[order]].filter(Boolean).join("  ·  ");
+  const first = lines[0].left.split(" ")[0];
+  try { await document.fonts.load('700 16px "Pretendard Variable"'); } catch (e) {}
+  const FONT = '"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif', W = 720, SC = 2, PAD = 24, RH = 38, HH = 96;
+  const cv = document.createElement("canvas"), ctx = cv.getContext("2d");
+  const H = HH + lines.length * RH + 20 + 38;
+  cv.width = W * SC; cv.height = H * SC; ctx.scale(SC, SC);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#003C24"; ctx.fillRect(0, 0, W, HH);
+  ctx.fillStyle = "#c8f169"; ctx.font = `800 12px ${FONT}`; ctx.fillText("JUNGWON UNIUS  ·  정산 알림", PAD, 30);
+  ctx.fillStyle = "#fff"; ctx.font = `800 24px ${FONT}`; ctx.fillText(`${S.year}년 ${S.month}월 통계 마감`, PAD, 62);
+  ctx.fillStyle = "#cfe6d6"; ctx.font = `600 13px ${FONT}`; ctx.fillText(sub, PAD, 84);
+  const rr = (x, y, w, h, r, fill) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fillStyle = fill; ctx.fill(); };
+  const fit = (t, mw) => { while (t.length > 1 && ctx.measureText(t).width > mw) t = t.slice(0, -1); return t; };
+  const col = {done: ["#e6f4e8", "#2e7d32"], l: ["#fcd9d6", "#c62828"], p: ["#ffe8d2", "#e65100"]};
+  let y = HH + 14;
+  lines.forEach(ln => {
+    const x = PAD + ln.depth * 18, w = W - PAD - x, g = ln.kind === "g";
+    rr(x, y, w, RH - 6, 8, g ? (ln.depth ? "#eef4ef" : "#d6ecd9") : col[ln.st][0]);
+    ctx.textAlign = "right"; ctx.font = `600 13px ${FONT}`;
+    const rw = ln.right ? ctx.measureText(ln.right).width + 12 : 0;
+    if (ln.right) { ctx.fillStyle = "#4a5a52"; ctx.fillText(ln.right, x + w - 12, y + 21); }
+    ctx.textAlign = "left";
+    if (!g) { ctx.fillStyle = col[ln.st][1]; ctx.font = `800 14px ${FONT}`; ctx.fillText(ln.st === "done" ? "✔" : ln.st === "l" ? "!" : "●", x + 12, y + 21); }
+    const lx = x + (g ? 12 : 32);
+    ctx.font = g ? `800 15px ${FONT}` : `600 14px ${FONT}`; ctx.fillStyle = g ? "#003C24" : "#0d1a14";
+    ctx.fillText(fit(ln.left, w - (lx - x) - rw - 8), lx, y + 21);
+    y += RH;
+  });
+  ctx.fillStyle = "#8a968f"; ctx.font = `500 11px ${FONT}`; ctx.fillText(`정원유니어스 · ${new Date().toLocaleString("ko-KR")} 기준`, PAD, H - 14);
+  const name = which === "all" ? `${S.month}월마감_${f.date ? d2(f.date).getDate() + "일" : scopeName[f.scope]}` : `${S.month}월마감_${first}`;
+  const r = await call("save_image", cv.toDataURL("image/png"), name);
+  toast(r && r.ok ? `이미지 ${r.clip ? "복사됨 — 카톡 입력창에서 Ctrl+V" : "저장됨"}  (${r.path})` : `이미지 저장 실패: ${r && r.error}`, 7000);
+}
+
+/* ---------- 통계이월 (작업 엑셀에 씀) ---------- */
+async function carryOver(i) {
+  if (!i || busy) return;
+  if (!confirm(`${i.hospital} · ${i.pharma}\n\n이번 달 통계를 내지 않고 다음 달로 이월합니다.\n작업 엑셀의 상태를 '통계이월'로 바꾸고 특이사항에 'mm월 통계 다음달로 이월'을 적습니다.\n\n진행할까요?`)) return;
+  busy = true;
+  try {
+    const r = await call("carry_over", S.year, S.month, i.manager, i.hospital, i.pharma);
+    toast(r && r.ok ? `통계이월 처리: ${i.hospital} · ${i.pharma} (${r.count}줄)` : `통계이월 실패: ${r && r.error}`, 7000);
+    await load(S.year, S.month);
+  } finally { busy = false; }
+}
+
+/* ---------- 확인 필요 ---------- */
+function fixHtml() {
+  const v = S.view, miss = v.missing.filter(m => m.pending);
+  const opts = () => `<option value="">제약사 선택…</option>` + [...new Set([...miss.map(m => m.pharma), ...v.pharmas])].map(p => `<option>${esc(p)}</option>`).join("");
+  const row = (u, k) => `<tr><td>${S.month}/${u.day}</td><td><b>${esc(u.name)}</b>${u.hour ? ` (${u.hour}시)` : ""}</td>
+       <td><select data-sel="${k}">${opts()}</select></td><td><button data-link="${k}">연결</button> <button data-ign="${k}">거래 없음</button></td></tr>`;
+  const head = `<tr><th>날짜</th><th>마감표 이름</th><th>연결할 제약사</th><th></th></tr>`;
+  const all = v.unlinked.map((u, k) => [u, k]), bad = all.filter(([u]) => u.garbled), rest = all.filter(([u]) => !u.garbled);
+  return `<div class="card"><h3>이번 달 거래 제약사인데 마감일을 못 찾음 (${miss.length})</h3>` + (miss.length ?
+      `<p style="color:var(--sub);margin:0 0 8px">마감표에 다른 이름으로 적혀 있거나 읽기에 실패했을 수 있습니다. 아래 "참고" 목록에서 알맞은 이름을 찾아 연결해 주세요.</p>
+       <table><tr><th>제약사</th><th>미처리 건</th><th>병원 수</th></tr>${miss.map(m => `<tr><td>${esc(m.pharma)}</td><td>${m.pending}</td><td>${m.hospitals}</td></tr>`).join("")}</table>` : `<div style="color:var(--ok)">없음 ✔</div>`) + `</div>` +
+    `<div class="card"><h3>글자를 못 읽은 이름 (${bad.length})</h3>` + (bad.length ?
+      `<p style="color:var(--sub);margin:0 0 8px">마감표 이미지에서 이름이 깨져 읽혔습니다. 어느 제약사인지 골라 <b>연결</b>해 주세요.</p><table>${head}${bad.map(([u, k]) => row(u, k)).join("")}</table>` : `<div style="color:var(--ok)">없음 ✔</div>`) + `</div>` +
+    `<div class="card"><details><summary style="cursor:pointer;font-weight:700">참고: 이번 달 거래 병원이 없는 제약사 ${rest.length}곳 (대부분 정상 — 열어서 볼 필요 없음)</summary>
+      <p style="color:var(--sub);margin:8px 0">이름만 다르게 적힌 거라면(예: 한국맥널티 ↔ 맥널티제약) 제약사를 골라 <b>연결</b>하세요.</p><table>${head}${rest.map(([u, k]) => row(u, k)).join("")}</table></details></div>`;
+}
+
+/* ---------- 전체 ---------- */
+function render() {
+  renderHead();
+  let html = "";
+  if (S.error) html += `<div class="alert">${esc(S.error)} <button onclick="pickFile()">엑셀 직접 선택</button> <span style="color:var(--sub)">또는 엑셀 파일을 이 창에 끌어다 놓으세요</span></div>`;
+  if (!S.has_deadlines) html += `<div class="alert info">${S.year}년 ${S.month}월 마감표가 아직 없습니다. 위의 <b>마감표 이미지 불러오기</b>를 누르거나, 이미지를 이 창에 끌어다 놓으세요.</div>`;
+  html += tab === "cal" ? calHtml() : tab === "mgr" ? mgrHtml() : fixHtml();
+  $("#main").innerHTML = html;
+  $("#body").classList.toggle("open", !!F && tab !== "fix");
+  $("#side").innerHTML = F && tab !== "fix" ? sideHtml() : "";
+  document.querySelectorAll("#tree > details.g > summary").forEach((sm, k) => sm.insertAdjacentHTML("beforeend", `<button class="imgbtn" data-img="${k}" title="이 묶음만 이미지로 복사">${COPY_ICON}</button>`));
+}
+function openPanel(f) {
+  const scope = f.scope || "pending";
+  F = {scope, date: f.date || null, manager: f.manager || null};
+  if (F.scope === "pending" && (f.date || f.manager)) {      // 미처리가 하나도 없으면 전체를 보여준다
+    const probe = S.view.items.filter(i => (!F.date || i.date === F.date) && (!F.manager || i.manager === F.manager));
+    if (!probe.some(i => !i.done)) F.scope = "all";
+  }
+  render();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-chip],[data-tab],[data-day],[data-scope],[data-clr],[data-close],[data-mgr],[data-img],[data-carry]");
+  if (!t) return;
+  if (t.dataset.carry) { e.preventDefault(); carryOver(S.view.items[+t.dataset.carry]); return; }
+  if (t.dataset.img) { e.preventDefault(); e.stopPropagation(); exportImage(t.dataset.img); return; }
+  if (t.dataset.chip) { const same = F && !F.date && !F.manager && F.scope === t.dataset.chip; if (same) F = null; else F = {scope: t.dataset.chip, date: null, manager: null}; render(); }
+  else if (t.dataset.tab) { tab = t.dataset.tab; render(); }
+  else if (t.dataset.day) { openPanel({date: t.dataset.day, manager: mgr || null}); }
+  else if (t.dataset.scope) { F.scope = t.dataset.scope; render(); }
+  else if (t.dataset.clr) { F[t.dataset.clr] = null; render(); }
+  else if (t.dataset.close) { F = null; render(); }
+  else if (t.dataset.mgr) { document.querySelectorAll(".mcard").forEach(c => c.classList.toggle("sel", c === t)); }
+});
+document.addEventListener("dblclick", e => {
+  const t = e.target.closest("[data-mgr]");
+  if (!t) return;
+  order = "mgr"; try { localStorage.setItem("order", order); } catch (x) {}      // 담당자 > 제약사 > 병원으로 열고, 이후 자유롭게 변경
+  openPanel({manager: t.dataset.mgr});
+});
+document.addEventListener("change", e => {
+  const id = e.target.id;
+  if (id === "mgrSel") { mgr = e.target.value; render(); }
+  else if (id === "orderSel") { order = e.target.value; try { localStorage.setItem("order", order); } catch (x) {} render(); }
+  else if (id === "showDone") { showDoneMgrs = e.target.checked; render(); }
+});
+document.addEventListener("click", async e => {
+  const l = e.target.closest("[data-link]"), g = e.target.closest("[data-ign]");
+  if (l) { const k = +l.dataset.link, p = document.querySelector(`[data-sel="${k}"]`).value; if (!p) return; await call("link", S.view.unlinked[k].name, p); load(S.year, S.month); }
+  if (g) { await call("link", S.view.unlinked[+g.dataset.ign].name, "-"); load(S.year, S.month); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && F) { F = null; render(); } });
+
+async function pickFile() { onWorkFileDropped(await call("pick_work_file", S.year, S.month)); }
+// 작업 엑셀 등록 결과(찾아보기·끌어다 놓기 공용). 파이썬이 창에 파일이 놓였을 때 직접 부르기도 한다.
+async function onWorkFileDropped(r) {
+  document.body.classList.remove("dragging");
+  if (!r || r.cancelled) return;
+  if (!r.ok) { toast(`작업 엑셀 등록 실패: ${r.error}`, 8000); return; }
+  F = null;
+  await load(r.year, r.month);
+  toast(`${r.year}년 ${r.month}월 작업 엑셀: ${r.name} (${r.count}줄)`, 6000);
+}
+$("#btnWork").onclick = pickFile;
+// 마감표 이미지를 창에 끌어다 놓았을 때(파이썬이 부른다) — '마감표 이미지 불러오기' 버튼과 같은 처리
+function onImageDropStart() {
+  document.body.classList.remove("dragging"); busy = true;
+  const b = $("#btnImport"); b.textContent = "읽는 중… (약 10초)"; b.disabled = true;
+  toast("마감표 이미지를 읽는 중입니다… (약 10초)", 60000);
+}
+async function onImageDropped(r) {
+  busy = false; const b = $("#btnImport"); b.textContent = "마감표 이미지 불러오기"; b.disabled = false;
+  if (r && r.ok) { F = null; await load(r.year, r.month); toast(`${r.year}년 ${r.month}월 마감표를 불러왔습니다 (${r.count}건)`, 6000); }
+  else toast(`마감표를 읽지 못했습니다: ${r && r.error}`, 9000);
+}
+$("#btnExport").onclick = async () => {
+  if (busy) return; busy = true; const b = $("#btnExport"); b.disabled = true; b.textContent = "만드는 중…";
+  try {
+    const r = await call("export_schedule_image", S.year, S.month);
+    toast(r && r.ok ? `마감표 이미지 ${r.clip ? "복사됨 — 카톡 입력창에서 Ctrl+V" : "저장됨"}  (${r.path})` : `마감표 이미지 내보내기 실패: ${r && r.error}`, r && r.ok ? 8000 : 9000);
+  } finally { busy = false; b.disabled = false; b.textContent = "마감표 이미지 내보내기"; }
+};
+// 끌어다 놓기: 파일을 끌고 오면 안내를 띄우고(브라우저가 파일을 열어버리지 않게 기본 동작을 막는다), 실제 처리는 파이썬이 한다
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes("Files");
+document.addEventListener("dragenter", e => { if (hasFiles(e)) { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); } });
+document.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
+document.addEventListener("dragleave", e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+document.addEventListener("drop", e => { if (hasFiles(e)) { e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging"); } });
+$("#month").onchange = e => { const [y, m] = e.target.value.split("-").map(Number); F = null; load(y, m); };
+$("#btnRefresh").onclick = () => load(S.year, S.month);
+$("#btnImport").onclick = async () => {
+  if (busy) return; busy = true; const b = $("#btnImport"); b.textContent = "읽는 중… (약 10초)"; b.disabled = true;
+  try {
+    const r = await call("import_image", S.year, S.month);
+    if (r && r.ok) { F = null; await load(r.year, r.month); }
+    else if (r && r.error) alert("마감표를 읽지 못했습니다: " + r.error);
+  } finally { busy = false; b.textContent = "마감표 이미지 불러오기"; b.disabled = false; }
+};
+
+let started = false;
+function start() {
+  if (started) return; started = true;
+  load(); setInterval(() => { if (!busy && document.visibilityState === "visible") load(S.year, S.month, true); }, 60000);
+}
+window.addEventListener("pywebviewready", start);
+setTimeout(() => { if (!window.pywebview) start(); }, 500);
+</script>
+</body>
+</html>
