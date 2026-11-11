@@ -2,7 +2,7 @@
 # 우클릭한 폴더 안에 '새 폴더'를 만들고, 탐색기에서 바로 이름 바꾸기 상태로 만든다.
 # 이미 있으면 '새 폴더 (2)', '새 폴더 (3)' ...
 if (-not $Dir -or -not (Test-Path -LiteralPath $Dir)) { exit 1 }
-$Dir = $Dir.TrimEnd('')
+$Dir = $Dir.TrimEnd([char]92)
 $name = "새 폴더"
 $path = Join-Path $Dir $name
 $i = 2
@@ -11,14 +11,14 @@ while (Test-Path -LiteralPath $path) { $path = Join-Path $Dir "$name ($i)"; $i++
 $leaf = Split-Path $path -Leaf
 
 # 이 폴더를 보여주는 탐색기 창(여러 개면 맨 앞에 있는 것) 또는 바탕화면 찾기
-Add-Type -Namespace W -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();'
+Add-Type -Namespace W -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);'
 $fg = [W.U]::GetForegroundWindow().ToInt64()
 $shell = New-Object -ComObject Shell.Application
-$view = $null
+$view = $null; $hwnd = $null
 foreach ($w in @($shell.Windows())) {
     try {
-        if ($w.Document.Folder.Self.Path.TrimEnd('') -eq $Dir) {
-            if ($null -eq $view -or $w.HWND -eq $fg) { $view = $w.Document }
+        if ($w.Document.Folder.Self.Path.TrimEnd([char]92) -eq $Dir) {
+            if ($null -eq $view -or $w.HWND -eq $fg) { $view = $w.Document; $hwnd = $w.HWND }
         }
     } catch {}
 }
@@ -26,7 +26,7 @@ if ($null -eq $view) {  # 바탕화면
     try {
         $hwnd = 0
         $disp = $shell.Windows().FindWindowSW([ref]0, [ref]"", 8, [ref]$hwnd, 1)
-        if ($disp -and $disp.Document.Folder.Self.Path.TrimEnd('') -eq $Dir) { $view = $disp.Document }
+        if ($disp -and $disp.Document.Folder.Self.Path.TrimEnd([char]92) -eq $Dir) { $view = $disp.Document; $hwnd = $null }
     } catch {}
 }
 if ($null -eq $view) { exit 0 }
@@ -35,7 +35,11 @@ if ($null -eq $view) { exit 0 }
 for ($n = 0; $n -lt 30; $n++) {
     try {
         $item = $view.Folder.ParseName($leaf)
-        if ($item) { $view.SelectItem($item, 0x1F); break }
+        if ($item) {
+            if ($hwnd) { [void][W.U]::SetForegroundWindow([IntPtr]$hwnd) }  # 창이 활성이어야 이름 바꾸기 입력칸이 열린다
+            Start-Sleep -Milliseconds 150
+            $view.SelectItem($item, 0x1F); break
+        }
     } catch {}
     Start-Sleep -Milliseconds 100
 }
