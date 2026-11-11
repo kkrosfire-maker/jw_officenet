@@ -86,6 +86,8 @@ body.dragging::after{content:"작업 엑셀(.xlsx) 또는 마감표 이미지(.p
 .cell .pend{font-weight:800;font-size:14px}
 .cell .pend .late-tag{font-size:70%;font-weight:400}      /* (기한지남): 미처리 글자의 70% 크기, 볼드 없음 */
 .cell .fr{font-size:12px;font-weight:600;color:var(--sub);margin-left:6px}
+.cell .fr.full{color:var(--blue)}
+.cell .fr.short{color:var(--late)}
 .cell .pend.p{color:var(--today);background:#ffe8d2} .cell .pend.l{color:var(--late);background:#fcd9d6}
 .cell .ml{font-size:14px;color:var(--ink);background:#fdecea;margin-top:2px}
 .cell .ml b{color:var(--late)}
@@ -246,7 +248,7 @@ function calHtml() {
     const ml = Object.entries(byM).sort((a, b) => b[1] - a[1]);
     const has = it.length;
     const cls = [iso === S.today ? "today" : "", dow === 0 ? "sun" : dow === 6 ? "sat" : "", has ? "has" : "", F && F.date === iso ? "sel" : ""].join(" ");
-    html += `<div class="cell ${cls}" ${has ? `data-day="${iso}"` : ""}><div class="hd"><div class="n">${d}</div>${it.length ? `<span class="fr" title="완료 / 전체">${dn}/${it.length}</span>` : ""}${d === v.first_day ? `<span class="se">(통계시작)</span>` : ""}${d === v.last_day ? `<span class="se end">(통계끝)</span>` : ""}</div><div class="bd">` +
+    html += `<div class="cell ${cls}" ${has ? `data-day="${iso}"` : ""}><div class="hd"><div class="n">${d}</div>${it.length ? `<span class="fr ${dn === it.length ? "full" : "short"}" title="완료 / 전체">${dn}/${it.length}</span>` : ""}${d === v.first_day ? `<span class="se">(통계시작)</span>` : ""}${d === v.last_day ? `<span class="se end">(통계끝)</span>` : ""}</div><div class="bd">` +
       (pend.length ? `<div class="pend ${n < 0 ? "l" : "p"}">미처리 ${pend.length}${n < 0 ? ` <span class="late-tag">(기한지남)</span>` : ""}</div>` +
         ml.slice(0, 4).map(([m, k]) => `<div class="ml ${n < 0 ? "" : "p"}">${esc(m)} <b>${k}</b></div>`).join("") + (ml.length > 4 ? `<div class="ml">외 ${ml.length - 4}명…</div>` : "")
         : (dn ? `<div class="allok">모두 완료 ✔</div>` : "")) +
