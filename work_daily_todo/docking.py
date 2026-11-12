@@ -6,7 +6,7 @@ from ctypes import wintypes as wt
 
 TITLE = "오늘의 할 일"
 BOARD_TITLE = "정원유니어스 프로그램 보드"
-DEFAULT_SIZE = (360, 800)
+DEFAULT_SIZE = (355, 800)
 
 
 def dock_x(board_left, board_right, width, screen_w):

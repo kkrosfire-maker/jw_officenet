@@ -162,9 +162,12 @@ const ui={notes:new Set(),fu:null,edit:null,focus:null,sel:null,drag:null,
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
 let tt;
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='',err?4000:2200)}
+let lastPt={x:innerWidth/2,y:innerHeight*.4};
+document.addEventListener('mousedown',e=>{lastPt={x:e.clientX,y:e.clientY}},true);
 function pickDate(cur,cb){
   const i=document.createElement('input');i.type='date';i.value=cur||'';
-  i.style.cssText='position:fixed;left:50%;top:40%;opacity:0;width:1px;height:1px';
+  // 누른 자리 바로 아래에 달력이 뜨도록 입력칸을 클릭 위치에 둔다
+  i.style.cssText=`position:fixed;left:${Math.max(0,lastPt.x-4)}px;top:${Math.max(0,lastPt.y)}px;opacity:0;width:1px;height:1px`;
   document.body.appendChild(i);
   i.onchange=()=>{cb(i.value);i.remove()};i.onblur=()=>setTimeout(()=>i.remove(),300);
   try{i.showPicker()}catch(e){i.focus()}
