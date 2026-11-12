@@ -101,6 +101,18 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
 
 .grip{flex:none;width:12px;margin:2px -4px 0 -6px;cursor:grab;color:var(--border);font-size:13px;line-height:18px;text-align:center;user-select:none;opacity:0}
 .item:hover .grip{opacity:1}
+.cal{position:fixed;z-index:50;width:224px;background:var(--bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:8px;font-size:13px;user-select:none}
+.cal-hd{display:flex;align-items:center;justify-content:space-between;font-weight:700;color:var(--ink);margin-bottom:4px}
+.cal-hd button{border:0;background:none;font-size:18px;width:28px;height:26px;border-radius:6px;cursor:pointer;color:var(--green)}
+.cal-hd button:hover,.cal-ft button:hover{background:var(--hover)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-g .w{font-style:normal;font-size:11px;color:var(--green-tint);padding:2px 0}.cal-g .sun{color:#C0392B}
+.cal-g button{border:0;background:none;height:28px;border-radius:6px;cursor:pointer;color:var(--ink);font:inherit}
+.cal-g button:hover{background:var(--hover)}
+.cal-g button.today{outline:1px solid var(--green)}
+.cal-g button.sel{background:var(--green);color:#fff}
+.cal-ft{display:flex;justify-content:space-between;margin-top:4px;border-top:1px solid var(--border);padding-top:4px}
+.cal-ft button{border:0;background:none;color:var(--green);font:inherit;padding:3px 8px;border-radius:6px;cursor:pointer}
 .item.dragging{opacity:.4}
 .item:not(.sub){cursor:grab}
 .item textarea{cursor:text}
@@ -164,13 +176,48 @@ let tt;
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='',err?4000:2200)}
 let lastPt={x:innerWidth/2,y:innerHeight*.4};
 document.addEventListener('mousedown',e=>{lastPt={x:e.clientX,y:e.clientY}},true);
+// 직접 그린 달력: 브라우저 기본 달력은 위치를 못 정해서, 누른 자리 기준으로 아래(공간 없으면 위)에 띄운다
 function pickDate(cur,cb){
-  const i=document.createElement('input');i.type='date';i.value=cur||'';
-  // 누른 자리 바로 아래에 달력이 뜨도록 입력칸을 클릭 위치에 둔다
-  i.style.cssText=`position:fixed;left:${Math.max(0,lastPt.x-4)}px;top:${Math.max(0,lastPt.y)}px;opacity:0;width:1px;height:1px`;
-  document.body.appendChild(i);
-  i.onchange=()=>{cb(i.value);i.remove()};i.onblur=()=>setTimeout(()=>i.remove(),300);
-  try{i.showPicker()}catch(e){i.focus()}
+  closeCal();
+  const pad=n=>String(n).padStart(2,'0'),fmt=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+  const todayS=(typeof S!=='undefined'&&S&&S.today)||fmt(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+  const base=/^\d{4}-\d\d-\d\d$/.test(cur||'')?cur:todayS;
+  let vy=+base.slice(0,4),vm=+base.slice(5,7)-1;
+  const box=el('div','cal');box.id='calPop';
+  const done=v=>{closeCal();cb(v)};
+  function draw(){
+    box.textContent='';
+    const hd=el('div','cal-hd');
+    const pv=el('button','','‹'),nx=el('button','','›');
+    pv.onclick=()=>{vm--;if(vm<0){vm=11;vy--}draw()};nx.onclick=()=>{vm++;if(vm>11){vm=0;vy++}draw()};
+    hd.append(pv,el('span','',`${vy}년 ${vm+1}월`),nx);box.appendChild(hd);
+    const g=el('div','cal-g');
+    '일월화수목금토'.split('').forEach((w,i)=>g.appendChild(el('i',i===0?'w sun':'w',w)));
+    const first=new Date(vy,vm,1).getDay(),len=new Date(vy,vm+1,0).getDate();
+    for(let i=0;i<first;i++)g.appendChild(el('i'));
+    for(let d=1;d<=len;d++){
+      const v=fmt(vy,vm,d),b=el('button',(v===cur?'sel ':'')+(v===todayS?'today':''),d);
+      b.onclick=()=>done(v);g.appendChild(b);
+    }
+    box.appendChild(g);
+    const ft=el('div','cal-ft');
+    const clr=el('button','','지우기'),tdy=el('button','','오늘');
+    clr.onclick=()=>done('');tdy.onclick=()=>done(todayS);
+    ft.append(clr,tdy);box.appendChild(ft);
+  }
+  draw();
+  document.body.appendChild(box);
+  const W=box.offsetWidth,H=box.offsetHeight,x0=lastPt.x,y0=lastPt.y;
+  let left=x0-4;if(left+W>innerWidth-4)left=innerWidth-W-4;left=Math.max(4,left);
+  let top=y0+14;if(top+H>innerHeight-4)top=y0-H-14;top=Math.max(4,top);
+  box.style.left=left+'px';box.style.top=top+'px';
+  setTimeout(()=>{document.addEventListener('mousedown',calOutside,true);document.addEventListener('keydown',calKey,true)},0);
+}
+function calOutside(e){if(!e.target.closest('#calPop'))closeCal()}
+function calKey(e){if(e.key==='Escape'){e.stopPropagation();closeCal()}}
+function closeCal(){
+  const c=document.getElementById('calPop');if(c)c.remove();
+  document.removeEventListener('mousedown',calOutside,true);document.removeEventListener('keydown',calKey,true);
 }
 let delIds=[];
 function askDelete(t){delIds=[t.id];$('delTxt').textContent=t.text;$('delDlg').showModal()}
