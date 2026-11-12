@@ -29,7 +29,11 @@ BACKUP_DIR = DATA_DIR / "backup"
 SAMPLES_DIR = APP_DIR / "samples"
 UPLOAD_DIR = DATA_DIR / "uploads"
 
-PRODUCT_MASTER_PATH = DATA_DIR / "product_master.xlsx"
+# 사람이 엑셀로 고치는 기준 파일: 제약사별 기준 + 제품마스터 시트 (바탕화면에 복사본을 둔다)
+CRITERIA_PATH = DATA_DIR / "제약사_기준.xlsx"
+CRITERIA_DESKTOP_NAME = "네오벤타 제약사 기준.xlsx"
+LEGACY_MASTER_PATH = DATA_DIR / "product_master.xlsx"   # 예전 단독 마스터 (이전용)
+PRODUCT_MASTER_PATH = CRITERIA_PATH                     # 제품 마스터는 기준 엑셀의 '제품마스터' 시트
 SETTINGS_PATH = DATA_DIR / "settings.json"
 CHANGE_LOG_PATH = DATA_DIR / "change_log.csv"
 RATE_TABLE_INDEX_PATH = RATE_TABLE_DIR / "index.json"

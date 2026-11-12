@@ -9,6 +9,7 @@ import streamlit as st
 import uihelp
 from core import apply as apply_mod
 from core import converter as conv
+from core import criteria
 from core import lawdata as lawdata_mod
 from core import writer as writer_mod
 from core.final_db import load_final_db
@@ -281,25 +282,31 @@ for code, issues in by_code.items():
                     value=product.get("최종제품명") or issue.detail["추천제품명"],
                     key=f"n_{issue.key}",
                 )
-                구간 = cols[1].number_input(
-                    "구간인센%", value=float(product.get("구간인센") or 0.0), step=0.01,
-                    format="%.4f", key=f"g_{issue.key}",
+                # 화면은 % (5 = 5%), 저장은 소수 (0.05). 예전에는 5 를 그대로 저장해 500% 로 계산됐다.
+                구간_pct = cols[1].number_input(
+                    "구간인센%", value=float(product.get("구간인센") or 0.0) * 100, step=0.5,
+                    format="%.2f", key=f"g_{issue.key}", help="5 = 5%",
                 )
-                특별 = cols[2].number_input(
-                    "특별인센%", value=float(product.get("특별인센") or 0.0), step=0.01,
-                    format="%.4f", key=f"s_{issue.key}",
+                특별_pct = cols[2].number_input(
+                    "특별인센%", value=float(product.get("특별인센") or 0.0) * 100, step=0.5,
+                    format="%.2f", key=f"s_{issue.key}", help="5 = 5%",
                 )
+                구간, 특별 = 구간_pct / 100, 특별_pct / 100
                 reason = reason_box(issue.key, existing)
                 action_cols = st.columns(2)
                 if action_cols[0].button("마스터에 등록", key=f"reg_{issue.key}"):
-                    sync(
-                        issue.key,
-                        {
-                            "action": "register",
-                            "product": {"최종제품명": name, "구간인센": 구간, "특별인센": 특별},
-                            "reason": reason,
-                        },
-                    )
+                    problem = criteria.check_incentive_value(구간) or criteria.check_incentive_value(특별)
+                    if problem:
+                        st.error(f"인센티브 단위를 확인하세요. {problem}")
+                    else:
+                        sync(
+                            issue.key,
+                            {
+                                "action": "register",
+                                "product": {"최종제품명": name, "구간인센": 구간, "특별인센": 특별},
+                                "reason": reason,
+                            },
+                        )
                 if action_cols[1].button("이 제품 제외", key=f"exc_{issue.key}"):
                     sync(issue.key, {"action": "exclude", "reason": reason})
 

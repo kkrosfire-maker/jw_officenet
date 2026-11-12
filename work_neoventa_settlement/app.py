@@ -56,7 +56,7 @@ cols[3].page_link("pages/5_초기_설정.py", label="초기 설정", icon="⚙�
 with st.expander("데이터 위치"):
     st.code(
         f"""기준정보 폴더 : {DATA_DIR}
-제품 마스터   : {DATA_DIR / 'product_master.xlsx'}
+제품 마스터   : {DATA_DIR / '제약사_기준.xlsx'} (바탕화면에 복사본 '네오벤타 제약사 기준.xlsx')
 제약사 설정   : {DATA_DIR / 'settings.json'}
 변경 이력     : {CHANGE_LOG_PATH}
 요율표 보관   : {DATA_DIR / 'rate_tables'}

@@ -138,13 +138,16 @@ def to_number(value):
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return value
+        # 표(pandas)의 빈 칸은 NaN 으로 들어온다. 숫자가 아니라 '비어 있음'으로 본다.
+        return None if value != value else value
     text = str(value).strip().replace(",", "")
     if not text:
         return None
     try:
         num = float(text)
     except ValueError:
+        return None
+    if num != num:
         return None
     return int(num) if num.is_integer() else num
 

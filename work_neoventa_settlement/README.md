@@ -175,7 +175,7 @@ build_exe.bat   ← 더블클릭
 ```
 data/
   rate_tables/          요율표 원본 사본 + index.json (버전 목록)
-  product_master.xlsx   제품 마스터 (엑셀로 직접 열어봐도 된다)
+  제약사_기준.xlsx      제약사별 최소금액·특성 + 제품 마스터(구간인센 등). 바탕화면에 복사본이 있고 어느 쪽을 고쳐도 된다
   settings.json         제약사 별칭, 최소 인정금액, 덮어쓰기, 마지막 경로
   change_log.csv        모든 변경 이력
   backup/               저장 전 자동 백업

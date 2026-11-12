@@ -13,9 +13,10 @@ from typing import Iterable, Optional
 
 import openpyxl
 
-from . import changelog
+from . import changelog, criteria
 from .config import (
     BACKUP_DIR,
+    CRITERIA_PATH,
     PRODUCT_MASTER_PATH,
     SETTINGS_PATH,
     VENDOR_NAME,
@@ -164,7 +165,7 @@ class ProductMaster:
             return cls([])
         wb = openpyxl.load_workbook(path, data_only=True)
         try:
-            ws = wb.active
+            ws = wb[criteria.SHEET_PRODUCT] if criteria.SHEET_PRODUCT in wb.sheetnames else wb.worksheets[0]
             rows = ws.iter_rows(min_row=1, values_only=True)
             header = [clean_str(h) for h in (next(rows, ()) or ())]
             index = {name: i for i, name in enumerate(header) if name}
@@ -196,9 +197,8 @@ class ProductMaster:
     def save(self, path: str | Path = PRODUCT_MASTER_PATH) -> None:
         path = Path(path)
         backup(path)
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "제품마스터"
+        wb = criteria.open_for_write(path)   # 같은 파일의 '제약사별 기준' 시트 등은 그대로 둔다
+        ws = criteria.replace_sheet(wb, criteria.SHEET_PRODUCT)
         ws.append(MASTER_COLUMNS)
         for cell in ws[1]:
             cell.font = openpyxl.styles.Font(bold=True)
@@ -225,8 +225,10 @@ class ProductMaster:
             for cell in row:
                 cell.number_format = "0.00%"
         ws.freeze_panes = "A2"
+        criteria.finish_workbook(wb)
         ensure_dirs()
         wb.save(path)
+        wb.close()
 
 
 def _split_list(value) -> list[str]:
@@ -278,23 +280,43 @@ class Settings:
                 entry = dict(self.thresholds[key])
                 entry["known"] = True
                 return entry
+        # 기준 엑셀의 '요율표 다른 표기' 에 적힌 이름
+        for key, entry in self.thresholds.items():
+            if name in (entry.get("alt") or []):
+                found = dict(entry)
+                found["known"] = True
+                return found
         return {"value": None, "raw": "", "needs_input": True, "known": False}
 
     def set_threshold(self, company: str, value: Optional[int], raw: str = "") -> None:
-        self.thresholds[clean_str(company)] = {
-            "value": value,
-            "raw": raw or ("없음" if value is None else f"{value:,}원"),
-            "needs_input": False,
-        }
+        key = clean_str(company)
+        entry = dict(self.thresholds.get(key) or {})   # 제출 인정기간 같은 메모는 보존한다
+        entry.update(
+            {
+                "value": value,
+                "raw": raw or ("없음" if value is None else f"{value:,}원"),
+                "needs_input": False,
+            }
+        )
+        self.thresholds[key] = entry
 
     # ---- 파일
 
     @classmethod
-    def load(cls, path: str | Path = SETTINGS_PATH) -> "Settings":
+    def load(cls, path: str | Path = SETTINGS_PATH, criteria_path: Optional[str | Path] = None) -> "Settings":
+        """설정을 읽는다. 최소 인정금액은 기준 엑셀의 '제약사별 기준' 시트가 있으면 그쪽이 우선.
+
+        기본 설정 경로를 쓸 때만 기준 엑셀(data/제약사_기준.xlsx)을 함께 본다.
+        """
         path = Path(path)
-        if not path.exists():
-            return cls()
-        return cls(json.loads(path.read_text(encoding="utf-8")))
+        settings = cls(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else cls()
+        if criteria_path is None and path == SETTINGS_PATH:
+            criteria_path = CRITERIA_PATH
+        if criteria_path is not None:
+            from_excel = criteria.read_thresholds(criteria_path)
+            if from_excel is not None:
+                settings.thresholds = from_excel
+        return settings
 
     def to_dict(self) -> dict:
         return {
@@ -305,13 +327,18 @@ class Settings:
             "initialized": self.initialized,
         }
 
-    def save(self, path: str | Path = SETTINGS_PATH) -> None:
+    def save(self, path: str | Path = SETTINGS_PATH, criteria_path: Optional[str | Path] = None) -> None:
         path = Path(path)
         backup(path)
         ensure_dirs()
         path.write_text(
             json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        if criteria_path is None and path == SETTINGS_PATH:
+            criteria_path = CRITERIA_PATH
+        if criteria_path is not None:
+            backup(criteria_path)
+            criteria.write_thresholds(self.thresholds, criteria_path)
 
 
 # ---------------------------------------------------------------- 초기화

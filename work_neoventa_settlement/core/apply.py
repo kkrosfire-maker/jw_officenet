@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from . import changelog, converter as conv
+from . import changelog, converter as conv, criteria
 from .converter import ConversionResult, ConvertContext
 from .master import Product
 from .utils import code_key, to_number
@@ -69,6 +69,10 @@ def apply_decisions(
 
         elif issue.code == conv.NEW_PRODUCT and decision.get("action") == "register":
             values = decision.get("product") or {}
+            for label in ("구간인센", "특별인센"):
+                problem = criteria.check_incentive_value(values.get(label))
+                if problem:
+                    raise ValueError(f"{issue.보험코드} {label}: {problem}")
             product = Product(
                 보험코드=code_key(issue.보험코드),
                 최종제품명=values.get("최종제품명") or issue.detail.get("추천제품명", ""),

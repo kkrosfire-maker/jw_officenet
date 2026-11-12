@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 import openpyxl
+from openpyxl.formula.translate import Translator
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table
 
@@ -105,12 +106,16 @@ def _month_text(value) -> str:
     return str(value or "")
 
 
+ORIGIN_ROW = LAST_COLUMN   # 읽은 행 값 리스트 끝에 붙이는 '원래 행 번호' 위치
+
+
 def _read_rows(ws) -> list[list]:
+    """DB 표의 기존 행을 읽는다. 각 행 끝(index 19)에 원래 행 번호를 붙인다."""
     rows = []
     for row_idx in range(FIRST_DATA_ROW, ws.max_row + 1):
         values = [ws.cell(row=row_idx, column=c).value for c in range(1, LAST_COLUMN + 1)]
         if any(v is not None and v != "" for v in values):
-            rows.append(values)
+            rows.append(values + [row_idx])
     return rows
 
 
@@ -123,30 +128,38 @@ def _style_template(ws):
     return styles, formats
 
 
+def _moved_formula(value, col: int, origin_row: Optional[int], row_idx: int):
+    """수식이면 원래 행 → 새 행으로 상대참조를 옮긴다. 수식이 아니면(수동 입력값) 그대로."""
+    if isinstance(value, str) and value.startswith("=") and origin_row and origin_row != row_idx:
+        letter = get_column_letter(col)
+        return Translator(value, origin=f"{letter}{origin_row}").translate_formula(f"{letter}{row_idx}")
+    return value
+
+
 def _write_rows(ws, rows: list[list], *, new_from: int, small_flags: list[bool], styles, formats) -> int:
-    """행들을 DB 표 자리에 쓰고, 마지막 행 번호를 돌려준다."""
+    """행들을 DB 표 자리에 쓰고, 마지막 행 번호를 돌려준다.
+
+    기존 행(new_from 앞)은 값과 수식을 **있는 그대로** 둔다. 사람이 손으로 넣은 금액·최종요율·
+    확정금액(예: `*0.7`, 0, 차액)을 표준 수식으로 되덮지 않는다. 행이 밀린 경우에만
+    수식의 행 번호를 옮긴다. 표준 수식은 새로 추가하는 행에만 넣는다.
+    """
     original_last = ws.max_row
     for offset, values in enumerate(rows):
         row_idx = FIRST_DATA_ROW + offset
         is_new = offset >= new_from
+        origin_row = values[ORIGIN_ROW] if len(values) > ORIGIN_ROW else None
         for col in range(1, LAST_COLUMN + 1):
             cell = ws.cell(row=row_idx, column=col)
             if styles is not None and is_new:
                 cell._style = copy(styles[col - 1])
                 cell.number_format = formats[col - 1]
-            cell.value = values[col - 1]
-        ws.cell(row=row_idx, column=11).value = AMOUNT_FORMULA
-        ws.cell(row=row_idx, column=15).value = RATE_FORMULA.format(row=row_idx)
+            value = values[col - 1]
+            cell.value = value if is_new else _moved_formula(value, col, origin_row, row_idx)
         if is_new:
+            ws.cell(row=row_idx, column=11).value = AMOUNT_FORMULA
+            ws.cell(row=row_idx, column=15).value = RATE_FORMULA.format(row=row_idx)
             ws.cell(row=row_idx, column=16).value = (
                 0 if small_flags[offset] else FIXED_FORMULA.format(row=row_idx)
-            )
-        else:
-            previous = values[15]
-            ws.cell(row=row_idx, column=16).value = (
-                FIXED_FORMULA.format(row=row_idx)
-                if isinstance(previous, str) and previous.startswith("=")
-                else previous
             )
 
     # 남은 행 지우기

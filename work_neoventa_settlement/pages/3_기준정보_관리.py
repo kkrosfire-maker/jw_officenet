@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 import uihelp
-from core import changelog
+from core import changelog, criteria
 from core.master import LIST_SEP, NO_CODE_PREFIX, NO_CODE_TEXT, Product, find_code_by_name
 from core.utils import code_key, to_number
 
@@ -149,6 +149,10 @@ with tab_master:
                 제외=bool(record["제외여부"]),
                 메모=str(record["메모"] or "").strip(),
             )
+            problem = criteria.check_incentive_value(product.구간인센) or criteria.check_incentive_value(product.특별인센)
+            if problem:
+                오류.append(f"{product.최종제품명}: 인센티브 단위를 확인하세요. {problem}")
+                continue
             origin = before.get(원래키) or before.get(code)
             if origin is None:
                 entries.append(
@@ -210,6 +214,12 @@ with tab_company:
         "같은 정산월 안에서 (병원 × 제약사) 금액 합계가 이 금액보다 작으면 소액처로 봅니다. "
         "비워 두면(없음) 소액처 판정을 하지 않습니다."
     )
+    st.info(
+        f"이 표는 기준 엑셀의 **제약사별 기준** 시트와 같은 내용입니다. 바탕화면의 "
+        f"`{criteria.desktop_path().name}` 을 엑셀로 고쳐도 되고, 여기서 고쳐도 됩니다 "
+        "(저장하면 바탕화면 파일도 갱신). 고친 값은 **앞으로 하는 정산**부터 적용됩니다.",
+        icon="📄",
+    )
     th_frame = pd.DataFrame(
         [
             {
@@ -217,6 +227,11 @@ with tab_company:
                 "최소금액": entry.get("value"),
                 "원문": entry.get("raw", ""),
                 "확인 필요": bool(entry.get("needs_input")),
+                "제출 인정기간": entry.get("submit", ""),
+                "신규소액 정산기간": entry.get("new_small", ""),
+                "코드삭제·기타 조건": entry.get("conditions", ""),
+                "마지막 수정 날짜": entry.get("modified", ""),
+                "요율표 다른 표기": LIST_SEP.join(entry.get("alt") or []),
             }
             for name, entry in sorted(settings.thresholds.items())
         ]
@@ -230,7 +245,12 @@ with tab_company:
         height=380,
         num_rows="dynamic",
         disabled=["원문"],
-        column_config={"최소금액": st.column_config.NumberColumn(format="%d")},
+        column_config={
+            "최소금액": st.column_config.NumberColumn(format="%d", help="비우면 '없음'(소액처 판정 안 함)"),
+            "요율표 다른 표기": st.column_config.TextColumn(
+                help="요율표에 다른 이름으로 나올 때 ' | ' 로 구분해 적습니다"
+            ),
+        },
         key="threshold_editor",
     )
 
@@ -262,10 +282,22 @@ with tab_company:
                         새값="없음" if value is None else str(int(value)),
                     )
                 )
+            new_value = int(value) if value is not None else None
+            changed_value = before.get("value") != new_value
             settings.thresholds[name] = {
-                "value": int(value) if value is not None else None,
-                "raw": before.get("raw", "") or ("없음" if value is None else f"{int(value):,}원"),
+                "value": new_value,
+                # 엑셀은 이 문구에서 금액을 읽으므로, 금액을 고쳤으면 문구도 새로 만든다.
+                # 아직 모르는 곳은 '없음'으로 바꾸지 않는다 (적어 둔 원문은 그대로, 없으면 빈칸)
+                "raw": ("" if before.get("raw") in (None, "", "없음") else before["raw"])
+                if (new_value is None and marked)
+                else criteria.format_amount(new_value) if changed_value or not before.get("raw")
+                else before.get("raw", ""),
                 "needs_input": marked,
+                "submit": str(record.get("제출 인정기간") or "").strip(),
+                "new_small": str(record.get("신규소액 정산기간") or "").strip(),
+                "conditions": str(record.get("코드삭제·기타 조건") or "").strip(),
+                "modified": str(record.get("마지막 수정 날짜") or "").strip(),
+                "alt": [a.strip() for a in str(record.get("요율표 다른 표기") or "").split("|") if a.strip()],
             }
 
         new_aliases = {}

@@ -6,6 +6,7 @@ from typing import Optional
 
 import streamlit as st
 
+from core import criteria
 from core import master as master_mod
 from core import rate_table as rate_mod
 from core.config import ensure_dirs
@@ -16,6 +17,7 @@ PAGE_ICON = "🧾"
 def page_setup(title: str) -> None:
     st.set_page_config(page_title=f"네오벤타 정산 · {title}", page_icon=PAGE_ICON, layout="wide")
     ensure_dirs()
+    _sync_criteria()
     _dropzone_css()
     st.title(f"{PAGE_ICON} {title}")
     _status_bar()
@@ -63,6 +65,18 @@ def _dropzone_css() -> None:
     )
 
 
+def _sync_criteria() -> None:
+    """바탕화면 기준 엑셀과 data/ 기준 엑셀을 맞춘다. 바탕화면에서 고쳤으면 가져온다."""
+    result = criteria.sync()
+    if result.imported:
+        invalidate(sync=False)
+        st.toast(result.message, icon="📥")
+    if result.action in ("locked", "invalid"):
+        st.session_state["criteria_notice"] = result.message
+    elif result.action != "none":
+        st.session_state.pop("criteria_notice", None)
+
+
 def _status_bar() -> None:
     """상단 상태: 현재 요율표, 승인 대기 알림, 초기화 여부."""
     settings = load_settings()
@@ -79,6 +93,13 @@ def _status_bar() -> None:
         cols[2].warning(f"승인 대기 중인 요율표: {pending.title} → '요율표 업데이트' 에서 확인", icon="🔔")
     elif not settings.initialized:
         cols[2].warning("아직 초기 설정을 하지 않았습니다 → '초기 설정' 페이지", icon="⚠️")
+    notice = st.session_state.get("criteria_notice")
+    if notice:
+        st.warning(notice, icon="📄")
+    st.caption(
+        f"기준 엑셀(최소금액·구간인센): 바탕화면 **{criteria.desktop_path().name}** — "
+        "엑셀에서 고쳐도, 이 프로그램의 '기준정보 관리' 에서 고쳐도 됩니다."
+    )
     st.divider()
 
 
@@ -119,10 +140,17 @@ def rate_name_index() -> dict:
     return _rate_name_index_cached(version.file) if version else {}
 
 
-def invalidate() -> None:
+def invalidate(sync: bool = True) -> None:
+    """저장 뒤 캐시를 비운다. sync=True 면 바탕화면 기준 엑셀 복사본도 갱신한다."""
     for key in ("master", "settings", "rate_table"):
         st.session_state.pop(key, None)
     _rate_name_index_cached.clear()
+    if sync:
+        result = criteria.sync()
+        if result.action in ("locked", "invalid"):
+            st.session_state["criteria_notice"] = result.message
+        else:
+            st.session_state.pop("criteria_notice", None)
 
 
 def require_ready() -> bool:
@@ -132,6 +160,14 @@ def require_ready() -> bool:
         return False
     if not load_master().products:
         st.error("제품 마스터가 비어 있습니다. '초기 설정' 을 먼저 하세요.")
+        return False
+    problems = criteria.incentive_problems(load_master())
+    if problems:
+        st.error(
+            "제품 마스터의 인센티브 값이 이상해서 정산을 멈췄습니다. "
+            "기준 엑셀(또는 '기준정보 관리')에서 고친 뒤 다시 하세요.\n\n- " + "\n- ".join(problems),
+            icon="🚫",
+        )
         return False
     return True
 

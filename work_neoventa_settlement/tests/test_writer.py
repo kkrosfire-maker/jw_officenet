@@ -236,3 +236,40 @@ def test_슬라이서는_O열_끝에서_끝난다(tmp_path):
         r"<xdr:to><xdr:col>(\d+)</xdr:col><xdr:colOff>(\d+)</xdr:colOff>", xml)]
     assert max(ends) <= 15 * 10**7
     assert fit_slicers(base) == 0          # 두 번 해도 그대로
+
+
+def test_기존_행의_수동_입력값은_덮어쓰지_않는다(tmp_path, resolved_result):
+    """사람이 손으로 넣은 금액·최종요율·확정금액이 다음 달 정산 때 표준 수식으로 바뀌면 안 된다."""
+    base = tmp_path / "최종엑셀.xlsx"
+    shutil.copy2(FINAL, base)
+    _strip_month(base, SETTLEMENT_MONTH)
+
+    wb = openpyxl.load_workbook(base)
+    ws = wb[DETAIL]
+    ws["K10"] = 0                                             # 금액 직접 입력
+    ws["O10"] = 0.53                                          # 최종요율 직접 입력
+    ws["P12"] = "=DB[[#This Row],[금액]]*O12*0.7"             # 확정금액 사용자 수식
+    ws["P13"] = 777                                           # 확정금액 직접 입력
+    wb.save(base)
+    wb.close()
+
+    writer.write_settlement(base, resolved_result, desktop_out_dir=tmp_path)
+
+    for path in (base, tmp_path / writer.desktop_file_name(SETTLEMENT_MONTH)):
+        wb = openpyxl.load_workbook(path)
+        ws = wb[DETAIL]
+        assert ws["K10"].value == 0
+        assert ws["O10"].value == 0.53
+        assert ws["P12"].value == "=DB[[#This Row],[금액]]*O12*0.7"
+        assert ws["P13"].value == 777
+        wb.close()
+
+
+def test_행이_밀리면_수식의_행번호만_옮긴다():
+    assert writer._moved_formula("=N41+M41+L41-1%", 15, 41, 40) == "=N40+M40+L40-1%"
+    assert (
+        writer._moved_formula("=DB[[#This Row],[금액]]*O235*0.7", 16, 235, 230)
+        == "=DB[[#This Row],[금액]]*O230*0.7"
+    )
+    assert writer._moved_formula(0.53, 15, 41, 40) == 0.53          # 상수는 그대로
+    assert writer._moved_formula("=N5+1", 15, 5, 5) == "=N5+1"       # 안 밀리면 그대로
