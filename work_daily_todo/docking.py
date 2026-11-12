@@ -6,7 +6,8 @@ from ctypes import wintypes as wt
 
 TITLE = "오늘의 할 일"
 BOARD_TITLE = "정원유니어스 프로그램 보드"
-DEFAULT_SIZE = (355, 800)
+FIXED_WIDTH = 371  # 실행 중인 창을 측정한 너비(2026-11-12). 항상 이 너비로 연다
+DEFAULT_SIZE = (FIXED_WIDTH, 800)
 
 
 def dock_x(board_left, board_right, width, screen_w):
@@ -122,6 +123,7 @@ def start_geometry(saved_path):
         with open(saved_path, encoding="utf-8") as f:
             g = json.load(f)
         g = int(g["x"]), int(g["y"]), int(g["width"]), int(g["height"])
+        g = g[0], g[1], FIXED_WIDTH, g[3]  # 너비는 저장값 대신 늘 고정
         if usable(g, _virtual_screen()):
             return g
     except (OSError, ValueError, KeyError, TypeError):

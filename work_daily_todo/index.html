@@ -43,6 +43,9 @@ h2 em{font-style:normal;margin-left:auto;font-size:11px;font-weight:400;color:va
 .late h2,h2.late{color:var(--late)}
 h2.late::before{background:var(--late)}
 .item.dy .cb{border-radius:50%}
+.rtog{display:flex;justify-content:center;padding:2px 0 0}
+.rtog button{border:0;background:none;color:var(--green);font-size:15px;line-height:1;padding:3px 24px;cursor:pointer;border-radius:8px}
+.rtog button:hover{background:var(--green-tint)}
 .chip.rp{color:var(--green);border-color:var(--green-tint)}
 .rkind{display:flex;gap:5px;margin-bottom:10px}
 .rkind button,.rdays button{flex:1;font:inherit;font-size:12px;padding:6px 0;border-radius:8px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
@@ -301,6 +304,7 @@ function itemEl(t){
   row.append(cb,body,acts);return row;
 }
 
+let routineOpen=false;try{routineOpen=!!localStorage.getItem('routineOpen')}catch(e){}
 function render(){
   if(!S)return;
   $('dLabel').textContent=S.label;$('dWeek').textContent=S.weekday;$('dYear').textContent=S.year;
@@ -319,7 +323,14 @@ function render(){
   $('prog').style.width=(all?(doneN/all*100):0)+'%';
   if(daily.length){
     const h=el('h2','','반복 루틴');h.appendChild(el('em','',`${dueR.filter(t=>t.done_at).length}/${dueR.length} 완료`));main.appendChild(h);
-    daily.forEach(t=>main.appendChild(itemEl(t)));
+    const isDay=t=>t.repeat==='day', rest=daily.filter(t=>!isDay(t));
+    daily.filter(t=>isDay(t)||routineOpen).forEach(t=>main.appendChild(itemEl(t)));
+    if(rest.length){  // 매일 루틴 외(매주·매월)는 접어 두고 삼각형으로 펼친다
+      const w=el('div','rtog'),b=el('button','',routineOpen?'▲':'▼');
+      b.title=routineOpen?`접기`:`매주·매월 루틴 ${rest.length}건 보기`;
+      b.onclick=()=>{routineOpen=!routineOpen;try{localStorage.setItem('routineOpen',routineOpen?'1':'')}catch(e){}render()};
+      w.appendChild(b);main.appendChild(w);
+    }
   }
   if(late.length){
     const h=el('h2','late','어제부터 밀린 일');h.appendChild(el('em','',`${late.length}건 · 먼저 처리하세요`));main.appendChild(h);
