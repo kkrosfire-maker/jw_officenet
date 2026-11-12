@@ -69,9 +69,11 @@ section.drag{opacity:.4}
 .gname{font:inherit;color:inherit;background:transparent;border:1px dashed var(--green);border-radius:6px;padding:2px 8px;outline:none;min-width:60px}
 .gname:focus{background:#fff}
 .editing .card{border-style:dashed;border-color:var(--green)}
-.editing .card .cdel{margin-left:auto}
-.card .cdel{margin-top:0;font-size:16px;flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;color:#b00020;font-size:16px;font-weight:700;line-height:1}
-.card .cdel:hover{background:#f6dcdc;color:#b00020}
+.card{position:relative}
+.card .cdel{position:absolute;top:6px;right:6px;margin:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;color:#555;font-size:13px;font-weight:700;line-height:1;opacity:.35;transition:opacity .12s,background .12s,color .12s}
+.card:hover .cdel{opacity:.55}
+.card .cdel:hover{opacity:1;background:#f6dcdc;color:#b00020}
+#cfm{max-width:360px}#cfm p{margin:0;line-height:1.5;word-break:keep-all}#cfm small{color:var(--green-tint)}
 .ph{width:52px;height:52px;border-radius:12px;flex:none;background:var(--green);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700}
 dialog{border:1px solid var(--border);border-radius:16px;padding:22px;width:min(440px,92vw);color:var(--ink);font-family:inherit}
 dialog::backdrop{background:rgba(0,0,0,.35)}
@@ -104,6 +106,8 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
   <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
     <button type="button" class="btn" id="bCancel">취소</button><button type="button" class="btn pri" id="bSave">저장</button></div>
 </form></dialog>
+<dialog id="cfm"><h3>삭제 확인</h3><p id="cMsg"></p>
+  <div class="acts"><span class="sp"></span><button type="button" class="btn" id="cNo">취소</button><button type="button" class="btn del" id="cYes">삭제</button></div></dialog>
 <div id="foot"></div>
 <div id="toast" popover="manual"></div>
 <script>
@@ -196,7 +200,7 @@ function render(){
       if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
       b.onclick=()=>editing?openDlg(p):launch(p);
-      if(editing){const x=document.createElement('span');x.className='cdel';x.textContent='✕';x.title='삭제';x.setAttribute('role','button');
+      {const x=document.createElement('span');x.className='cdel';x.textContent='✕';x.title='삭제';x.setAttribute('role','button');
         x.onclick=e=>{e.stopPropagation();delProg(p)};x.ondragstart=e=>e.preventDefault();b.appendChild(x)}
       b.draggable=true;b.dataset.id=p.id;
       b.ondragstart=e=>{dragId=p.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',p.id);setTimeout(()=>b.classList.add('drag'),0)};
@@ -239,9 +243,19 @@ $('bAdd').onclick=()=>openDlg(null);
 $('bEdit').onclick=()=>{editing=!editing;$('bEdit').classList.toggle('on',editing);$('bEdit').textContent=editing?'편집 끝':'편집';render()};
 $('bCancel').onclick=()=>$('dlg').close();
 $('bSave').onclick=submit;
+function askDel(p){
+  return new Promise(res=>{
+    const d=$('cfm');$('cMsg').innerHTML='';
+    const b=document.createElement('b');b.textContent=`'${p.name}'`;
+    const sm=document.createElement('small');sm.textContent='프로그램 파일 자체는 지워지지 않아요.';
+    $('cMsg').append(b,' 을(를) 보드에서 삭제할까요?',document.createElement('br'),sm);
+    const done=v=>{d.onclose=null;d.close();res(v)};
+    $('cYes').onclick=()=>done(true);$('cNo').onclick=()=>done(false);
+    d.onclose=()=>res(false);d.showModal();$('cNo').focus();
+  });
+}
 async function delProg(p){
-  if(!confirm(`'${p.name}' 을(를) 보드에서 삭제할까요?
-(프로그램 파일 자체는 지워지지 않아요)`))return;
+  if(!await askDel(p))return;
   const j=await post('/api/save',{action:'delete',id:p.id});
   j.ok?($('dlg').close(),toast('삭제했어요'),load()):toast(j.error,true);
 }
