@@ -49,7 +49,28 @@ class Api:
             self._window.confirm_close = self._dirty
 
 
+def _already_running():
+    # 이름 있는 뮤텍스로 중복 실행을 막고, 이미 떠 있는 창을 앞으로 가져온다
+    import ctypes
+    k32 = ctypes.windll.kernel32
+    u32 = ctypes.windll.user32
+    k32.CreateMutexW.restype = ctypes.c_void_p
+    handle = k32.CreateMutexW(None, False, "Global\\JWUniusSettlementDashboard")
+    if k32.GetLastError() != 183:  # ERROR_ALREADY_EXISTS
+        global _mutex
+        _mutex = handle  # 프로세스가 끝날 때까지 유지
+        return False
+    hwnd = u32.FindWindowW(None, TITLE)
+    if hwnd:
+        if u32.IsIconic(hwnd):
+            u32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        u32.SetForegroundWindow(hwnd)
+    return True
+
+
 def main():
+    if _already_running():
+        return
     # 예전(GS파마) exe와 같은 웹 저장소를 써서, 거기 남은 상태·메모를 첫 실행 때 옮겨온다
     web_storage = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "GS파마정산대시보드")
     os.makedirs(web_storage, exist_ok=True)

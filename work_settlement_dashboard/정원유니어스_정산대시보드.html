@@ -59,6 +59,7 @@ h1{font-size:20px;margin:0}
 button,.btn{font:inherit;font-size:13px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 button.sm{padding:3px 9px;font-size:12px}
+button.sm.del{color:#c0392b}
 button:hover{filter:brightness(.97)}
 button:disabled{opacity:.45;cursor:default;filter:none}
 .chatbar{font-size:12.5px;color:var(--text-2);margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -166,6 +167,49 @@ input.ce{width:100%;padding:4px 6px}
 .msg.sys .bub{background:none;border:0;color:var(--text-3);font-size:12px}
 .msg.hit .bub{outline:2px solid var(--accent);outline-offset:1px}
 mark{background:var(--mark);color:inherit;border-radius:2px}
+/* ---------- 통계 이상유무 ---------- */
+.adrop{border:2px dashed var(--line-2);border-radius:var(--radius);padding:18px;text-align:center;color:var(--text-2);background:var(--bg);transition:.15s}
+.adrop.over{border-color:var(--accent);background:var(--accent-soft)}
+.adrop b{color:var(--text)}
+.arow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 0}
+.afile{font-size:13px;color:var(--text-2)}
+.akpis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:0 0 12px}
+.ak{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+.ak.on{outline:2px solid var(--accent)}
+.ak .l{font-size:12px;color:var(--text-2)} .ak .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.ak.t-중단 .v{color:var(--crit)} .ak.t-급감 .v{color:var(--s-wait)} .ak.t-급증 .v{color:var(--accent)} .ak.t-신규 .v{color:var(--good)}
+table.at td,table.at th{white-space:nowrap;padding:5px 8px}
+table.at td.num{text-align:right;font-variant-numeric:tabular-nums}
+table.at th.num{text-align:right}
+table.at tr.l0 td{background:var(--accent-soft);font-weight:700;border-top:2px solid var(--line-2)}
+table.at tr.l1 td{background:var(--bg);font-weight:600}
+table.at tr.l2 td{font-weight:400}
+table.at tr.l2 td.nm{padding-left:52px}
+table.at tr.l1 td.nm{padding-left:26px}
+table.at td.nm{max-width:320px;overflow:hidden;text-overflow:ellipsis}
+table.at tr.l0 td.nm,table.at tr.l1 td.nm{cursor:pointer;user-select:none}
+.tg{display:inline-block;width:14px;color:var(--text-3);font-size:11px}
+.sev{display:inline-block;min-width:44px;text-align:center;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px}
+.sev.s3{background:var(--crit);color:#fff} .sev.s2{background:var(--s-wait-bg);color:var(--s-wait);border:1px solid var(--s-wait)} .sev.s1{background:var(--s-old-bg);color:var(--s-old)}
+.ty2{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:4px}
+.ty2.t-중단{background:var(--crit-soft);color:var(--crit);border:1px solid var(--crit)}
+.ty2.t-급감{background:var(--s-wait-bg);color:var(--s-wait)}
+.ty2.t-급증{background:var(--accent-soft);color:var(--accent)}
+.ty2.t-신규{background:var(--good-soft);color:var(--good)}
+.cnt{display:inline-block;font-size:11.5px;font-weight:600;margin-right:6px}
+.cnt.t-중단{color:var(--crit)} .cnt.t-급감{color:var(--s-wait)} .cnt.t-급증{color:var(--accent)} .cnt.t-신규{color:var(--good)}
+.spark{display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle}
+.spark i{display:block;width:8px;background:var(--muted);border-radius:1px}
+.spark i:last-child{background:var(--accent)}
+.spark.dn i:last-child{background:var(--crit)}
+.zero{color:var(--text-3)}
+.anote{font-size:12.5px;background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0 0;display:none}
+.athr{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;margin-bottom:8px}
+.athr input[type=number]{width:96px;font:inherit;font-size:13px;border:1px solid var(--line-2);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 6px}
+.achip{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--line-2);border-radius:999px;padding:3px 10px;font-size:12.5px;cursor:pointer;user-select:none}
+.achip.on{background:var(--accent-soft);border-color:var(--accent)}
+.achip input{display:none}
+.awrap{max-height:calc(100vh - 380px);min-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 @media (max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}input[type=search]{min-width:0;width:100%}}
 </style>
 </head>
@@ -205,6 +249,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       <button data-tab="month">월별 현황</button>
       <button data-tab="log">이벤트 로그</button>
       <button data-tab="crit">정산불가 기준</button>
+      <button data-tab="anom">통계 이상유무</button>
     </nav>
   </div></div>
 
@@ -273,6 +318,32 @@ mark{background:var(--mark);color:inherit;border-radius:2px}
       <div class="card" id="h-card" style="display:none">
         <h2 id="h-title"></h2>
         <table id="h-t" class="fx"></table>
+      </div>
+    </section>
+    <section class="panel" id="p-anom">
+      <div class="card">
+        <h2>통계 이상유무</h2>
+        <div class="hint">최근 3개월 처방 rawdata(엑셀)를 끌어다 놓고 「분석」을 누르면, 담당자 &gt; 거래처 &gt; 제약회사 순으로 갑작스러운 감소·증가·중단·신규를 보여줍니다. 파일은 이 화면에서만 읽고 어디에도 저장하지 않습니다.</div>
+        <div class="adrop" id="a-drop"><b>처방 데이터 엑셀을 여기에 끌어다 놓으세요</b><br><span class="small">또는 </span><label class="btn sm">파일 선택<input type="file" id="a-file" accept=".xlsx,.xls" hidden></label></div>
+        <div class="arow"><span class="afile" id="a-info">파일 없음</span><button class="primary" id="a-run" disabled>분석</button><button id="a-x" disabled>결과 엑셀로 내보내기</button></div>
+        <div class="anote" id="a-note"></div>
+      </div>
+      <div class="card" id="a-res" style="display:none">
+        <div class="akpis" id="a-k"></div>
+        <div class="athr">
+          <span>변동률 기준 <input type="number" id="a-pct" value="40" min="5" max="95" step="5">%</span>
+          <span>최소 변동금액 <input type="number" id="a-min" value="100000" min="0" step="50000">원</span>
+          <label class="achip on" id="a-onlyl"><input type="checkbox" id="a-only" checked><span>이상 항목만 보기</span></label>
+          <select id="a-sev"><option value="1">중요도 전체</option><option value="2">중간 이상</option><option value="3">높음만</option></select>
+          <select id="a-mgr"></select>
+          <input type="search" id="a-q" placeholder="거래처·제약회사 검색">
+        </div>
+        <div class="filters">
+          <button class="sm" id="a-l0">담당자만</button><button class="sm" id="a-l1">거래처까지</button><button class="sm" id="a-l2">전체 펼치기</button>
+          <span class="small">담당자·거래처 줄을 누르면 엑셀 그룹처럼 접고 펼칩니다. 증감은 「앞선 달 평균 → 최근 달」 기준.</span>
+          <span class="count" id="a-n"></span>
+        </div>
+        <div class="awrap"><table class="at" id="a-t"></table></div>
       </div>
     </section>
   </div></div>
@@ -374,6 +445,8 @@ async function save(){
     // Claude Code가 그사이 데이터를 바꿨으면, 새 데이터 위에 내 변경을 얹어서 저장
     const keys=changedKeys(),fresh=(await api.load()).data;expire(fresh);
     const fe=new Map(fresh.events.map(e=>[e.no,e])),fc=new Map(fresh.criteria.map(c=>[c.id,c]));
+    const gone=new Set(D.criteria.filter(c=>!crW.has(c.id)).map(c=>c.id));
+    if(gone.size)fresh.criteria=fresh.criteria.filter(c=>!gone.has(c.id));
     for(const [k,id] of keys){
       if(k==='ev'){const e=evW.get(id),t=fe.get(id);if(t)Object.assign(t,{s:e.s,memo:e.memo,dd:e.dd||''})}
       if(k==='cr'){const c=crW.get(id),t=fc.get(id);if(t)Object.assign(t,c);else fresh.criteria.push(clone(c))}
@@ -585,7 +658,7 @@ const CRIT_COLS=[
   {k:'etc',label:'코드삭제·기타 조건',v:c=>svC(c).etc},
   {k:'upd',label:'최신화 날짜',w:104,v:c=>upd(svC(c))},
   {k:'flag',label:'변동',w:110,v:c=>CORDER[svC(c).flag]??4},
-  {k:'act',label:'',w:118},
+  {k:'act',label:'',w:150},
 ];
 function renderCrit(){
   const f=$('c-f').value,q=$('c-q').value.trim();
@@ -604,7 +677,7 @@ function renderCrit(){
     return `<tr data-id="${esc(c.id)}"><td class="c"><a href="#" data-h="${esc(c.n)}">${esc(c.n)}</a></td><td>${cell('ua')}</td><td>${cell('ub')}</td><td>${cell('uc')}</td><td>${cell('etc')}</td>
     <td class="n">${esc(upd(c)||'-')}</td><td>${c.flag?`<span class="pill f-${esc(c.flag)}">${esc(c.flag)}</span>`:''}${need&&c.src?`<div class="small">${esc(c.src)}</div>`:''}</td>
     <td><div class="acts">${ed?`<button class="sm primary" data-a="done">완료</button><button class="sm" data-a="cancel">취소</button>`:
-      `${need?`<button class="sm primary" data-a="ok" title="대화 최신값을 표에 반영">확인</button>`:''}<button class="sm" data-a="edit">수정</button>`}</div></td></tr>`}).join('')+'</tbody>';
+      `${need?`<button class="sm primary" data-a="ok" title="대화 최신값을 표에 반영">확인</button>`:''}<button class="sm" data-a="edit">수정</button><button class="sm del" data-a="del" title="이 제약사 기준을 목록에서 삭제 (되돌리기 가능)">삭제</button>`}</div></td></tr>`}).join('')+'</tbody>';
 }
 RENDER['c-t']=renderCrit;
 $('c-f').addEventListener('change',renderCrit);$('c-q').addEventListener('input',renderCrit);
@@ -615,6 +688,12 @@ $('c-t').addEventListener('click',ev=>{
     if(a==='ok')change('cr',id,{ua:c.a,ub:c.b,uc:c.c,flag:'반영',upd:today()},`${n} 기준 표에 반영`);
     if(a==='edit'){editing=id;renderCrit();$('c-t').querySelector(`tr[data-id="${CSS.escape(id)}"] input`)?.focus()}
     if(a==='cancel'){editing=null;renderCrit()}
+    if(a==='del'){
+      // 행 삭제는 전체 스냅샷으로 기록해 「되돌리기」로 복구된다
+      const old=clone(W);W.criteria=W.criteria.filter(x=>x.id!==id);
+      const op={k:'all',old,new:clone(W),label:`${n} 기준 삭제`};idx();stack.push(op);histName===n&&(histName=null,$('h-card').style.display='none');
+      refresh();note(`${n} 기준을 삭제했습니다. 「저장」을 눌러야 반영됩니다.`);
+    }
     if(a==='done'){
       // 직접 입력한 칸은 입력값, 비워 둔 칸은 대화 최신값(없으면 지금 표 값)
       const v={};tr.querySelectorAll('input.ce').forEach(i=>{const k=i.dataset.k,lk=LK[k],typed=i.value.trim();v[k]=typed||(needC(c)&&lk&&c[lk]?c[lk]:'')||c[k]||''});editing=null;
@@ -730,9 +809,10 @@ function loadWorkbook(buf,name){
 }
 function readFile(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{loadWorkbook(new Uint8Array(r.result),f.name)}catch(e){note('파일을 읽지 못했습니다: '+e.message)}};r.readAsArrayBuffer(f)}
 $('file').addEventListener('change',e=>{readFile(e.target.files[0]);e.target.value=''});
-addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('dragging')});
+const onAnom=()=>$('p-anom').classList.contains('on');
+addEventListener('dragover',e=>{e.preventDefault();if(!onAnom())document.body.classList.add('dragging')});
 addEventListener('dragleave',e=>{if(e.target===document.documentElement||!e.relatedTarget)document.body.classList.remove('dragging')});
-addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('dragging');readFile(e.dataTransfer.files[0])});
+addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('dragging');if(onAnom())return;readFile(e.dataTransfer.files[0])});
 
 /* ---------- 엑셀로 저장 (전체 백업) ---------- */
 $('xsave').addEventListener('click',()=>{
@@ -757,6 +837,159 @@ $('xsave').addEventListener('click',()=>{
   XLSX.writeFile(wb,`정원유니어스_정산카톡_정리_${today().replace(/-/g,'')}.xlsx`);
   note('엑셀 파일을 내려받았습니다.');
 });
+
+/* ---------- 통계 이상유무 ---------- */
+const AT=['중단','급감','급증','신규'];
+const SEVN=['','낮음','중간','높음'];
+let AN={data:null,res:null,tys:new Set(AT),open:new Set()};
+const won=n=>Math.round(n).toLocaleString('ko-KR');
+function aMonth(v){if(v instanceof Date)return `${v.getFullYear()}-${p2(v.getMonth()+1)}`;const m=String(v||'').match(/(\d{4})\D?(\d{1,2})/);return m?`${m[1]}-${p2(m[2])}`:''}
+function aParse(buf){
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  let rows=null;
+  for(const n of ['Sheet1',...wb.SheetNames]){const sh=wb.Sheets[n];if(!sh)continue;const a=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
+    const hi=a.slice(0,10).findIndex(r=>r.includes('처방월')&&r.includes('금액')&&r.includes('거래처'));if(hi>=0){rows={h:a[hi],r:a.slice(hi+1)};break}}
+  if(!rows)throw new Error('처방월·거래처·금액 열이 있는 시트를 찾지 못했습니다.');
+  const ci=n=>rows.h.indexOf(n);const cm=ci('처방월'),cc=ci('거래처'),ca=ci('금액'),cg=ci('영업담당자');
+  let cp=ci('정산처');if(cp<0)cp=ci('제조사');if(cp<0)throw new Error('「정산처」(또는 제조사) 열이 없습니다.');
+  const map=new Map(),tot={};let n=0;
+  for(const r of rows.r){const m=aMonth(r[cm]);const amt=+r[ca];if(!m||!r[cc]||!isFinite(amt))continue;
+    let g=String(r[cg]??'').trim();if(!g||g[0]==='#')g='(담당자 미지정)';
+    const c=String(r[cc]).trim(),p=String(r[cp]).trim()||'(제약사 없음)';const k=g+'\u0001'+c+'\u0001'+p;
+    let o=map.get(k);if(!o){o={g,c,p,v:{}};map.set(k,o)}o.v[m]=(o.v[m]||0)+amt;tot[m]=(tot[m]||0)+amt;n++}
+  const months=Object.keys(tot).sort();
+  if(months.length<2)throw new Error('처방월이 2개월 이상 들어 있어야 비교할 수 있습니다.');
+  return {items:[...map.values()],months:months.slice(-3),tot,n};
+}
+function aFile(f){
+  if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=aParse(new Uint8Array(r.result));AN.data=d;AN.res=null;
+    $('a-info').innerHTML=`<b>${esc(f.name)}</b> · ${d.n.toLocaleString()}행 · 처방월 ${d.months.join(', ')} — 「분석」을 눌러 주세요`;
+    $('a-run').disabled=false;$('a-x').disabled=true;$('a-res').style.display='none';$('a-note').style.display='none'}
+    catch(e){AN.data=null;$('a-run').disabled=true;$('a-info').textContent='파일 없음';note('파일을 읽지 못했습니다: '+e.message)}};
+  r.readAsArrayBuffer(f);
+}
+function aClass(base,last,pct,minAmt){
+  const d=last-base,ad=Math.abs(d);let ty='';
+  if(base>0&&last<=0)ty='중단';else if(base<=0&&last>0)ty='신규';
+  else if(base>0){const p=d/base;if(p<=-pct)ty='급감';else if(p>=pct)ty='급증'}
+  if(ty&&ad<minAmt)ty='';
+  let sev=0;
+  if(ty){const p=base>0?Math.abs(d/base):1;
+    sev=(ad>=minAmt*20||(ad>=minAmt*5&&(ty==='중단'||p>=0.6)))?3:(ad>=minAmt*2?2:1)}
+  return {d,ty,sev};
+}
+function aCompute(){
+  const D=AN.data;if(!D)return;
+  const pct=(+$('a-pct').value||40)/100,minAmt=+$('a-min').value||0,M=D.months,L=M[M.length-1],P=M.slice(0,-1);
+  const root=new Map();
+  const add=(o,v)=>{for(const m of M)o.v[m]=(o.v[m]||0)+(v[m]||0)};
+  for(const it of D.items){
+    let g=root.get(it.g);if(!g){g={n:it.g,v:{},kids:new Map(),lv:0};root.set(it.g,g)}
+    let c=g.kids.get(it.c);if(!c){c={n:it.c,v:{},kids:new Map(),lv:1};g.kids.set(it.c,c)}
+    c.kids.set(it.p,{n:it.p,v:it.v,kids:null,lv:2});add(g,it.v);add(c,it.v)}
+  const fin=(o,id)=>{o.id=id;o.a=M.map(m=>o.v[m]||0);o.base=P.reduce((s,m)=>s+(o.v[m]||0),0)/P.length;o.last=o.v[L]||0;
+    const r=aClass(o.base,o.last,pct,minAmt);o.d=r.d;o.ty=r.ty;o.sev=r.sev;o.pc=o.base>0?o.d/o.base:null;
+    o.cnt={중단:0,급감:0,급증:0,신규:0};o.max=0;
+    if(!o.kids){if(o.ty){o.cnt[o.ty]=1;o.max=o.sev}}
+    else{o.list=[...o.kids.values()];for(const c of o.list){fin(c,id+'|'+c.n);AT.forEach(t=>o.cnt[t]+=c.cnt[t]);o.max=Math.max(o.max,c.max)}}
+    o.score=o.max*1e12+Math.abs(o.d)};
+  const gs=[...root.values()];gs.forEach(g=>fin(g,g.n));
+  AN.res={gs,months:M,last:L};
+}
+function aSpark(o){const mx=Math.max(...o.a,1);return `<span class="spark${o.d<0?' dn':''}">${o.a.map(v=>`<i style="height:${Math.max(2,Math.round(v/mx*20))}px"></i>`).join('')}</span>`}
+function aHeat(o){ // 증감률 칸 배경 농도 (감소=빨강, 증가=파랑)
+  if(o.pc==null)return '';const a=Math.min(Math.abs(o.pc),1);const col=o.d<0?'var(--crit)':'var(--accent)';
+  return `background:color-mix(in srgb,${col} ${Math.round(a*38)}%,transparent)`}
+function aRow(o){
+  const exp=AN.open.has(o.id);
+  const nm=o.lv<2?`<span class="tg">${exp?'▼':'▶'}</span>${esc(o.n)}`:esc(o.n);
+  const cells=o.a.map(v=>`<td class="num${v?'':' zero'}">${v?won(v):'-'}</td>`).join('');
+  const pc=o.pc==null?(o.last>0?'신규':'-'):`${o.pc>0?'+':''}${(o.pc*100).toFixed(0)}%`;
+  const dd=`${o.d>0?'+':''}${won(o.d)}`;
+  const info=(o.lv===0&&aGone(o)?'<span class="cnt t-중단" title="이 담당자는 최근월 합계가 거의 없습니다. 개별 제약사 문제가 아니라 처방 미등록일 수 있습니다">⚠ 전체 미등록 의심</span>':'')+(o.lv<2?AT.filter(t=>o.cnt[t]).map(t=>`<span class="cnt t-${t}">${t} ${o.cnt[t]}</span>`).join(''):(o.ty?`<span class="ty2 t-${o.ty}">${o.ty}</span>`:''));
+  const s=o.lv<2?o.max:(o.ty?o.sev:0);
+  const sev=s?`<span class="sev s${s}">${SEVN[s]}</span>`:'';
+  return `<tr class="l${o.lv}" data-id="${esc(o.id)}"><td class="nm" title="${esc(o.n)}">${nm}</td>${cells}<td class="num">${o.base?won(o.base):'-'}</td><td class="num" style="${o.d<0?'color:var(--crit)':o.d>0?'color:var(--accent)':''}">${dd}</td><td class="num" style="${aHeat(o)}">${pc}</td><td>${aSpark(o)}</td><td>${info}</td><td>${sev}</td></tr>`;
+}
+function aRender(){
+  const R=AN.res;if(!R)return;
+  const q=$('a-q').value.trim().toLowerCase(),only=$('a-only').checked,sev=+$('a-sev').value,mg=$('a-mgr').value;
+  const out=[];let leaf=0;
+  const sorted=l=>l.slice().sort((a,b)=>b.score-a.score||a.n.localeCompare(b.n,'ko'));
+  const ok=(p,c)=>{if(q&&!(p.n.toLowerCase().includes(q)||c.n.toLowerCase().includes(q)))return false;
+    if(only&&(!p.ty||!AN.tys.has(p.ty)||p.sev<sev))return false;return true};
+  for(const g of sorted(R.gs)){
+    if(mg&&g.n!==mg)continue;
+    const cs=[];
+    for(const c of sorted(g.list)){const ls=sorted(c.list).filter(p=>ok(p,c));if(ls.length)cs.push([c,ls])}
+    if(!cs.length)continue;
+    out.push(aRow(g));
+    if(!AN.open.has(g.id))continue;
+    for(const [c,ls] of cs){out.push(aRow(c));leaf+=ls.length;if(AN.open.has(c.id))for(const p of ls)out.push(aRow(p))}
+  }
+  const bl=R.months.length>2?`앞선 ${R.months.length-1}개월 평균`:R.months[0];
+  const th=`<thead><tr><th>담당자 &gt; 거래처 &gt; 제약회사</th>${R.months.map(m=>`<th class="num">${m}</th>`).join('')}<th class="num">${bl}</th><th class="num">증감액</th><th class="num">증감률</th><th>추이</th><th>구분</th><th>중요도</th></tr></thead>`;
+  $('a-t').innerHTML=th+'<tbody>'+(out.join('')||`<tr><td colspan="${R.months.length+6}" class="empty">조건에 맞는 항목이 없습니다.</td></tr>`)+'</tbody>';
+  $('a-n').textContent=`제약회사 ${leaf}건`;
+}
+function aKpi(){
+  const R=AN.res,c={중단:0,급감:0,급증:0,신규:0};let hi=0;
+  for(const g of R.gs){AT.forEach(t=>c[t]+=g.cnt[t]);for(const cl of g.list)for(const p of cl.list)if(p.ty&&p.sev===3)hi++}
+  const all=AN.tys.size===AT.length;
+  $('a-k').innerHTML=`<div class="ak${$('a-sev').value==='3'?' on':''}" data-ty="hi"><div class="l">중요도 높음</div><div class="v" style="color:var(--crit)">${hi}</div></div>`+
+    AT.map(t=>`<div class="ak t-${t}${!all&&AN.tys.has(t)?' on':''}" data-ty="${t}"><div class="l">${t}</div><div class="v">${c[t]}</div></div>`).join('')+
+    `<div class="ak" style="cursor:default"><div class="l">${R.last} 합계</div><div class="v" style="font-size:16px">${won(AN.data.tot[R.last]||0)}</div></div>`+
+    `<div class="ak" style="cursor:default"><div class="l">전체 미등록 의심 담당자</div><div class="v" style="font-size:18px">${R.gs.filter(aGone).length}</div></div>`;
+  $('a-k').querySelectorAll('.ak[data-ty]').forEach(e=>e.addEventListener('click',()=>{const t=e.dataset.ty;
+    if(t==='hi')$('a-sev').value=$('a-sev').value==='3'?'1':'3';
+    else AN.tys=(AN.tys.size===1&&AN.tys.has(t))?new Set(AT):new Set([t]);
+    $('a-only').checked=true;$('a-onlyl').classList.add('on');aKpi();aRender()}));
+}
+const aGone=g=>g.base>0&&g.last/g.base<0.3;
+function aRun(){
+  if(!AN.data)return;
+  const D=AN.data,L=D.months[D.months.length-1];
+  aCompute();const R=AN.res;
+  const gone=R.gs.filter(aGone).map(g=>g.n);
+  const nt=$('a-note');nt.style.display=gone.length?'block':'none';
+  nt.innerHTML=gone.length?`⚠ 최근월(${L})에 거의 비어 있는 담당자: <b>${gone.map(esc).join(', ')}</b> — 개별 제약사가 끊긴 게 아니라 해당 월 처방이 아직 등록되지 않았을 수 있으니 먼저 확인해 보세요.`:'';
+  const ms=[...new Set(D.items.map(i=>i.g))].sort((a,b)=>a.localeCompare(b,'ko'));
+  $('a-mgr').innerHTML='<option value="">담당자 전체</option>'+ms.map(m=>`<option>${esc(m)}</option>`).join('');
+  AN.open=new Set(R.gs.map(g=>g.id));AN.tys=new Set(AT);$('a-sev').value='1';
+  $('a-res').style.display='block';$('a-x').disabled=false;aKpi();aRender();
+}
+function aLvl(l){ // 0=담당자만, 1=거래처까지, 2=전체
+  const R=AN.res;if(!R)return;AN.open=new Set();
+  for(const g of R.gs){if(l>=1)AN.open.add(g.id);if(l>=2)for(const c of g.list)AN.open.add(c.id)}
+  aRender();
+}
+function aExport(){
+  const R=AN.res;if(!R)return;
+  const rows=[['담당자','거래처','제약회사',...R.months,'기준평균','증감액','증감률','구분','중요도']];
+  for(const g of R.gs)for(const c of g.list)for(const p of c.list)rows.push([g.n,c.n,p.n,...p.a,Math.round(p.base),Math.round(p.d),p.pc==null?'':Math.round(p.pc*1000)/10+'%',p.ty,p.ty?SEVN[p.sev]:'']);
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[12,26,26,13,13,13,14,13,9,8,8].map(w=>({wch:w}));ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(rows[0].length-1)}${rows.length}`};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'통계 이상유무');
+  XLSX.writeFile(wb,`통계이상유무_${R.last}_${today().replace(/-/g,'')}.xlsx`);
+}
+function aInit(){
+  const dz=$('a-drop');
+  ['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('over')}));
+  ['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('over')}));
+  $('p-anom').addEventListener('drop',ev=>{ev.preventDefault();aFile(ev.dataTransfer.files[0])});
+  $('a-file').addEventListener('change',e=>{aFile(e.target.files[0]);e.target.value=''});
+  $('a-run').addEventListener('click',aRun);
+  $('a-x').addEventListener('click',aExport);
+  const re=()=>{aCompute();aKpi();aRender()};
+  ['a-pct','a-min'].forEach(i=>$(i).addEventListener('change',re));
+  $('a-only').addEventListener('change',()=>{$('a-onlyl').classList.toggle('on',$('a-only').checked);aRender()});
+  $('a-sev').addEventListener('change',()=>{aKpi();aRender()});
+  $('a-mgr').addEventListener('change',aRender);
+  $('a-q').addEventListener('input',aRender);
+  $('a-l0').addEventListener('click',()=>aLvl(0));$('a-l1').addEventListener('click',()=>aLvl(1));$('a-l2').addEventListener('click',()=>aLvl(2));
+  $('a-t').addEventListener('click',ev=>{const tr=ev.target.closest('tr.l0,tr.l1');if(!tr)return;const id=tr.dataset.id;AN.open.has(id)?AN.open.delete(id):AN.open.add(id);aRender()});
+}
+aInit();
 
 /* ---------- 시작 ---------- */
 async function init(){
