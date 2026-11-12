@@ -219,16 +219,10 @@ function itemEl(t){
     const m=el('div','memo','📝 '+t.note);m.title='클릭해서 수정 (드래그하면 복사)';
     let had=false;m.onmousedown=()=>{had=!!String(getSelection()).length};
     m.onclick=()=>{if(String(getSelection()).length&&!had)return;ui.openNote(t.id)};body.appendChild(m)}
-  if(ui.fu===t.id){
-    const f=el('input','fu-in');f.placeholder='후속 작업 내용 → Enter (오늘 할 일로 추가)';body.appendChild(f);
-    f.onkeydown=e=>{if(e.key==='Enter'&&f.value.trim()){const v=f.value;ui.fu=null;run('add',v,t.id,null)}if(e.key==='Escape'){ui.fu=null;render()}};
-    setTimeout(()=>f.focus(),0);
-  }
   const acts=el('div','acts');
   const btn=(cls,ic,tip,fn)=>{const b=el('button',cls,ic);b.title=tip;b.onclick=fn;acts.appendChild(b);return b};
   btn('','📅','완료일(마감일) 지정',()=>pickDate(t.due,v=>run('set_due',t.id,v)));
   btn(t.repeat?'on':'','🔁',t.repeat?`반복: ${repText(t.repeat)} (눌러서 변경)`:'반복 루틴 (매일(평일)·매주·매월)',()=>pickRepeat(t.repeat,r=>run('set_repeat',t.id,r)));
-  btn('','↳','후속 작업 추가',()=>ui.toggleFu(t.id));
   btn(ui.notes.has(t.id)?'on':'','✎','메모',()=>ui.toggleNote(t.id));
   btn('x','✕','삭제',()=>askDelete(t));
   row.dataset.id=t.id;row.dataset.sec=t.section;
