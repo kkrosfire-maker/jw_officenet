@@ -151,7 +151,20 @@ class H(BaseHTTPRequestHandler):
             req = json.loads(body)
             prog = req.get("program") or {}
             data = prog.pop("icon_data", None)  # 사용자가 고른 이미지(dataURL). 있으면 자동 아이콘 가져오기는 건너뛴다
-            cfg = apply(load(), req, (lambda p: "") if data else icon_for)
+            reset = prog.pop("icon_reset", False) and req["action"] == "update" and not data  # 직접 고른 이미지를 버리고 자동 아이콘으로
+            base = load()
+            if reset:
+                old = next((p for p in base["programs"] if p["id"] == prog.get("id")), None)
+                if old:
+                    old.pop("icon_custom", None)
+            cfg = apply(base, req, (lambda p: "") if data else icon_for)
+            if reset:
+                target = next(p for p in cfg["programs"] if p["id"] == prog.get("id"))
+                try:
+                    target["icon"] = icon_for(target) or ""
+                except Exception:
+                    target["icon"] = ""
+                target.pop("icon_custom", None)
             if data:
                 import base64
                 target = next(p for p in cfg["programs"] if p["id"] == (prog.get("id") if req["action"] == "update" else cfg["programs"][-1]["id"]))

@@ -95,6 +95,8 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
 .izone.over{border-style:solid;box-shadow:0 0 0 3px rgba(13,74,50,.18)}
 .ibtn{border:1px solid var(--green);background:#fff;color:var(--green);font-size:12px;line-height:1.35;padding:0}
 .ibtn:hover{background:var(--hover)}
+.ibtn[hidden]{display:none}
+#bIconReset{border-color:var(--border);color:var(--green-tint)}
 .acts{display:flex;gap:8px;margin-top:18px}.acts .sp{flex:1}
 /* 오늘의 할 일 접이식 패널 */
 #todo{display:none;position:fixed;top:0;right:0;bottom:0;width:371px;background:#fff;border-left:2px solid var(--green);z-index:4}
@@ -125,7 +127,7 @@ body.todo-open #todo{display:block}
   <label>설명<input id="fDesc"></label>
   <label>그룹<input id="fGroup" list="gl" placeholder="예: 업무"></label><datalist id="gl"></datalist>
   <div class="iconrow"><div class="izone" id="iZone" tabindex="0" role="button" title="이미지를 끌어다 놓거나 눌러서 선택"><img id="fIconImg" alt="" hidden><span class="plus" id="fIconPlus">＋</span></div>
-    <button type="button" class="ibtn" id="bIcon">이미지<br>변경</button><input type="file" id="fIcon" accept="image/*" hidden></div>
+    <button type="button" class="ibtn" id="bIcon">이미지<br>변경</button><button type="button" class="ibtn" id="bIconReset" title="직접 고른 이미지를 지우고 자동 아이콘으로 되돌리기" hidden>자동<br>복원</button><input type="file" id="fIcon" accept="image/*" hidden></div>
   <label id="lPath">프로그램 경로<div class="row"><input id="fPath"><button type="button" class="btn" id="bBrowse">찾아보기</button></div></label>
   <label id="lUrl">웹 주소<input id="fUrl" placeholder="https://"></label>
   <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
@@ -259,7 +261,8 @@ async function load(){
   catch(e){toast('programs.json 을 읽지 못했어요',true)}
 }
 function syncType(){const u=$('fType').value==='url';$('lUrl').style.display=u?'':'none';$('lPath').style.display=u?'none':''}
-let iconData=null;
+let iconData=null,iconReset=false;
+function syncReset(){$('bIconReset').hidden=!(iconData||(cur?.icon_custom&&!iconReset))}
 function showIcon(src){
   const im=$('fIconImg');im.hidden=!src;$('fIconPlus').hidden=!!src;
   if(src)im.src=src;else im.removeAttribute('src');
@@ -269,7 +272,7 @@ async function loadIconFile(f){ // 고른·끌어 놓은 이미지를 512px 이�
     const bmp=await createImageBitmap(f),k=Math.min(1,512/Math.max(bmp.width,bmp.height));
     const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
     c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-    iconData=c.toDataURL('image/png');showIcon(iconData);
+    iconData=c.toDataURL('image/png');iconReset=false;showIcon(iconData);syncReset();
   }catch(err){toast('이미지를 읽지 못했어요',true)}
 }
 async function pickIcon(){ // 앱 창에서는 바탕화면에서 시작하는 파일 선택 창, 브라우저에서는 기본 선택 창
@@ -277,6 +280,11 @@ async function pickIcon(){ // 앱 창에서는 바탕화면에서 시작하는 �
     const d=await pywebview.api.pick_image();if(d)loadIconFile(await (await fetch(d)).blob());
   }else $('fIcon').click();
 }
+$('bIconReset').onclick=()=>{ // 방금 고른 이미지는 취소, 저장돼 있던 직접 고른 이미지는 자동 아이콘으로 되돌린다
+  iconData=null;
+  if(cur?.icon_custom){iconReset=true;showIcon('')}else showIcon(cur?.icon?iconUrl(cur):'');
+  syncReset();
+};
 $('bIcon').onclick=pickIcon;$('iZone').onclick=pickIcon;
 $('iZone').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickIcon()}};
 $('fIcon').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadIconFile(f)};
@@ -290,13 +298,13 @@ function openDlg(p){
   cur=p;$('dT').textContent=p?'프로그램 수정':'프로그램 추가';
   $('fType').value=p?.type||'exe';$('fName').value=p?.name||'';$('fDesc').value=p?.desc||'';
   $('fGroup').value=p?.group||'';$('fPath').value=p?.path||'';$('fUrl').value=p?.url||'';
-  iconData=null;showIcon(p?.icon?iconUrl(p):'');
+  iconData=null;iconReset=false;showIcon(p?.icon?iconUrl(p):'');syncReset();
   $('bDel').style.display=p?'':'none';syncType();$('dlg').showModal();
 }
 async function submit(){
   const t=$('fType').value;
   const program={...(cur||{}),type:t,name:$('fName').value,desc:$('fDesc').value,group:$('fGroup').value,path:$('fPath').value,url:$('fUrl').value};
-  if(iconData)program.icon_data=iconData;
+  if(iconData)program.icon_data=iconData;else if(iconReset)program.icon_reset=true;
   if(cur&&t==='exe'&&cur.path!==program.path)program.cwd='';
   try{
     const j=await post('/api/save',{action:cur?'update':'add',program});
