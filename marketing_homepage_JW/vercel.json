@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/favicon.ico", "destination": "/assets/00_favicon_64.png" },
     { "source": "/news/:id(\\d+)", "destination": "/api/article?id=:id" },
     { "source": "/news", "destination": "/api/list" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }

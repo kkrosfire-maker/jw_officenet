@@ -1,4 +1,4 @@
-window.HOME_URL = "index_(261113b)_섹션명.html";
+window.HOME_URL = "index_(261113c)_섹션명.html";
 
 // 게시판 데이터 저장소. 'static' = news/posts.js(내 PC 관리자), 'supabase' = Supabase 테이블 읽기
 // Supabase 전환 시: type 을 'supabase' 로 바꾸고 url / anonKey 를 채운다(anonKey 는 공개용 키라 노출돼도 됨, service_role 키는 절대 넣지 말 것).
