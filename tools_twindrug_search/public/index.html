@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFFEF2">
+<title>대체약 찾기</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <h1>대체약 찾기</h1>
+    <span class="basis" id="basis">자료 불러오는 중…</span>
+    <a class="cso" href="tel:010-3014-7731">CSO 문의 · 정원유니어스 010-3014-7731</a>
+  </div>
+  <div class="search-row">
+    <span class="num">1</span>
+    <input id="q" type="search" placeholder="약 이름 · 성분 · 제약사 (초성도 됨)" autocomplete="off" autofocus>
+    <button id="clear" class="btn" type="button">지우기</button>
+  </div>
+</header>
+
+<main id="main">
+  <section id="results"></section>
+  <section id="detail" hidden></section>
+</main>
+
+<footer class="foot">
+  <p>자료: 건강보험심사평가원 약제급여목록·저가약 대체조제 목록 (공공자료).
+  "대체 가능"은 성분·함량·제형이 같다는 뜻이며, 실제 대체조제는 생동인정 여부와 약사 판단을 따릅니다.
+  "대조약"은 생동성시험의 기준이 된 약으로, 대부분 오리지널이지만 항상 그런 것은 아닙니다.</p>
+  <p class="foot-links"><a href="tel:010-3014-7731">CSO 문의: 정원유니어스 010-3014-7731</a> · <a href="privacy.html">개인정보처리방침</a></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

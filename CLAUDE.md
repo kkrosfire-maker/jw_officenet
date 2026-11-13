@@ -29,6 +29,16 @@ Applies to every project under this workspace.
 - When the user doubts a result or repeats a request, treat it as a sign the previous attempt failed: re-verify against the real source instead of restating the earlier claim.
 - After a fix, verify it actually works (run it, check output) before reporting it done.
 
+## Reference material must actually be seen
+
+Applies to every project under this workspace.
+
+- When the user gives a reference (a site to imitate, a design, a file, a screenshot), do not start building until you have actually seen its real content (rendered page, screenshot, full text). Page title, a few links, or general knowledge of "typical sites" is not seeing it.
+- If fetching returns a thin shell (JS-rendered page) or the Chrome-extension screenshot fails, capture it yourself with headless Playwright (`python script.py`, not `-I`; it is installed): `goto(wait_until="networkidle")`, then scroll with REAL `page.mouse.wheel()` steps with waits and screenshot each viewport (`scrollTo` does not trigger scroll-reveal animations on React/GSAP sites and gives blank shots). Also dump `#root` innerText for copy/structure. Only if that also fails, ask the user for screenshots or saved HTML. Do not substitute a guessed structure and present it as finished work. (Lesson 2026-11-06: joeunmarketing.com reference was captured this way after wrongly giving up.)
+- If you must produce a draft without the reference, say so first in the report, and label it clearly as a guess — never claim it resembles the reference.
+- Do not report "opened/ran/works" unless you verified the actual result (e.g. process launched is not the same as window shown). Say exactly what was and was not verified.
+- Before making a deliverable the user will open themselves (HTML etc.), consider whether it opens on their machine (e.g. `.html` has no default app on this PC → provide a launcher .bat that opens it in Chrome).
+
 ## Project
 
 <!-- TODO: Fill in once a project is added to this workspace -->

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">계약정보 조회</string>
+    <string name="title_activity_main">계약정보 조회</string>
+    <string name="package_name">com.jw.contractcalc</string>
+    <string name="custom_url_scheme">com.jw.contractcalc</string>
+</resources>

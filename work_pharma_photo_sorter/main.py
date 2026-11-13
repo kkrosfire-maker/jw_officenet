@@ -10,7 +10,7 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 import photo_sort
 import photos
 from review import format_review
-from roster import ExcelParseError, parse_excel
+from roster import ExcelParseError, add_entry, parse_excel, update_entry
 
 try:
     import pharma_zip
@@ -92,6 +92,7 @@ class PictureDivider:
         self.photo_dir  = tk.StringVar()
         self.excel_path = tk.StringVar()
         self.excel_data: list[dict] = []
+        self.unmatched_hospitals: list[str] = []
         self.status_var = tk.StringVar(value="준비")
 
         cfg = load_config()
@@ -174,6 +175,12 @@ class PictureDivider:
         sb = ttk.Scrollbar(tbl_frame, orient="vertical", command=self.tree.yview)
         sb.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=sb.set)
+        self.tree.bind("<Double-1>", lambda e: self._edit_entry())
+
+        edit_row = ttk.Frame(self.excel_frame)
+        edit_row.grid(row=2, column=0, sticky="e", pady=(6, 0))
+        ttk.Button(edit_row, text="병원 추가", command=self._add_entry, width=10).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(edit_row, text="선택 수정", command=self._edit_entry, width=10).grid(row=0, column=1)
 
         # 버튼
         btn_frame = ttk.Frame(main)
@@ -265,14 +272,110 @@ class PictureDivider:
         self.excel_data = data
         self.excel_path.set(filepath)
         self.tree.delete(*self.tree.get_children())
-        for item in data:
-            self.tree.insert("", "end", values=(item["거래처명"], item["담당자"]))
+        for i, item in enumerate(data):
+            self.tree.insert("", "end", iid=str(i), values=(item["거래처명"], item["담당자"]))
         self._save_cfg()
 
         msg = f"엑셀 로드 완료 — {len(data)}개 거래처"
         self.status_var.set(msg)
         if not silent:
             self._log(f"[엑셀] {msg}", "info")
+
+    # ── 거래처 추가/수정 ──────────────────────────────────────────────────────
+
+    def _ask_entry(self, title: str, name: str = "", manager: str = "", suggestions: list[str] = ()):
+        """거래처명/담당자 입력창. 확인하면 (거래처명, 담당자), 취소하면 None."""
+        dlg = tk.Toplevel(self.root)
+        dlg.title(title)
+        dlg.transient(self.root)
+        dlg.resizable(False, False)
+        frm = ttk.Frame(dlg, padding=12)
+        frm.grid()
+        name_var, mgr_var = tk.StringVar(value=name), tk.StringVar(value=manager)
+        ttk.Label(frm, text="거래처명").grid(row=0, column=0, sticky="w", pady=4)
+        name_cb = ttk.Combobox(frm, textvariable=name_var, values=list(suggestions), width=40)
+        name_cb.grid(row=0, column=1, padx=(8, 0))
+        ttk.Label(frm, text="담당자").grid(row=1, column=0, sticky="w", pady=4)
+        managers = sorted({d["담당자"] for d in self.excel_data})
+        ttk.Combobox(frm, textvariable=mgr_var, values=managers, width=40).grid(row=1, column=1, padx=(8, 0))
+        if suggestions:
+            ttk.Label(frm, text="※ 거래처명 목록: 직전 분류에서 매칭되지 않은 병원", foreground="#666").grid(
+                row=2, column=0, columnspan=2, sticky="w")
+
+        result = []
+        def ok(_e=None):
+            n, m = name_var.get().strip(), mgr_var.get().strip()
+            if not n or not m:
+                messagebox.showwarning("경고", "거래처명과 담당자를 모두 입력하세요.", parent=dlg)
+                return
+            result.append((n, m))
+            dlg.destroy()
+        btns = ttk.Frame(frm)
+        btns.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="e")
+        ttk.Button(btns, text="확인", command=ok, width=8).grid(row=0, column=0, padx=4)
+        ttk.Button(btns, text="취소", command=dlg.destroy, width=8).grid(row=0, column=1)
+        dlg.bind("<Return>", ok)
+        dlg.bind("<Escape>", lambda e: dlg.destroy())
+        name_cb.focus_set()
+        dlg.grab_set()
+        self.root.wait_window(dlg)
+        return result[0] if result else None
+
+    def _write_excel(self, action) -> bool:
+        """엑셀 파일에 반영. 실패해도 화면(메모리)에는 반영하되 사용자에게 알린다."""
+        path = self.excel_path.get()
+        if not path:
+            messagebox.showwarning("경고", "엑셀 파일을 먼저 업로드해주세요.")
+            return False
+        if Path(path).suffix.lower() != ".xlsx":
+            messagebox.showwarning("안내", "xls 파일은 엑셀에 저장할 수 없어 이번 실행 동안만 반영됩니다.")
+            return True
+        try:
+            if action(path) is False:
+                messagebox.showwarning("안내", "엑셀에서 해당 줄을 찾지 못해 이번 실행 동안만 반영됩니다.")
+        except PermissionError:
+            messagebox.showwarning("안내", "엑셀 파일이 열려 있어 저장하지 못했습니다.\n이번 실행 동안만 반영됩니다. 엑셀을 닫고 다시 시도하세요.")
+        except Exception as e:
+            messagebox.showwarning("안내", f"엑셀 저장 실패 ({e})\n이번 실행 동안만 반영됩니다.")
+        return True
+
+    def _add_entry(self):
+        if not self.excel_path.get():
+            messagebox.showwarning("경고", "엑셀 파일을 먼저 업로드해주세요.")
+            return
+        known = {d["거래처명"] for d in self.excel_data}
+        got = self._ask_entry("병원 추가", suggestions=[h for h in self.unmatched_hospitals if h not in known])
+        if not got:
+            return
+        name, manager = got
+        if not self._write_excel(lambda p: add_entry(p, name, manager)):
+            return
+        self.excel_data.append({"거래처명": name, "담당자": manager})
+        i = len(self.excel_data) - 1
+        self.tree.insert("", "end", iid=str(i), values=(name, manager))
+        self.tree.see(str(i))
+        self.status_var.set(f"추가: {name} → {manager}")
+        self._log(f"[엑셀] 추가: {name} → {manager}", "info")
+
+    def _edit_entry(self):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showinfo("안내", "수정할 병원을 목록에서 선택하세요.")
+            return
+        i = int(sel[0])
+        old = self.excel_data[i]
+        got = self._ask_entry("병원 수정", old["거래처명"], old["담당자"])
+        if not got:
+            return
+        name, manager = got
+        if (name, manager) == (old["거래처명"], old["담당자"]):
+            return
+        if not self._write_excel(lambda p: update_entry(p, old["거래처명"], old["담당자"], name, manager)):
+            return
+        self.excel_data[i] = {"거래처명": name, "담당자": manager}
+        self.tree.item(sel[0], values=(name, manager))
+        self.status_var.set(f"수정: {old['거래처명']} → {name} / {manager}")
+        self._log(f"[엑셀] 수정: {old['거래처명']}({old['담당자']}) → {name}({manager})", "info")
 
     def _sort_by_column(self, col: str) -> None:
         reverse = self._sort_reverse[col]
@@ -358,6 +461,7 @@ class PictureDivider:
         self._log(f"{'─'*50}", "info")
 
         results = photo_sort.classify(files, lookup)
+        self.unmatched_hospitals = sorted({r.hospital for r in results if r.match_type == "none"})
 
         def on_event(e: photo_sort.SortEvent):
             if e.kind == "moved":

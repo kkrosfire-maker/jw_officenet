@@ -41,3 +41,33 @@ def parse_excel(filepath: str) -> list[dict]:
         raise ExcelParseError("유효한 데이터가 없습니다.\n(거래처명, 담당자 열을 확인하세요)")
 
     return data
+
+
+def _cell_text(value) -> str:
+    return str(value).strip() if value else ""
+
+
+def add_entry(filepath: str, name: str, manager: str) -> None:
+    """엑셀 맨 아래에 거래처명/담당자 한 줄을 추가해 저장한다. (.xlsx만 가능)"""
+    wb = openpyxl.load_workbook(filepath)
+    try:
+        wb.active.append([name, manager])
+        wb.save(filepath)
+    finally:
+        wb.close()
+
+
+def update_entry(filepath: str, old_name: str, old_manager: str, name: str, manager: str) -> bool:
+    """엑셀에서 (old_name, old_manager) 줄을 찾아 새 값으로 바꿔 저장한다. 못 찾으면 False."""
+    wb = openpyxl.load_workbook(filepath)
+    try:
+        ws = wb.active
+        for row in ws.iter_rows(min_col=1, max_col=2):
+            if _cell_text(row[0].value) == old_name and _cell_text(row[1].value) == old_manager:
+                row[0].value = name
+                row[1].value = manager
+                wb.save(filepath)
+                return True
+        return False
+    finally:
+        wb.close()

@@ -1,0 +1,9 @@
+{
+  "name": "대체약 찾기",
+  "short_name": "대체약",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFDE7",
+  "theme_color": "#FFFEF2",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

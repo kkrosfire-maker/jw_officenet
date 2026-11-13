@@ -1,0 +1,217 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Malgun Gothic', -apple-system, sans-serif;
+  background: #2c2c2c;
+  color: #333;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #f4f4f4;
+  box-shadow: 0 0 24px rgba(0,0,0,0.5);
+}
+
+header {
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 100%);
+  color: white;
+  padding: 18px 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+header h1 { font-size: 19px; font-weight: 700; }
+
+.dashboard-btn {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  border-radius: 7px;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.dashboard-btn:hover,
+.dashboard-btn:active { background: rgba(255,255,255,0.15); }
+
+main { padding: 16px; }
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: #888;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.field-label-inline {
+  font-size: 14px;
+  color: #555;
+  font-weight: 700;
+  flex: 0 0 74px;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.input-row:last-child { margin-bottom: 0; }
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.section-header .field-label { margin-bottom: 0; }
+
+.date-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.date-sublabel {
+  font-size: 11px;
+  color: #999;
+  font-weight: 700;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="number"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 7px;
+  font-size: 16px;
+  font-family: inherit;
+  color: #333;
+  background: white;
+}
+input:focus { outline: none; border-color: #1b2838; }
+
+.today-btn {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 7px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #555;
+  transition: all 0.15s;
+}
+.today-btn:hover { border-color: #1b2838; background: #f0f0f0; }
+.today-btn:active { background: #e6e6e6; }
+
+.error-msg {
+  color: #e91e63;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 4px 8px;
+}
+
+.calc-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #26a69a;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: background 0.15s;
+}
+.calc-btn:hover { background: #2bbcae; }
+.calc-btn:active { background: #1e8c81; }
+
+.result-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1b2838;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.result-title span { color: #26a69a; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.info-table th {
+  width: 38%;
+  background: #f4f4f4;
+  color: #555;
+  font-weight: 700;
+  text-align: left;
+  padding: 11px 12px;
+  border-bottom: 1px solid #eee;
+}
+.info-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #eee;
+  font-weight: 700;
+  color: #1b2838;
+}
+.info-table tr:last-child th,
+.info-table tr:last-child td { border-bottom: none; }
+
+.amount-table thead th {
+  background: #1b2838;
+  color: white;
+  font-weight: 700;
+  padding: 10px 12px;
+  text-align: left;
+}
+.amount-table tbody th {
+  background: #f4f4f4;
+  color: #555;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  border-right: 1px solid #eee;
+}
+.amount-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+}
+.amount-table tr:last-child th,
+.amount-table tr:last-child td { border-bottom: none; }
+.amount-table td:first-of-type { font-weight: 700; color: #1b2838; }
+.amount-table td:last-of-type { color: #999; font-size: 13px; }

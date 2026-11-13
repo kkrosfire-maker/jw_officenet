@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>계약정보 조회</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>계약정보 조회</h1>
+    <a class="dashboard-btn" href="https://jw-officenet.onrender.com/" target="_blank" rel="noopener noreferrer">대쉬보드</a>
+  </header>
+
+  <main>
+    <section class="card">
+      <label class="field-label">방 이름</label>
+      <div class="input-row">
+        <input type="text" id="room-name" placeholder="예: B007" autocomplete="off">
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <label class="field-label">계약기간</label>
+        <button type="button" id="today-btn" class="today-btn">오늘</button>
+      </div>
+
+      <div class="input-row">
+        <div class="date-field">
+          <span class="date-sublabel">개시일</span>
+          <input type="date" id="start-date">
+        </div>
+        <div class="date-field">
+          <span class="date-sublabel">만료일</span>
+          <input type="date" id="end-date">
+        </div>
+      </div>
+
+      <div class="input-row">
+        <label class="field-label-inline">개월수</label>
+        <input type="number" id="months-input" min="1" placeholder="개월 수" style="flex:1;">
+        <button type="button" id="months-calc-btn" class="today-btn">계산</button>
+      </div>
+    </section>
+
+    <p id="error-msg" class="error-msg" style="display:none;"></p>
+
+    <button type="button" id="calc-btn" class="calc-btn">계산하기</button>
+
+    <section id="result" class="result">
+      <h2 class="result-title"><span id="result-room">-</span> 계약정보</h2>
+
+      <table class="info-table">
+        <tbody>
+          <tr><th>계약기간</th><td id="out-months">-</td></tr>
+          <tr><th>입주개시일</th><td id="out-start">-</td></tr>
+          <tr><th>입주만료일</th><td id="out-end">-</td></tr>
+        </tbody>
+      </table>
+
+      <table class="amount-table">
+        <thead>
+          <tr><th>구분</th><th>내용</th><th>비고</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="2">표준금액</th>
+            <td id="out-standard-ex">-</td>
+            <td>(VAT 별도)</td>
+          </tr>
+          <tr>
+            <td id="out-standard-inc">-</td>
+            <td>(VAT 포함)</td>
+          </tr>
+          <tr>
+            <th rowspan="2">할인금액</th>
+            <td id="out-discount-ex">-</td>
+            <td>(VAT 별도)</td>
+          </tr>
+          <tr>
+            <td id="out-discount-inc">-</td>
+            <td>(VAT 포함)</td>
+          </tr>
+          <tr>
+            <th>예치금</th>
+            <td id="out-deposit">-</td>
+            <td>(퇴실 시 반환)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<script src="room_rates.js"></script>
+<script src="calc.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

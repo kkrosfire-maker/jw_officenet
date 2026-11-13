@@ -2,7 +2,7 @@
 Claude Code 새 사용자 설치 도우미 (ClaudeCode_설치.exe 의 본체)
 
 다른 사람 PC에서 실행하면:
-  1. 바탕화면\\workspace 폴더 생성
+  1. C:\\workspace 폴더 생성
   2. PowerShell 실행 정책 해제 (프로필/claude 명령이 막히지 않게)
   3. Git, Claude Code CLI 설치 (없을 때만)
   4. 내 Claude Code 설정·스킬(/c-push 등)·CLAUDE.md 복사
@@ -106,7 +106,8 @@ class Paths:
             self.documents = known_folder(CSIDL_PERSONAL)
             self.localappdata = Path(os.environ["LOCALAPPDATA"])
             self.appdata = Path(os.environ["APPDATA"])
-        self.workspace = self.desktop / "workspace"
+        # 바탕화면(OneDrive 등)에선 권한 오류가 잦아 C 드라이브 바로 아래에 둔다
+        self.workspace = (root / "workspace") if test_root else Path("C:/workspace")
         self.claude_dir = self.home / ".claude"
         self.claude_bin = self.home / ".local" / "bin"
         self.ide_exe = self.localappdata / "Programs" / "Antigravity IDE" / "Antigravity IDE.exe"
@@ -650,7 +651,7 @@ def main():
     print("=" * 60)
     print(f"""
   이 프로그램이 하는 일
-   - 바탕화면에 workspace 폴더 만들기 ({p.workspace})
+   - workspace 폴더 만들기 ({p.workspace})
    - Git, Claude Code, Antigravity IDE, ShareX 설치 (이미 있으면 건너뜀)
    - 설정·스킬(/c-push 등)·단축 명령(q, ㅂ, cc) 적용
    - 바탕화면 바로가기, claude.ai 즐겨찾기 추가

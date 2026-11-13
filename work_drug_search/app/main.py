@@ -312,7 +312,8 @@ class RateSheetApp:
             content, textvariable=self.keyword_var, font=("맑은 고딕", 10)
         )
         entry.pack(side="left", fill="x", expand=True, padx=6)
-        entry.bind("<Return>", lambda e: self._do_search())
+        self.search_entry = entry
+        entry.bind("<Return>", lambda e: self._do_search_and_select())
         entry.bind(
             "<FocusIn>",
             lambda e: sync_ime_composition_font(entry, "맑은 고딕", 10),
@@ -500,6 +501,22 @@ class RateSheetApp:
         messagebox.showerror("오류", str(error))
 
     # ---------- 검색 ----------
+    def _focus_search_entry(self, select_all=True):
+        entry = getattr(self, "search_entry", None)
+        if entry is None:
+            return
+        # focus_force는 창이 비활성일 때 Windows 포그라운드를 강제로 뺏어 다른 창에서
+        # 일하다 돌아오면 입력이 먹통이 될 수 있어 focus_set만 쓴다.
+        entry.focus_set()
+        if select_all:
+            entry.selection_range(0, "end")
+            entry.icursor("end")
+
+    def _do_search_and_select(self):
+        self._do_search()
+        # 검색 후 입력칸에 포커스를 두고 검색어 전체 선택 (바로 덮어쓰기 가능)
+        self._focus_search_entry()
+
     def _do_search(self):
         if not self.rows:
             messagebox.showwarning("알림", "먼저 기준 엑셀 파일을 선택해주세요.")
@@ -1342,6 +1359,7 @@ def main():
     root = tk.Tk()
     _apply_window_icon(root)
     app = RateSheetApp(root)
+    root.after(200, lambda: app._focus_search_entry(select_all=False))
     root.mainloop()
 
 

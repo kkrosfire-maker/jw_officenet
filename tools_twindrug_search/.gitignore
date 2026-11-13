@@ -1,0 +1,26 @@
+# 심평원 원본 엑셀(매달 새로 받음, 저장소에 안 넣음)
+data_raw/
+__pycache__/
+.vercel
+.env*
+
+# ===== 자동 추가 (2026-09-01 비밀정보 차단 2차) =====
+# 키·인증서 파일. 실수로 커밋되면 되돌릴 수 없다.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# 시크릿 모음 폴더
+secrets/
+credentials/
+config/credentials.json
+
+# .env 의 변형들 (.env.local / .env.bak-… 등)
+# .env.example 은 값이 없는 견본이라 일부러 남긴다.
+.env.*
+!.env.example
+.vercel
+.env*
