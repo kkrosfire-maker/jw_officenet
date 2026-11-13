@@ -77,3 +77,11 @@ class CarryOverTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoStatsTest(CarryOverTest):
+    def test_no_stats_sets_status_and_mark_without_note(self):
+        n = ledger_write.no_stats(self.p, 11, "건스", "A의원", "삼익제약")
+        self.assertEqual(n, 1)
+        r = self.cells()
+        self.assertEqual((r[2][2], r[2][8], r[2][9]), ("통계없음", 1, "기존 메모"))

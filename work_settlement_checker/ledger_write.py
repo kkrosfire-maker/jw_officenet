@@ -12,7 +12,7 @@ from pathlib import Path
 import openpyxl
 
 import names
-from ledger_read import CARRIED, DONE, _COLS, _HEAD
+from ledger_read import CARRIED, DONE, NO_STATS, _COLS, _HEAD
 
 SHEET = "통계입력확인"
 
@@ -55,7 +55,17 @@ def _save_safely(wb, path):
 
 
 def carry_over(path, month, manager, hospital, pharma):
-    """입력월이 month월이고 (담당자·병원·제약사)가 같은 줄 중 아직 처리 안 된 줄을 통계이월로 바꾼다.
+    """미처리 줄을 통계이월로 바꾼다(상태·I열=1·특이사항 'mm월 통계 다음달로 이월')."""
+    return set_status(path, month, manager, hospital, pharma, CARRIED)
+
+
+def no_stats(path, month, manager, hospital, pharma):
+    """미처리 줄을 통계없음으로 바꾼다(상태·I열=1. 특이사항은 건드리지 않음)."""
+    return set_status(path, month, manager, hospital, pharma, NO_STATS)
+
+
+def set_status(path, month, manager, hospital, pharma, status):
+    """입력월이 month월이고 (담당자·병원·제약사)가 같은 줄 중 아직 처리 안 된 줄의 상태를 status로 바꾼다.
     반환: 바꾼 줄 수. 못 찾으면 0. 엑셀이 열려 있어 못 쓰면 PermissionError."""
     wb = openpyxl.load_workbook(path)                     # 수식·데이터검증 유지를 위해 read_only 아님
     try:
@@ -75,9 +85,10 @@ def carry_over(path, month, manager, hospital, pharma):
             if (text(r, "input_month") != want or text(r, "manager") != manager or text(r, "hospital") != hospital
                     or names.norm(text(r, "pharma")) != names.norm(pharma) or text(r, "status") in DONE):
                 continue
-            ws.cell(r, col["status"]).value = CARRIED
+            ws.cell(r, col["status"]).value = status
             ws.cell(r, col["mark"]).value = 1
-            ws.cell(r, col["note"]).value = note_text(text(r, "note"), month_label(text(r, "rx_month"), text(r, "input_month")))
+            if status == CARRIED:
+                ws.cell(r, col["note"]).value = note_text(text(r, "note"), month_label(text(r, "rx_month"), text(r, "input_month")))
             n += 1
         if n:
             wb.calculation.fullCalcOnLoad = True

@@ -139,12 +139,19 @@ class Api:
 
     def carry_over(self, year, month, manager, hospital, pharma):
         """통계를 이번 달에 내지 않고 다음 달로 넘긴다 → 작업 엑셀 상태=통계이월, 특이사항='mm월 통계 다음달로 이월'."""
+        return self._write_status("carry_over", year, month, manager, hospital, pharma)
+
+    def no_stats(self, year, month, manager, hospital, pharma):
+        """이번 달 통계 자료가 없음 → 작업 엑셀 상태=통계없음."""
+        return self._write_status("no_stats", year, month, manager, hospital, pharma)
+
+    def _write_status(self, fn, year, month, manager, hospital, pharma):
         import ledger_write
         wf = self._work_file(year, month)
         if wf is None:
             return dict(ok=False, error="작업 엑셀을 찾지 못했습니다.")
         try:
-            n = ledger_write.carry_over(wf, month, manager, hospital, pharma)
+            n = getattr(ledger_write, fn)(wf, month, manager, hospital, pharma)
         except PermissionError:
             return dict(ok=False, error="엑셀 파일이 열려 있어 저장하지 못했습니다. 엑셀을 닫고 다시 눌러 주세요.")
         except Exception as e:

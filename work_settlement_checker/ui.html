@@ -141,7 +141,7 @@ summary .meta{font-weight:600;color:var(--sub);font-size:12px}
 .leaf .hr.past{background:var(--late-soft);color:var(--late)}
 .leaf .lg{color:var(--late);font-size:12px;font-weight:700}
 .leaf .lg.full{color:var(--blue)}
-.leaf .carry{padding:0 8px;font-size:11px;border-radius:99px;line-height:20px;white-space:nowrap}
+.leaf .carry{margin-left:4px;padding:0 8px;font-size:11px;border-radius:99px;line-height:20px;white-space:nowrap}
 .mini.cr{color:var(--g2);background:var(--brand-soft);font-weight:700}
 .mini{color:var(--sub);font-size:12px;background:var(--bg);border-radius:4px;padding:0 5px}
 .empty{color:var(--sub);padding:24px;text-align:center}
@@ -287,7 +287,7 @@ const fixed = i => i.how === "fixed" ? `<span class="mini" title="마감표 글�
 function leaf(i, name, meta) {
   const st = i.done ? "✔" : isLate(i) ? "!" : "●", cls = i.done ? "done" : isLate(i) ? "l" : "p";
   const cr = i.carried_n ? `<span class="mini cr">${i.carried_n >= i.total ? "통계이월" : `이월 ${i.carried_n}`}</span>` : "";
-  const btn = i.done ? "" : `<button class="carry" data-carry="${S.view.items.indexOf(i)}" title="이번 달 통계를 내지 않고 다음 달로 넘김 (엑셀 상태=통계이월, 특이사항 기록)">통계이월</button>`;
+  const btn = i.done ? "" : `<button class="carry" data-carry="${S.view.items.indexOf(i)}" title="이번 달 통계를 내지 않고 다음 달로 넘김 (엑셀 상태=통계이월, 특이사항 기록)">통계이월</button><button class="carry" data-nostat="${S.view.items.indexOf(i)}" title="이번 달 통계 자료가 없음 (엑셀 상태=통계없음)">통계없음</button>`;
   return `<div class="leaf ${cls}"><span class="st">${st}</span><span class="nm">${name} ${part(i)} ${cr}</span><span class="mt">${meta} ${hourTag(i)}</span>${btn}</div>`;
 }
 function treeHtml(items) {
@@ -389,6 +389,22 @@ async function carryOver(i) {
   } finally { busy = false; }
 }
 
+async function noStats(i) {
+  if (!i || busy) return;
+  if (!confirm(`${i.hospital} · ${i.pharma}
+
+이번 달 통계 자료가 없음으로 처리합니다.
+작업 엑셀의 상태를 '통계없음'으로 바꿉니다.
+
+진행할까요?`)) return;
+  busy = true;
+  try {
+    const r = await call("no_stats", S.year, S.month, i.manager, i.hospital, i.pharma);
+    toast(r && r.ok ? `통계없음 처리: ${i.hospital} · ${i.pharma} (${r.count}줄)` : `통계없음 실패: ${r && r.error}`, 7000);
+    await load(S.year, S.month);
+  } finally { busy = false; }
+}
+
 /* ---------- 확인 필요 ---------- */
 function fixHtml() {
   const v = S.view, miss = v.missing.filter(m => m.pending);
@@ -429,8 +445,9 @@ function openPanel(f) {
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-chip],[data-tab],[data-day],[data-scope],[data-clr],[data-close],[data-mgr],[data-img],[data-carry]");
+  const t = e.target.closest("[data-chip],[data-tab],[data-day],[data-scope],[data-clr],[data-close],[data-mgr],[data-img],[data-carry],[data-nostat]");
   if (!t) return;
+  if (t.dataset.nostat) { e.preventDefault(); noStats(S.view.items[+t.dataset.nostat]); return; }
   if (t.dataset.carry) { e.preventDefault(); carryOver(S.view.items[+t.dataset.carry]); return; }
   if (t.dataset.img) { e.preventDefault(); e.stopPropagation(); exportImage(t.dataset.img); return; }
   if (t.dataset.chip) { const same = F && !F.date && !F.manager && F.scope === t.dataset.chip; if (same) F = null; else F = {scope: t.dataset.chip, date: null, manager: null}; render(); }

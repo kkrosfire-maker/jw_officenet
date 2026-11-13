@@ -13,7 +13,8 @@ from pathlib import Path
 import openpyxl
 
 CARRIED = "통계이월"                   # 이번 달에 통계를 내지 않고 다음 달로 넘긴 줄
-DONE = ("입력완료", "통계없음", "정산불가", CARRIED)
+NO_STATS = "통계없음"                 # 이번 달 통계 자료가 없는 줄
+DONE = ("입력완료", NO_STATS, "정산불가", CARRIED)
 _COLS = dict(year=0, manager=1, status=2, hospital=3, rx_month=4, input_month=5, pharma=6, mark=8, note=9)
 _HEAD = {"연도": "year", "담당자명": "manager", "거래처명": "hospital", "처방월": "rx_month", "입력월": "input_month", "제약사명": "pharma", "특이사항": "note"}
 
