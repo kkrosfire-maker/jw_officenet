@@ -11,12 +11,13 @@
 :root{
   --green:#0D4A32; --green-dark:#0A3A28; --green-tint:#5E8168;
   --border:#C6D3CC; --hover:#EAF1ED; --ink:#1F2A24; --bg:#FFFFFF; --card:#FFFFFF;
+  --tw:0px; /* 오늘의 할 일 패널이 펼쳐진 너비 */
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;min-height:100vh;position:relative;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;min-height:100vh;position:relative;overflow-x:hidden;padding-right:var(--tw)}
 /* 하단 곡선 장식 */
-body::after{content:"";position:fixed;left:0;right:0;bottom:var(--fh,23px);height:min(22vw,200px);
+body::after{content:"";position:fixed;left:0;right:var(--tw);bottom:var(--fh,23px);height:min(22vw,200px);
   background:url(assets/swoosh.png) right bottom/cover no-repeat;pointer-events:none;z-index:0;
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px calc((200px + var(--hh,116px)) / 5)}
@@ -38,7 +39,7 @@ main section:first-child{margin-top:14px}
 h2{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16px;color:var(--green)}
 h2::before{content:"";width:4px;height:18px;background:var(--green);border-radius:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
-.card{display:flex;align-items:center;gap:14px;padding:16px;background:var(--card);border:1px solid var(--border);
+.card{display:flex;align-items:center;gap:14px;padding:16px;background:var(--card);border:1.5px solid var(--green);
   border-radius:14px;cursor:pointer;text-align:left;font:inherit;color:inherit;
   transition:transform .12s,box-shadow .12s,background .12s,border-color .12s}
 .card:hover{background:var(--hover);border-color:var(--green);transform:translateY(-2px);box-shadow:0 6px 16px rgba(13,74,50,.14)}
@@ -48,7 +49,7 @@ h2::before{content:"";width:4px;height:18px;background:var(--green);border-radiu
 .card b{display:block;font-size:16px}
 .card span{display:block;margin-top:3px;font-size:12px;color:var(--green-tint);line-height:1.35}
 .card .tag{display:inline-block;margin-top:5px;font-size:11px;color:var(--green);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
-#foot{position:fixed;left:0;right:0;bottom:0;height:var(--fh,23px);background:var(--bg);z-index:2;pointer-events:none}
+#foot{position:fixed;left:0;right:var(--tw);bottom:0;height:var(--fh,23px);background:var(--bg);z-index:2;pointer-events:none}
 #toast{margin:0;border:0;inset:auto;position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--green);color:#fff;padding:10px 20px;
   border-radius:99px;font-size:14px;opacity:0;transition:.25s;z-index:5;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
@@ -63,15 +64,18 @@ h2 .tools{margin:0 0 0 auto}
 .card.drag{opacity:.4}
 .card.over{border-color:var(--green);box-shadow:-5px 0 0 var(--green)}
 .grid.over{outline:2px dashed var(--green);outline-offset:4px;border-radius:14px}
-.ghandle{cursor:grab;color:var(--green);font-size:18px;user-select:none}
+.ghandle{cursor:grab;color:var(--green);font-size:18px;user-select:none;opacity:0;transition:opacity .12s}
+h2:hover .ghandle{opacity:.55}.ghandle:hover{opacity:1!important}
 section.over{outline:2px dashed var(--green);outline-offset:6px;border-radius:8px}
 section.drag{opacity:.4}
 .gname{font:inherit;color:inherit;background:transparent;border:1px dashed var(--green);border-radius:6px;padding:2px 8px;outline:none;min-width:60px}
 .gname:focus{background:#fff}
-.editing .card{border-style:dashed;border-color:var(--green)}
 .card{position:relative}
 .card .cdel{position:absolute;top:6px;right:6px;margin:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;color:#555;font-size:13px;font-weight:700;line-height:1;opacity:.35;transition:opacity .12s,background .12s,color .12s}
-.card:hover .cdel{opacity:.55}
+.card .cedit{position:absolute;top:6px;left:6px;margin:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;color:#555;opacity:.35;transition:opacity .12s,background .12s,color .12s}
+.card .cedit svg{width:13px;height:13px}
+.card:hover .cedit,.card:hover .cdel{opacity:.55}
+.card .cedit:hover{opacity:1;background:#DDE9E2;color:var(--green)}
 .card .cdel:hover{opacity:1;background:#f6dcdc;color:#b00020}
 #cfm{max-width:360px}#cfm p{margin:0;line-height:1.5;word-break:keep-all}#cfm small{color:var(--green-tint)}
 .ph{width:52px;height:52px;border-radius:12px;flex:none;background:var(--green);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:700}
@@ -81,7 +85,26 @@ dialog h3{margin:0 0 14px;color:var(--green)}
 dialog label{display:block;margin-top:10px;font-size:12px;color:var(--green-tint)}
 dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inherit;font-size:14px;border:1px solid var(--border);border-radius:8px}
 .row{display:flex;gap:6px}.row input{flex:1}.row .btn{margin-top:4px;border-radius:8px;white-space:nowrap}
+.iconrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.izone,.ibtn{width:52px;height:52px;border-radius:12px;flex:none;cursor:pointer;font:inherit}
+.izone{position:relative;overflow:hidden;display:grid;place-items:center;border:1.5px dashed var(--border);color:var(--green-tint);background:#fff}
+.izone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.izone img[hidden]{display:none}
+.izone .plus{font-size:26px;line-height:1;font-weight:300}
+.izone:hover,.izone.over,.izone:focus-visible{border-color:var(--green);color:var(--green);background:var(--hover);outline:none}
+.izone.over{border-style:solid;box-shadow:0 0 0 3px rgba(13,74,50,.18)}
+.ibtn{border:1px solid var(--green);background:#fff;color:var(--green);font-size:12px;line-height:1.35;padding:0}
+.ibtn:hover{background:var(--hover)}
 .acts{display:flex;gap:8px;margin-top:18px}.acts .sp{flex:1}
+/* 오늘의 할 일 접이식 패널 */
+#todo{display:none;position:fixed;top:0;right:0;bottom:0;width:371px;background:#fff;border-left:2px solid var(--green);z-index:4}
+#todo iframe{display:block;width:100%;height:100%;border:0}
+body.todo-open #todo{display:block}
+#tgl{position:fixed;top:50%;right:var(--tw);transform:translateY(-50%);z-index:6;width:15px;height:86px;padding:0;border:0;
+  border-radius:12px 0 0 12px;background:var(--green);color:#fff;font-size:13px;cursor:pointer;box-shadow:-2px 0 8px rgba(13,74,50,.25);opacity:.7;touch-action:none;cursor:grab}
+#tgl.moving{cursor:grabbing}
+#tgl i{display:inline-block;font-style:normal;transform:scaleX(.7)} /* 삼각형: 밑변(세로)은 그대로, 높이(가로)만 30% 줄임 */
+#tgl:hover{background:var(--green-dark)}
 @media(max-width:640px){header{flex-wrap:wrap}.clock{margin-left:0;text-align:left;width:100%}}
 </style>
 </head>
@@ -92,7 +115,7 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
     <div class="title"><div class="trow"><h1 id="ttl">정원유니어스 프로그램 보드</h1><button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button></div><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
   </header>
-  <div class="tools"><button class="btn" id="bEdit">편집</button><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
+  <div class="tools"><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
   <main id="main"></main>
 </div>
 <dialog id="dlg"><form method="dialog" id="frm" onsubmit="return false">
@@ -101,6 +124,8 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
   <label>이름<input id="fName" required></label>
   <label>설명<input id="fDesc"></label>
   <label>그룹<input id="fGroup" list="gl" placeholder="예: 업무"></label><datalist id="gl"></datalist>
+  <div class="iconrow"><div class="izone" id="iZone" tabindex="0" role="button" title="이미지를 끌어다 놓거나 눌러서 선택"><img id="fIconImg" alt="" hidden><span class="plus" id="fIconPlus">＋</span></div>
+    <button type="button" class="ibtn" id="bIcon">이미지<br>변경</button><input type="file" id="fIcon" accept="image/*" hidden></div>
   <label id="lPath">프로그램 경로<div class="row"><input id="fPath"><button type="button" class="btn" id="bBrowse">찾아보기</button></div></label>
   <label id="lUrl">웹 주소<input id="fUrl" placeholder="https://"></label>
   <div class="acts"><button type="button" class="btn del" id="bDel">삭제</button><span class="sp"></span>
@@ -108,6 +133,8 @@ dialog input,dialog select{width:100%;margin-top:4px;padding:8px 10px;font:inher
 </form></dialog>
 <dialog id="cfm"><h3>삭제 확인</h3><p id="cMsg"></p>
   <div class="acts"><span class="sp"></span><button type="button" class="btn" id="cNo">취소</button><button type="button" class="btn del" id="cYes">삭제</button></div></dialog>
+<aside id="todo"><iframe id="todoFrame" title="오늘의 할 일"></iframe></aside>
+<button id="tgl" title="오늘의 할 일 펼치기" aria-expanded="false"><i>▶</i></button>
 <div id="foot"></div>
 <div id="toast" popover="manual"></div>
 <script>
@@ -138,7 +165,9 @@ async function launch(p){
   }catch(e){toast('실행기(server.py)가 꺼져 있어요',true)}
 }
 
-let CFG, editing=false, cur=null, dragId=null, dragGroup=null;
+let CFG, cur=null, iconVer=Date.now(); // 아이콘 주소에 붙여 이미지를 바꾼 뒤 캐시된 옛 그림이 보이지 않게 한다
+const iconUrl=p=>`assets/${p.icon}?v=${iconVer}`;
+let dragId=null, dragGroup=null;
 async function moveTo(id,beforeId,group){
   dragId=null;
   const list=CFG.programs, from=list.findIndex(x=>x.id===id);
@@ -176,30 +205,38 @@ const post=(u,b)=>fetch(u,{method:'POST',body:typeof b==='string'?b:JSON.stringi
 
 function render(){
   const main=$('main'),tools=document.querySelector('.tools');main.before(tools); // 지우기 전에 안전한 자리로 뺀다
-  main.innerHTML='';main.classList.toggle('editing',editing);
+  main.innerHTML='';
   const groups={};
   CFG.programs.forEach(p=>(groups[p.group||'기타']??=[]).push(p));
   Object.entries(groups).forEach(([g,list])=>{
     const s=document.createElement('section');
     s.innerHTML=`<h2></h2><div class="grid"></div>`;s.querySelector('h2').textContent=g;
-    if(editing){ // 편집 중에는 주제 이름을 바로 고칠 수 있다
-      const h=s.querySelector('h2'),inp=document.createElement('input');
-      inp.className='gname';inp.value=g;inp.size=Math.max(4,g.length*1.6);h.textContent='';h.appendChild(inp);
-      const done=()=>{const n=inp.value.trim();if(n&&n!==g)renameGroup(g,n);else inp.value=g};
+    { // 주제 제목: 이름을 더블클릭하면 바로 고치고, 왼쪽 ⠿ 를 끌면 주제 순서를 바꾼다
+      const h=s.querySelector('h2');
       const hd=document.createElement('span');hd.className='ghandle';hd.textContent='⠿';hd.title='끌어서 주제 순서 바꾸기';hd.draggable=true;h.prepend(hd);
+      h.title='더블클릭해서 주제 이름 바꾸기';
+      h.ondblclick=()=>{
+        if(h.querySelector('.gname'))return;
+        const inp=document.createElement('input');inp.className='gname';inp.value=g;inp.size=Math.max(4,g.length*1.6);
+        const t=[...h.childNodes].find(n=>n.nodeType===3);if(t)t.remove();hd.after(inp);inp.focus();inp.select();
+        let fin=false;const done=ok=>{if(fin)return;fin=true;const n=inp.value.trim();if(ok&&n&&n!==g)renameGroup(g,n);else render()};
+        inp.onblur=()=>done(true);inp.onkeydown=e=>{if(e.key==='Enter')done(true);if(e.key==='Escape')done(false)};
+      };
       hd.ondragstart=e=>{dragGroup=g;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',g);e.dataTransfer.setDragImage(s,20,20);setTimeout(()=>s.classList.add('drag'),0)};
       hd.ondragend=()=>{dragGroup=null;document.querySelectorAll('.drag,.over').forEach(x=>x.classList.remove('drag','over'))};
       s.ondragover=e=>{if(!dragGroup||dragGroup===g)return;e.preventDefault();document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));s.classList.add('over')};
       s.ondrop=e=>{if(!dragGroup)return;e.preventDefault();moveGroup(dragGroup,g)};
-      inp.onchange=done;inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=g;inp.blur()}};
     }
     if(!main.children.length)s.querySelector('h2').appendChild(tools); // 첫 주제와 같은 줄에 둔다
     list.forEach(p=>{
       const b=document.createElement('button');b.className='card';
-      b.innerHTML=`${p.icon?`<img src="assets/${p.icon}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
+      b.innerHTML=`${p.icon?`<img src="${iconUrl(p)}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
       if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
-      b.onclick=()=>editing?openDlg(p):launch(p);
+      b.onclick=()=>launch(p);
+      {const e=document.createElement('span');e.className='cedit';e.title='수정';e.setAttribute('role','button');
+        e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5z"/><path d="M14 6l4 4"/></svg>';
+        e.onclick=ev=>{ev.stopPropagation();openDlg(p)};e.ondragstart=ev=>ev.preventDefault();b.appendChild(e)}
       {const x=document.createElement('span');x.className='cdel';x.textContent='✕';x.title='삭제';x.setAttribute('role','button');
         x.onclick=e=>{e.stopPropagation();delProg(p)};x.ondragstart=e=>e.preventDefault();b.appendChild(x)}
       b.draggable=true;b.dataset.id=p.id;
@@ -218,19 +255,48 @@ function render(){
   $('gl').innerHTML=Object.keys(groups).map(g=>`<option value="${g.replace(/"/g,'&quot;')}">`).join('');
 }
 async function load(){
-  try{CFG=await (await fetch('/api/programs')).json();document.title=$('ttl').textContent=CFG.title;render()}
+  try{iconVer=Date.now();CFG=await (await fetch('/api/programs')).json();document.title=$('ttl').textContent=CFG.title;render()}
   catch(e){toast('programs.json 을 읽지 못했어요',true)}
 }
 function syncType(){const u=$('fType').value==='url';$('lUrl').style.display=u?'':'none';$('lPath').style.display=u?'none':''}
+let iconData=null;
+function showIcon(src){
+  const im=$('fIconImg');im.hidden=!src;$('fIconPlus').hidden=!!src;
+  if(src)im.src=src;else im.removeAttribute('src');
+}
+async function loadIconFile(f){ // 고른·끌어 놓은 이미지를 512px 이하로 줄여 두고, 저장할 때 서버가 256px 정사각으로 다듬는다
+  try{
+    const bmp=await createImageBitmap(f),k=Math.min(1,512/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    iconData=c.toDataURL('image/png');showIcon(iconData);
+  }catch(err){toast('이미지를 읽지 못했어요',true)}
+}
+async function pickIcon(){ // 앱 창에서는 바탕화면에서 시작하는 파일 선택 창, 브라우저에서는 기본 선택 창
+  if(window.pywebview&&pywebview.api&&pywebview.api.pick_image){
+    const d=await pywebview.api.pick_image();if(d)loadIconFile(await (await fetch(d)).blob());
+  }else $('fIcon').click();
+}
+$('bIcon').onclick=pickIcon;$('iZone').onclick=pickIcon;
+$('iZone').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickIcon()}};
+$('fIcon').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadIconFile(f)};
+{
+  const z=$('iZone');
+  z.ondragover=e=>{e.preventDefault();z.classList.add('over')};
+  z.ondragleave=()=>z.classList.remove('over');
+  z.ondrop=e=>{e.preventDefault();z.classList.remove('over');const f=[...e.dataTransfer.files].find(x=>x.type.startsWith('image/'));f?loadIconFile(f):toast('이미지 파일을 놓아 주세요',true)};
+}
 function openDlg(p){
   cur=p;$('dT').textContent=p?'프로그램 수정':'프로그램 추가';
   $('fType').value=p?.type||'exe';$('fName').value=p?.name||'';$('fDesc').value=p?.desc||'';
   $('fGroup').value=p?.group||'';$('fPath').value=p?.path||'';$('fUrl').value=p?.url||'';
+  iconData=null;showIcon(p?.icon?iconUrl(p):'');
   $('bDel').style.display=p?'':'none';syncType();$('dlg').showModal();
 }
 async function submit(){
   const t=$('fType').value;
   const program={...(cur||{}),type:t,name:$('fName').value,desc:$('fDesc').value,group:$('fGroup').value,path:$('fPath').value,url:$('fUrl').value};
+  if(iconData)program.icon_data=iconData;
   if(cur&&t==='exe'&&cur.path!==program.path)program.cwd='';
   try{
     const j=await post('/api/save',{action:cur?'update':'add',program});
@@ -240,7 +306,6 @@ async function submit(){
 }
 $('fType').onchange=syncType;
 $('bAdd').onclick=()=>openDlg(null);
-$('bEdit').onclick=()=>{editing=!editing;$('bEdit').classList.toggle('on',editing);$('bEdit').textContent=editing?'편집 끝':'편집';render()};
 $('bCancel').onclick=()=>$('dlg').close();
 $('bSave').onclick=submit;
 function askDel(p){
@@ -261,6 +326,35 @@ async function delProg(p){
 }
 $('bDel').onclick=()=>delProg(cur);
 $('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.name;if(!$('fDesc').value)$('fDesc').value=j.desc}};
+// 삼각형 버튼은 끌어서 위아래로 옮길 수 있다(4px 넘게 움직이면 끌기, 아니면 클릭)
+{
+  const b=$('tgl');let sy=0,st=0,drag=false,moved=false;
+  b.onpointerdown=e=>{sy=e.clientY;st=b.getBoundingClientRect().top;drag=true;moved=false;b.setPointerCapture(e.pointerId)};
+  b.onpointermove=e=>{
+    if(!drag)return;
+    if(!moved&&Math.abs(e.clientY-sy)<4)return;
+    moved=true;b.classList.add('moving');
+    const top=Math.min(Math.max(st+e.clientY-sy,0),innerHeight-b.offsetHeight);
+    b.style.transform='none';b.style.top=top+'px';
+  };
+  b.onpointerup=b.onpointercancel=()=>{drag=false;b.classList.remove('moving');if(moved)setTimeout(()=>moved=false,0)};
+  b.addEventListener('click',e=>{if(moved){e.stopImmediatePropagation();e.preventDefault()}},true);
+  addEventListener('resize',()=>{if(b.style.top)b.style.top=Math.min(parseFloat(b.style.top),Math.max(innerHeight-b.offsetHeight,0))+'px'});
+}
+// 오늘의 할 일 패널: 평소엔 접혀 있고, 삼각형을 누르면 창이 오른쪽으로 늘어나며 펼쳐진다
+$('tgl').onclick=async()=>{
+  const open=!document.body.classList.contains('todo-open');
+  const hasApi=window.pywebview&&pywebview.api&&pywebview.api.set_todo;
+  if(open){
+    if(hasApi)await pywebview.api.set_todo(true);
+    const f=$('todoFrame');if(!f.src)f.src='/todo/index.html';
+  }
+  document.body.classList.toggle('todo-open',open);
+  document.documentElement.style.setProperty('--tw',open?'371px':'0px');
+  $('tgl').firstChild.textContent=open?'◀':'▶';$('tgl').title=open?'오늘의 할 일 접기':'오늘의 할 일 펼치기';$('tgl').setAttribute('aria-expanded',open);
+  if(!open&&hasApi)await pywebview.api.set_todo(false);
+  syncHH();
+};
 load();
 </script>
 </body>

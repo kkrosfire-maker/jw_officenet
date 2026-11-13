@@ -4,12 +4,14 @@ import json, os, subprocess, sys, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
-from icons import icon_for, suggest
+from icons import icon_for, save_custom, suggest
 from store import StoreError, apply
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = 8765
 ORIGINS = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
+TODO_DIR = os.path.join(os.path.dirname(HERE), "work_daily_todo")  # 오늘의 할 일 - 보드 오른쪽 접이식 패널로 합쳐 둔다
+TODO_W = 371  # work_daily_todo/docking.py FIXED_WIDTH 와 같은 패널 너비(CSS px)
 
 
 def load():
@@ -41,8 +43,53 @@ def launch(p):
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     cmd = f'"{path}" {p.get("args", "")}'.strip()
+    before = _visible_windows()
     subprocess.Popen(cmd, cwd=p.get("cwd") or os.path.dirname(path),
                      creationflags=0x00000008 | 0x00000200, close_fds=True)  # DETACHED | NEW_GROUP
+    threading.Thread(target=_raise_new_window, args=(before,), daemon=True).start()
+
+
+def _visible_windows():
+    """제목 있는 보이는 최상위 창 핸들 집합."""
+    import ctypes
+    from ctypes import wintypes
+    u = ctypes.windll.user32
+    found = set()
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def cb(h, _):
+        if u.IsWindowVisible(h) and u.GetWindowTextLengthW(h) > 0 and not u.GetWindow(h, 4):  # GW_OWNER
+            found.add(h)
+        return True
+    u.EnumWindows(cb, 0)
+    return found
+
+
+def _raise_new_window(before, timeout=30):
+    """서버는 포그라운드 권한이 없어 새로 뜬 앱 창이 다른 창 뒤에 깔림 → 새 창을 앞으로 올린다."""
+    import ctypes, time
+    u, k = ctypes.windll.user32, ctypes.windll.kernel32
+    end = time.time() + timeout
+    while time.time() < end:
+        time.sleep(0.3)
+        new = _visible_windows() - before
+        if not new:
+            continue
+        time.sleep(0.4)  # 창이 다 그려진 뒤
+        h = max(new)
+        fg = u.GetForegroundWindow()
+        me, other = k.GetCurrentThreadId(), u.GetWindowThreadProcessId(fg, None)
+        u.AttachThreadInput(me, other, True)
+        try:
+            u.ShowWindow(h, 6)  # SW_MINIMIZE 후 복원하면 포그라운드 제한을 우회해 맨 앞으로 나옴
+            u.ShowWindow(h, 9)  # SW_RESTORE
+            u.BringWindowToTop(h)
+            u.SetForegroundWindow(h)
+            if u.GetForegroundWindow() != h:
+                u.SwitchToThisWindow(h, True)
+        finally:
+            u.AttachThreadInput(me, other, False)
+        return
 
 
 class H(BaseHTTPRequestHandler):
@@ -64,9 +111,12 @@ class H(BaseHTTPRequestHandler):
             path = "/index.html"
         elif path == "/favicon.ico":
             path = "/assets/icons/officeboard.png"
-        full = os.path.normpath(os.path.join(HERE, path.lstrip("/")))
+        root = HERE
+        if path.startswith("/todo/"):  # 오늘의 할 일 화면(iframe)과 그 아이콘
+            root, path = TODO_DIR, path[len("/todo"):]
+        full = os.path.normpath(os.path.join(root, path.lstrip("/")))
         allowed = path in ("/index.html", "/manifest.json") or path.startswith("/assets/")
-        if not (allowed and full.startswith(HERE) and os.path.isfile(full)):
+        if not (allowed and full.startswith(root) and os.path.isfile(full)):
             return self.send(404)
         ext = os.path.splitext(full)[1].lower()
         ctype = {".html": "text/html; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/manifest+json"}.get(ext, "application/octet-stream")
@@ -98,7 +148,19 @@ class H(BaseHTTPRequestHandler):
     def do_save(self, body):
         """{action: add|update|delete|reorder, ...} 를 store.apply 로 적용해 programs.json 에 저장한다."""
         try:
-            save(apply(load(), json.loads(body), icon_for))
+            req = json.loads(body)
+            prog = req.get("program") or {}
+            data = prog.pop("icon_data", None)  # 사용자가 고른 이미지(dataURL). 있으면 자동 아이콘 가져오기는 건너뛴다
+            cfg = apply(load(), req, (lambda p: "") if data else icon_for)
+            if data:
+                import base64
+                target = next(p for p in cfg["programs"] if p["id"] == (prog.get("id") if req["action"] == "update" else cfg["programs"][-1]["id"]))
+                try:
+                    target["icon"] = save_custom(target["id"], base64.b64decode(data.split(",", 1)[-1]))
+                except ValueError as e:
+                    raise StoreError(str(e))
+                target["icon_custom"] = True
+            save(cfg)
             self.send(200, b'{"ok":true}')
         except StoreError as e:
             self.send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False).encode())
@@ -137,6 +199,7 @@ def center_on_display(n, w, h):
 
 class WinApi:
     TITLE = "정원유니어스 프로그램 보드"
+    _shift = 0  # 패널을 펼치며 창을 왼쪽으로 민 만큼(접을 때 되돌린다)
 
     def set_pin(self, on):
         """항상 위 고정. pywebview 의 on_top 대신 윈도우 API 로 직접 바꾼다."""
@@ -148,18 +211,88 @@ class WinApi:
             u.SetWindowPos(hwnd, -1 if on else -2, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)  # NOSIZE|NOMOVE|NOACTIVATE
         return bool(on)
 
+    def pick_image(self):
+        """대표 이미지 파일 선택 창(바탕화면에서 시작). 고른 파일을 dataURL 로 돌려주고, 취소하면 빈 문자열."""
+        import base64, mimetypes, webview
+        win = getattr(self, "_window", None)
+        if not win:
+            return ""
+        got = win.create_file_dialog(webview.OPEN_DIALOG, directory=os.path.join(os.path.expanduser("~"), "Desktop"),
+                                     file_types=("이미지 파일 (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp;*.ico)",))
+        if not got:
+            return ""
+        path = got if isinstance(got, str) else got[0]
+        with open(path, "rb") as f:
+            return f"data:{mimetypes.guess_type(path)[0] or 'image/png'};base64," + base64.b64encode(f.read()).decode()
+
+    def set_todo(self, on):
+        """오늘의 할 일 패널을 펼치거나 접을 때 창을 패널 너비만큼 오른쪽으로 늘이고 줄인다.
+        오른쪽에 자리가 없으면 왼쪽으로 밀어 화면 안에 둔다."""
+        import ctypes
+        from ctypes import wintypes as wt
+
+        class MI(ctypes.Structure):
+            _fields_ = [("cb", wt.DWORD), ("rc", wt.RECT), ("wk", wt.RECT), ("fl", wt.DWORD), ("dev", wt.WCHAR * 32)]
+
+        u = ctypes.windll.user32
+        u.FindWindowW.restype = ctypes.c_void_p
+        u.MonitorFromWindow.restype = ctypes.c_void_p
+        u.MonitorFromWindow.argtypes = [ctypes.c_void_p, wt.DWORD]
+        u.GetMonitorInfoW.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        u.GetWindowRect.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        u.GetDpiForWindow.argtypes = [ctypes.c_void_p]
+        u.SetWindowPos.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+        hwnd = u.FindWindowW(None, self.TITLE)
+        if not hwnd:
+            return False
+        r = wt.RECT()
+        u.GetWindowRect(hwnd, ctypes.byref(r))
+        dw = round(TODO_W * (u.GetDpiForWindow(hwnd) or 96) / 96)
+        w, h = r.right - r.left, r.bottom - r.top
+        flags = 0x0004 | 0x0010  # NOZORDER|NOACTIVATE
+        if on:
+            mi = MI()
+            mi.cb = ctypes.sizeof(mi)
+            u.GetMonitorInfoW(u.MonitorFromWindow(hwnd, 2), ctypes.byref(mi))
+            self._shift = max(0, min(r.right + dw - mi.wk.right, r.left - mi.wk.left))
+            u.SetWindowPos(hwnd, None, r.left - self._shift, r.top, w + dw, h, flags)
+        else:
+            u.SetWindowPos(hwnd, None, r.left + self._shift, r.top, max(w - dw, 300), h, flags)
+            self._shift = 0
+        return bool(on)
+
+
+def _board_api():
+    """보드 창이 부르는 함수 모음. 오늘의 할 일(work_daily_todo)이 있으면 그 함수도 같은 창에서 부를 수 있게 합친다."""
+    sys.path.insert(0, TODO_DIR)
+    try:
+        from app import Api as TodoApi
+    except Exception:
+        return WinApi()
+
+    class BoardApi(WinApi, TodoApi):  # set_pin 은 보드 것이 우선
+        def __init__(self):
+            TodoApi.__init__(self)
+
+        def _close(self):  # 할 일 앱의 창 위치 저장은 보드에서는 쓰지 않는다
+            pass
+
+        def quit(self):  # 할 일 패널의 '종료' 는 쓰지 않는다
+            pass
+
+    api = BoardApi()
+    return api
+
 
 def open_board():
     """전용 창(pywebview)으로 연다. board.ico 를 창 아이콘으로 써서 작업표시줄에서 선명하게 보인다."""
     url = f"http://127.0.0.1:{PORT}/"
-    todo = os.path.join(os.path.dirname(HERE), "work_daily_todo", "app.py")
-    if os.path.exists(todo):  # 오늘의 할 일 앱을 보드 옆에 같이 띄운다
-        subprocess.Popen([sys.executable, todo, "--dock"], cwd=os.path.dirname(todo), creationflags=0x08000000)
     try:
         import ctypes, webview
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
         pos = center_on_display(1, 903, 1008) or (None, None)  # 1번 모니터 가운데
-        webview.create_window("정원유니어스 프로그램 보드", url, width=903, height=1008, x=pos[0], y=pos[1], js_api=WinApi())
+        api = _board_api()
+        api._window = win = webview.create_window("정원유니어스 프로그램 보드", url, width=903, height=1008, x=pos[0], y=pos[1], js_api=api)
         webview.start(icon=os.path.join(HERE, "board.ico"))
     except Exception:
         webbrowser.open(url)

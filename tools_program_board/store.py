@@ -63,8 +63,10 @@ def apply(cfg, req, icons):
                 raise StoreError("수정할 프로그램을 찾을 수 없어요")
             old = progs[i]
             p["icon"] = old.get("icon", "")
+            if old.get("icon_custom"):  # 사용자가 직접 고른 이미지는 자동 가져오기로 덮어쓰지 않는다
+                p["icon_custom"] = True
             key = "url" if p["type"] == "url" else "path"
-            if p["id"].startswith("custom") and (not p["icon"] or old.get(key) != p[key]):
+            if p["id"].startswith("custom") and not p.get("icon_custom") and (not p["icon"] or old.get(key) != p[key]):
                 p["icon"] = _icon(icons, p) or p["icon"]
             progs[i] = p
     else:

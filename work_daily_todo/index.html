@@ -128,6 +128,8 @@ dialog input{width:100%;margin-top:3px;padding:7px 9px;font:inherit;border:1px s
 #selBar span{margin-right:auto;color:var(--green)}
 #selBar button{font:inherit;font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--green);background:#fff;color:var(--green);cursor:pointer}
 #selBar .pri{background:var(--green);color:#fff}
+/* 프로그램 보드 안에 들어가 있을 때는 창 고정·종료를 보드가 맡는다 */
+body.emb #pin,body.emb #bQuit{display:none}
 </style>
 </head>
 <body>
@@ -437,7 +439,11 @@ setInterval(async()=>{
 },30000);
 window.addEventListener('focus',async()=>{if(!api)return;const s=await api.get_state();if(s.today!==S.today){S=s;render()}});
 
-window.addEventListener('pywebviewready',async()=>{api=window.pywebview.api;S=await api.get_state();render();$('inp').focus()});
+async function boot(a){api=a;S=await api.get_state();render();$('inp').focus()}
+if(window.parent!==window){ // 프로그램 보드의 iframe 안: 상위 창의 pywebview API 를 쓴다
+  document.body.classList.add('emb');
+  const t=setInterval(()=>{const p=window.parent.pywebview;if(p&&p.api&&p.api.get_state){clearInterval(t);boot(p.api)}},100);
+}else window.addEventListener('pywebviewready',()=>boot(window.pywebview.api));
 </script>
 </body>
 </html>

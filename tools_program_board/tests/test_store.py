@@ -91,3 +91,12 @@ def test_input_cfg_not_mutated():
 def test_unknown_action():
     with pytest.raises(StoreError):
         apply(cfg(), {"action": "zap"}, NO_ICON)
+
+
+def test_update_keeps_custom_icon_and_skips_refetch():
+    calls = []
+    def icons(p):
+        calls.append(p["id"]); return "icons/auto.png"
+    base = cfg(exe("custom1", icon="icons/custom1.png", icon_custom=True, path="old"))
+    out = apply(base, {"action": "update", "program": {"id": "custom1", "name": "a", "path": "new"}}, icons)
+    assert calls == [] and out["programs"][0]["icon"] == "icons/custom1.png" and out["programs"][0]["icon_custom"]

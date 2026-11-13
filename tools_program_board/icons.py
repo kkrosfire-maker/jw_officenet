@@ -186,6 +186,21 @@ def _save_square(img, p):
     return f"icons/{p['id']}.png"
 
 
+def save_custom(pid, data):
+    """사용자가 고른 이미지(바이트)를 가운데 맞춘 256px 정사각 PNG 로 저장하고 상대경로를 돌려준다.
+    투명 여백만 있는 이미지 등 못 읽는 파일이면 ValueError."""
+    import io
+    from PIL import Image
+    try:
+        img = Image.open(io.BytesIO(data)).convert("RGBA")
+    except Exception as e:
+        raise ValueError("이미지 파일을 읽지 못했어요") from e
+    path = _save_square(img, {"id": pid})
+    if not path:
+        raise ValueError("이미지가 비어 있어요")
+    return path
+
+
 def _ico_file_icon(ico, p):
     """.ico 파일에서 가장 큰 크기를 골라 저장한다."""
     from PIL import Image
