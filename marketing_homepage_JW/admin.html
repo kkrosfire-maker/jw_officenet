@@ -164,7 +164,7 @@ $('f').onsubmit=async e=>{e.preventDefault();const d=fields(),m=check(d);if(m)re
     toast(editId?'수정되었습니다.':(d.published?'등록되었습니다.':'비공개(검토 대기)로 저장되었습니다.'));reset();await load()
   }catch(err){toast(err.message,1)}finally{$('save').disabled=false}};
 // ---- 원문 링크의 대표 이미지 가져오기 (서버 함수 /api/og-image 가 대신 내려받는다. 로컬 화면에서는 배포 주소로 부른다)
-const OG_API=/^(127\.0\.0\.1|localhost)$/.test(location.hostname)?'https://jungwon-unius-homepage.vercel.app':'';
+const OG_API=/^(127\.0\.0\.1|localhost)$/.test(location.hostname)?'https://jungwonunius.co.kr':'';
 async function fetchOg(link){
   const t=await NewsAuth.token();
   const r=await fetch(OG_API+'/api/og-image?url='+encodeURIComponent(link),{headers:{Authorization:'Bearer '+t}});
