@@ -5,7 +5,7 @@
  * 글은 Supabase 에서 '공개된 글'만 읽는다(공개용 키, 읽기 전용). 응답은 CDN 이 5분간 보관한다.
  * 도메인을 연결하면 SITE 만 바꾸면 된다(환경변수 SITE_URL 로도 지정 가능).
  */
-const SITE = (process.env.SITE_URL || 'https://jungwon-unius-homepage.vercel.app').replace(/\/$/, '');
+const SITE = (process.env.SITE_URL || 'https://jungwonunius.co.kr').replace(/\/$/, '');
 const SB_URL = 'https://mfbclctzkjdsrrsivlmg.supabase.co';
 const SB_KEY = 'sb_publishable_CKV18Z4BTPr0Z5huTM3d6A_xr07oeBc'; // 공개용 키(읽기 전용)
 const DEF_THUMB = 'assets/news_thumbnail_default.webp';

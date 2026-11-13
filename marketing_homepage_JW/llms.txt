@@ -9,8 +9,8 @@
 - 이메일: jungwonunius@naver.com
 
 ## 주요 페이지
-- [홈](https://jungwon-unius-homepage.vercel.app/): 회사 소개, 파트너 서비스, 정산 프로세스, 자주 묻는 질문, 위치와 문의
-- [CSO 업계 소식](https://jungwon-unius-homepage.vercel.app/news): 제약 CSO 시장의 최신 동향과 정원유니어스 소식. 기사마다 원문 출처 링크를 함께 제공합니다.
+- [홈](https://jungwonunius.co.kr/): 회사 소개, 파트너 서비스, 정산 프로세스, 자주 묻는 질문, 위치와 문의
+- [CSO 업계 소식](https://jungwonunius.co.kr/news): 제약 CSO 시장의 최신 동향과 정원유니어스 소식. 기사마다 원문 출처 링크를 함께 제공합니다.
 
 ## 파트너 서비스 (홈 "네 가지 약속")
 - 빠르고 정직한 정산: 마감부터 정산까지 빠르게, 수수료 차감 없이 계약서대로 정산합니다. 상담을 통해 추가(+α) 수수료를 지급하기도 합니다.

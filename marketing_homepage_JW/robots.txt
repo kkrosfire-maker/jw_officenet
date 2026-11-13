@@ -43,4 +43,4 @@ User-agent: Applebot-Extended
 Allow: /
 Disallow: /admin.html
 
-Sitemap: https://jungwon-unius-homepage.vercel.app/sitemap.xml
+Sitemap: https://jungwonunius.co.kr/sitemap.xml
