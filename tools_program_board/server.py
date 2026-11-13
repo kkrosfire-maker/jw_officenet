@@ -19,6 +19,17 @@ def load():
         return json.load(f)
 
 
+UI_STATE = os.path.join(HERE, "ui_state.json")  # 창 상태(할 일 패널 펼침 여부) - 사용자별 값이라 git 에 올리지 않는다
+
+
+def load_ui():
+    try:
+        with open(UI_STATE, encoding="utf-8") as f:
+            return {"todo_open": bool(json.load(f).get("todo_open"))}
+    except (OSError, ValueError, AttributeError):
+        return {"todo_open": False}
+
+
 def save(cfg):
     tmp = os.path.join(HERE, "programs.json.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
@@ -105,6 +116,8 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/api/ui":
+            return self.send(200, json.dumps(load_ui()).encode())
         if path == "/api/programs":
             return self.send(200, json.dumps(load(), ensure_ascii=False).encode())
         if path == "/":
@@ -125,6 +138,14 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = urlparse(self.path).path
+        if route == "/api/ui" and self.headers.get("Origin") in ORIGINS:
+            try:
+                st = {"todo_open": bool(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()).get("todo_open"))}
+                with open(UI_STATE, "w", encoding="utf-8") as f:
+                    json.dump(st, f)
+                return self.send(200, b'{"ok":true}')
+            except (ValueError, OSError, AttributeError):
+                return self.send(400)
         if route not in ("/api/launch", "/api/save", "/api/browse") or self.headers.get("Origin") not in ORIGINS:
             return self.send(403)
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()

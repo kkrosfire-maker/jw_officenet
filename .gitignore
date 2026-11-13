@@ -30,3 +30,4 @@ venv/
 tools_claude_usb_backup/claude-cli/claude.exe
 
 work_daily_todo/data/
+tools_program_board/ui_state.json

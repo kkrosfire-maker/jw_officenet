@@ -349,9 +349,9 @@ $('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$
   b.addEventListener('click',e=>{if(moved){e.stopImmediatePropagation();e.preventDefault()}},true);
   addEventListener('resize',()=>{if(b.style.top)b.style.top=Math.min(parseFloat(b.style.top),Math.max(innerHeight-b.offsetHeight,0))+'px'});
 }
-// 오늘의 할 일 패널: 평소엔 접혀 있고, 삼각형을 누르면 창이 오른쪽으로 늘어나며 펼쳐진다
-$('tgl').onclick=async()=>{
-  const open=!document.body.classList.contains('todo-open');
+// 오늘의 할 일 패널: 평소엔 접혀 있고, 삼각형을 누르면 창이 오른쪽으로 늘어나며 펼쳐진다. 펼침 여부는 기억해 다음 실행 때 복원한다
+async function setTodo(open){
+  if(open===document.body.classList.contains('todo-open'))return;
   const hasApi=window.pywebview&&pywebview.api&&pywebview.api.set_todo;
   if(open){
     if(hasApi)await pywebview.api.set_todo(true);
@@ -362,7 +362,19 @@ $('tgl').onclick=async()=>{
   $('tgl').firstChild.textContent=open?'◀':'▶';$('tgl').title=open?'오늘의 할 일 접기':'오늘의 할 일 펼치기';$('tgl').setAttribute('aria-expanded',open);
   if(!open&&hasApi)await pywebview.api.set_todo(false);
   syncHH();
+}
+$('tgl').onclick=async()=>{
+  const open=!document.body.classList.contains('todo-open');
+  await setTodo(open);
+  post('/api/ui',{todo_open:open}).catch(()=>{});
 };
+(async()=>{ // 지난번에 펼쳐 둔 채 닫았으면 앱 창 준비를 기다렸다가 다시 펼친다
+  try{
+    if(!(await (await fetch('/api/ui')).json()).todo_open)return;
+    for(let i=0;i<50&&!(window.pywebview&&pywebview.api);i++)await new Promise(r=>setTimeout(r,100));
+    setTodo(true);
+  }catch(e){}
+})();
 load();
 </script>
 </body>
