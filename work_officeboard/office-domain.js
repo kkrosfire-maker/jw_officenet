@@ -59,8 +59,9 @@ function isVirtual(id, d) { return !!(d && d.contractType === '비상주') || /^
 
 function isActiveContract(d) { return !INACTIVE_STATUSES.includes(d && d.contractStatus); }
 
-// "A018-2" → "A018(2)", "A018" → "A018"
+// 화면 표시용 ID (저장 키는 그대로): "A001" → "A01", "A018" → "A18", "A018-2" → "A18(2)"
 function displayVaId(id) {
+  id = String(id).replace(/^([A-Za-z]+)0(\d{2,})/, '$1$2'); // 숫자부 앞의 0 하나 제거
   const m = id.match(/^(.+)-(\d+)$/);
   return m ? `${m[1]}(${m[2]})` : id;
 }

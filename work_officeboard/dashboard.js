@@ -3,7 +3,7 @@ let currentMonth   = new Date().toISOString().slice(0, 7);
 let currentRoom    = null;
 let _editingVaId   = null; // VA 수정 시 원본 ID 추적 (ID 변경 감지용)
 let _vaShowInactive = false; // 비상주 목록 계약해지·만료 표시 여부 유지
-let _vaSort = { col: 'start', asc: true }; // 비상주 목록 정렬 상태
+let _vaSort = { col: 'id', asc: true }; // 비상주 목록 정렬 상태
 let _vaCameFromList = false; // 등록/수정 모달을 비상주 목록에서 열었는지 (닫을 때 목록으로 복귀할지 결정)
 let _customRentBase = 0; // 할인율 "직접입력" 모드에서 사용자가 입력한 부가세 제외 기준액
 
@@ -226,7 +226,7 @@ function _roomToForm(roomId, d) {
   var color = ZONE[z].color;
 
   document.getElementById('modal-type-bar').style.background   = color;
-  document.getElementById('modal-title').textContent           = roomId;
+  document.getElementById('modal-title').textContent           = displayVaId(roomId);
   document.getElementById('modal-type-label').textContent      = ZONE[z].name;
   document.getElementById('modal-type-label').style.background = color;
 
@@ -699,7 +699,7 @@ function renderFloor() {
         el.onclick = () => openModal(cell);
 
         let html = `<div class="type-strip" style="background:${color}"></div>`;
-        html += `<div class="room-id">${cell}</div>`;
+        html += `<div class="room-id">${displayVaId(cell)}</div>`;
         html += `<div class="room-name">${d.name || d.tenantName || '공실'}</div>`;
         if (isOccupied(d) && d.rent) {
           html += `<div class="room-rent">${fmtWon(d.rent)}원</div>`;
@@ -828,10 +828,12 @@ function updateMonthDisplay() {
 // ── 비상주 목록 ─────────────────────────────────────
 function _vaSortRooms(rooms, data) {
   const { col, asc } = _vaSort;
+  // numeric:true → A9 < A10, A018 < A018-2 처럼 번호를 숫자로 비교
+  const byId = (a, b) => a.localeCompare(b, 'en', { numeric: true });
   return rooms.slice().sort((a, b) => {
-    const va = col === 'id' ? a : (data[a].start || '');
-    const vb = col === 'id' ? b : (data[b].start || '');
-    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    let c = col === 'id' ? byId(a, b) : (data[a].start || '').localeCompare(data[b].start || '');
+    if (c === 0) c = byId(a, b); // 동률이면 ID 순으로 고정
+    return asc ? c : -c;
   });
 }
 
