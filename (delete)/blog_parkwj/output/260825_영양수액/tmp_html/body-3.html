@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 36px;
+  }
+
+  .card-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .compare-wrap {
+    display: flex;
+    gap: 24px;
+  }
+
+  .compare-col {
+    flex: 1;
+    border-radius: 20px;
+    padding: 44px 30px;
+  }
+
+  .col-title {
+    font-size: 34px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid rgba(255,255,255,0.6);
+    color: #fff;
+  }
+
+  .col-item {
+    font-size: 26px;
+    color: #fff;
+    line-height: 1.6;
+    margin-bottom: 28px;
+    padding-left: 22px;
+    position: relative;
+  }
+  .col-item:last-child { margin-bottom: 0; }
+  .col-item::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+  }
+
+  .local { background: linear-gradient(160deg, #F4803A, #E8963F); }
+  .systemic { background: linear-gradient(160deg, #E24C4C, #C93838); }
+
+  .warn-badge {
+    text-align: center;
+    font-size: 25px;
+    font-weight: 700;
+    color: #C93838;
+    background: #FDE0E0;
+    border-radius: 16px;
+    padding: 26px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">영양수액 <span style="color:#F4803A">부작용</span></div>
+
+    <div class="compare-wrap">
+      <div class="compare-col local">
+        <div class="col-title">국소 부작용</div>
+        <div class="col-item">주사부위 통증·멍</div>
+        <div class="col-item">정맥염(혈관 염증)</div>
+        <div class="col-item">혈전·침윤(약물 유출)</div>
+      </div>
+      <div class="compare-col systemic">
+        <div class="col-title">전신 부작용</div>
+        <div class="col-item">구역·설사</div>
+        <div class="col-item">피부발진·어지러움</div>
+        <div class="col-item">심장박동 증가</div>
+      </div>
+    </div>
+
+    <div class="warn-badge">지용성 비타민 장기 반복 투여 시 축적 독성 우려</div>
+  </div>
+</div>
+</body>
+</html>

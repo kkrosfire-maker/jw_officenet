@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .card-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .compare-wrap {
+    display: flex;
+    gap: 20px;
+  }
+
+  .compare-col {
+    flex: 1;
+    border-radius: 20px;
+    padding: 26px 22px;
+  }
+
+  .col-title {
+    font-size: 32px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid rgba(255,255,255,0.6);
+  }
+
+  .col-item {
+    font-size: 23px;
+    color: #fff;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    padding-left: 18px;
+    position: relative;
+  }
+  .col-item::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+  }
+
+  .exhaustion { background: linear-gradient(160deg, #F4803A, #E8963F); }
+  .exhaustion .col-title { color: #fff; }
+
+  .stroke { background: linear-gradient(160deg, #E24C4C, #C93838); }
+  .stroke .col-title { color: #fff; }
+
+  .warn-badge {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #C93838;
+    background: #FDE0E0;
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">열탈진 vs 열사병</div>
+
+    <div class="compare-wrap">
+      <div class="compare-col exhaustion">
+        <div class="col-title">열탈진</div>
+        <div class="col-item">두통·어지럼증</div>
+        <div class="col-item">메스꺼움·구토</div>
+        <div class="col-item">축축하고 차가운 피부</div>
+        <div class="col-item">극심한 무력감</div>
+      </div>
+      <div class="compare-col stroke">
+        <div class="col-title">열사병</div>
+        <div class="col-item">40℃대 고체온</div>
+        <div class="col-item">땀이 나지 않음</div>
+        <div class="col-item">의식저하·섬망·경련</div>
+        <div class="col-item">신경학적 이상</div>
+      </div>
+    </div>
+
+    <div class="warn-badge">의식 이상 있으면 즉시 119 신고</div>
+  </div>
+</div>
+</body>
+</html>

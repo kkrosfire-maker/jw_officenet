@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 40px;
+  }
+
+  .card-title {
+    font-size: 44px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #FFF6EE;
+    border-left: 8px solid #F4803A;
+    border-radius: 18px;
+    padding: 32px 26px;
+  }
+
+  .cell-icon {
+    width: 74px;
+    height: 74px;
+    border-radius: 50%;
+    background: #F4803A;
+    color: #fff;
+    font-size: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cell-text .label {
+    font-size: 27px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+  .cell-text .desc {
+    font-size: 20px;
+    color: #666;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">기저질환자 <span class="accent">주의사항</span></div>
+
+    <div class="grid">
+      <div class="cell"><div class="cell-icon">❤️</div><div class="cell-text"><div class="label">심장질환</div><div class="desc">폐부종 위험</div></div></div>
+      <div class="cell"><div class="cell-icon">🫘</div><div class="cell-text"><div class="label">신장질환</div><div class="desc">체액과잉 위험</div></div></div>
+      <div class="cell"><div class="cell-icon">🫁</div><div class="cell-text"><div class="label">간 기능저하</div><div class="desc">간성혼수 위험</div></div></div>
+      <div class="cell"><div class="cell-icon">🩸</div><div class="cell-text"><div class="label">고혈압</div><div class="desc">혈압 상승 우려</div></div></div>
+      <div class="cell"><div class="cell-icon">🍬</div><div class="cell-text"><div class="label">당뇨병</div><div class="desc">혈당 상승 우려</div></div></div>
+      <div class="cell"><div class="cell-icon">👴</div><div class="cell-text"><div class="label">고령자</div><div class="desc">수분·나트륨 주의</div></div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

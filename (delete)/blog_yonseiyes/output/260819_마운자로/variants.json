@@ -1,0 +1,51 @@
+{
+  "corner_label_text": "마운자로 효과, 임상 수치로 살펴보기",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "마운자로,<br>무엇이 다르게 작용할까요",
+      "body_html": "마운자로의 성분인 <strong>티르제파타이드</strong>는 GIP와 GLP-1, 두 수용체에 동시에 작용하는 이중작용제입니다. 기존 위고비·오젬픽(세마글루타이드)이 GLP-1 하나에만 작용하는 것과 달리 GIP 경로까지 함께 자극해 인슐린 분비와 식욕·포만감 조절에 관여합니다. SURPASS 임상에서는 당화혈색소가 <strong>2%p 이상</strong>, 체중이 <strong>15% 이상</strong> 감소한 결과가 보고됐습니다.",
+      "illustration_desc": "GIP·GLP-1 두 갈래로 나뉜 경로 도표를 함께 살펴보는 의료진",
+      "illustration_file": "1.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 2,
+      "title": "SURMOUNT-1,<br>72주 체중 변화는",
+      "body_html": "당뇨병이 없는 비만·과체중 성인을 대상으로 한 SURMOUNT-1 임상에서, 72주간 관찰한 결과 <strong>15mg 투여군의 평균 체중은 -22.5%</strong> 감소했습니다(위약군 -2.4%). 같은 대상자를 176주(3.4년)까지 연장 추적한 결과에서는 <strong>2형 당뇨병 발생 위험이 위약군 대비 94% 낮게</strong> 나타났습니다. 다만 이 수치는 약물을 꾸준히 복용한 경우를 기준으로 산출된 값입니다.",
+      "illustration_desc": "하락하는 꺾은선 그래프를 손으로 짚으며 확인하는 인물",
+      "illustration_file": "2.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "마운자로 vs 위고비,<br>SURMOUNT-5 비교",
+      "items": [
+        "체중 변화율 — 마운자로 -20.2% vs 세마글루타이드 -13.7%",
+        "체중 감소량 — 마운자로 22.8kg vs 세마글루타이드 15.0kg",
+        "허리둘레 변화 — 마운자로 -18.4cm vs 세마글루타이드 -13.0cm",
+        "10·15·20·25% 이상 감량 달성 비율 — 모두 마운자로군에서 더 높게 나타남"
+      ],
+      "illustration_desc": "두 개의 저울을 나란히 놓고 비교하며 살펴보는 인물",
+      "illustration_file": "3.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "부작용,<br>이것만은 확인하세요",
+      "items": [
+        "위장관계 증상 — 오심·구토·설사·식욕저하·변비·상복부 불편감",
+        "오심 발생률 — 마운자로군 20.43% vs 대조군 10.47%",
+        "박스경고 — 동물실험에서 관찰된 갑상선 C세포 종양 관련 경고 포함",
+        "투여 금기 — 수질성 갑상선암·다발성내분비선종 2형 개인 또는 가족력"
+      ],
+      "illustration_desc": "문진표를 의료진과 함께 확인하며 상담받는 인물",
+      "illustration_file": "4.png"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 44px;
+    text-align: center;
+    background: linear-gradient(160deg, #FDE9E0, #FFF6EE);
+    border-radius: 24px;
+    padding: 50px;
+  }
+
+  .warn-icon {
+    font-size: 60px;
+  }
+
+  .tag {
+    font-size: 27px;
+    font-weight: 700;
+    color: #fff;
+    background: #C93838;
+    border-radius: 999px;
+    padding: 14px 34px;
+  }
+
+  .quote-main {
+    font-size: 48px;
+    font-weight: 900;
+    color: #1A2340;
+    line-height: 1.55;
+  }
+  .quote-main .accent { color: #C93838; }
+
+  .sub-line {
+    font-size: 28px;
+    color: #444;
+    line-height: 1.6;
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 34px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+
+  .footnote {
+    font-size: 24px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="warn-icon">⚠️</div>
+    <div class="tag">국외 증례보고 · 2025</div>
+    <div class="quote-main">33세 여성,<br>정맥 비타민 수액 후<br><span class="accent">스티븐스-존슨 증후군</span></div>
+    <div class="sub-line">글루타치온 · 비타민C · D 수액 투여 사례</div>
+    <div class="footnote">규제 느슨한 웰니스 클리닉, 과거 시술 이력 확인 필요</div>
+  </div>
+</div>
+</body>
+</html>

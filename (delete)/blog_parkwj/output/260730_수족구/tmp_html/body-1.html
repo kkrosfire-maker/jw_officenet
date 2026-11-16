@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 30px; }
+  .card-title { font-size: 44px; font-weight: 900; color: #1A2340; text-align: center; }
+  .card-title .accent { color: #F4803A; }
+  .sub { font-size: 22px; color: #666; text-align: center; margin-top: -14px; }
+  .stat-wrap { display: flex; gap: 20px; }
+  .stat { flex: 1; background: #FFF6EE; border-radius: 20px; padding: 34px 12px; text-align: center; }
+  .stat.hot { background: #F4803A; }
+  .stat .k { font-size: 22px; color: #666; margin-bottom: 12px; }
+  .stat.hot .k { color: #FFE7D3; }
+  .stat .v { font-size: 44px; font-weight: 900; color: #F4803A; }
+  .stat.hot .v { color: #fff; }
+  .stat .u { font-size: 18px; color: #999; }
+  .stat.hot .u { color: #FFE7D3; }
+  .hl { text-align: center; font-size: 25px; font-weight: 700; color: #1A2340; background: #FFF0DC; border-radius: 16px; padding: 26px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">2026년 수족구병 <span class="accent">유행 상황</span></div>
+    <div class="sub">외래환자 1,000명당 의사환자분율</div>
+    <div class="stat-wrap">
+      <div class="stat"><div class="k">20주</div><div class="v">1.7</div><div class="u">명</div></div>
+      <div class="stat"><div class="k">24주</div><div class="v">8.9</div><div class="u">명</div></div>
+      <div class="stat hot"><div class="k">27주</div><div class="v">19.4</div><div class="u">명</div></div>
+    </div>
+    <div class="hl">0~6세는 1,000명당 27.2명<br>매년 5월부터 늘어 6~9월 유행</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 46px;
+    text-align: center;
+    background: linear-gradient(160deg, #FFF3E0, #FFF9F0);
+    border-radius: 24px;
+    padding: 50px;
+  }
+
+  .icon-top {
+    font-size: 64px;
+  }
+
+  .card-title {
+    font-size: 46px;
+    font-weight: 900;
+    color: #1A2340;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .contrast-wrap {
+    display: flex;
+    gap: 26px;
+    width: 100%;
+  }
+
+  .contrast-box {
+    flex: 1;
+    border-radius: 20px;
+    padding: 50px 26px;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+
+  .bad {
+    background: #FDE0E0;
+    color: #C93838;
+  }
+  .good {
+    background: #E8F7EF;
+    color: #2E7D5B;
+  }
+
+  .footnote {
+    font-size: 28px;
+    color: #444;
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 34px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="icon-top">🚫</div>
+    <div class="card-title">반복 사용, <span class="accent">주의하세요</span></div>
+
+    <div class="contrast-wrap">
+      <div class="contrast-box bad">피곤할 때마다<br>습관처럼 X</div>
+      <div class="contrast-box good">필요할 때만<br>적절히 O</div>
+    </div>
+
+    <div class="footnote">균형잡힌 식사 · 충분한 휴식이 먼저입니다</div>
+  </div>
+</div>
+</body>
+</html>

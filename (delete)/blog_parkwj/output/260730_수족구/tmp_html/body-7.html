@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+  .card-title { font-size: 44px; font-weight: 900; color: #1A2340; text-align: center; }
+  .card-title .accent { color: #F4803A; }
+  .row { display: flex; align-items: center; gap: 24px; background: #FFF6EE; border-left: 8px solid #F4803A; border-radius: 18px; padding: 24px 30px; }
+  .row-icon { width: 72px; height: 72px; border-radius: 50%; background: #F4803A; color: #fff; font-size: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .row-text { font-size: 26px; font-weight: 700; color: #1A2340; }
+  .warn { text-align: center; font-size: 24px; font-weight: 700; color: #C93838; background: #FDE0E0; border-radius: 16px; padding: 24px; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">수족구병 <span class="accent">탈수 관리</span></div>
+    <div class="row"><div class="row-icon">🚫</div><div class="row-text">검증된 특이 치료제·항바이러스제 없음</div></div>
+    <div class="row"><div class="row-icon">🌡️</div><div class="row-text">대증 요법으로 발열·통증 조절</div></div>
+    <div class="row"><div class="row-icon">💧</div><div class="row-text">수분 섭취로 탈수 예방이 핵심</div></div>
+    <div class="row"><div class="row-icon">🏥</div><div class="row-text">증상이 심하면 입원해 정맥 수액</div></div>
+    <div class="warn">발열 지속·반복 구토는 중증화와 연관됩니다</div>
+  </div>
+</div>
+</body>
+</html>

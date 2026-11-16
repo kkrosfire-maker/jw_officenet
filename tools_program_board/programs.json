@@ -2,61 +2,6 @@
   "title": "정원유니어스 프로그램 보드",
   "programs": [
     {
-      "id": "app5",
-      "name": "사이즈조절기",
-      "desc": "사진 원근 보정 · 크기 조절",
-      "group": "통계",
-      "icon": "icons/app5.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist\\photo_converter.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist"
-    },
-    {
-      "id": "custom10",
-      "name": "사진문구넣기",
-      "desc": "병원별 문구, 제약사별 구분",
-      "group": "통계",
-      "icon": "icons/custom10.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist\\사진문구넣기.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist"
-    },
-    {
-      "id": "app6",
-      "name": "사진분류",
-      "desc": "제약사 통계 사진 자동 분류",
-      "group": "통계",
-      "icon": "icons/app6.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter\\사진분류프로그램.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter"
-    },
-    {
-      "id": "custom7",
-      "name": "정원유니어스정산대시보드",
-      "desc": "정산대시보드",
-      "group": "통계",
-      "icon": "icons/custom7.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist\\정원유니어스정산대시보드.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist"
-    },
-    {
-      "id": "app4",
-      "name": "요율표검색기",
-      "desc": "정원유니어스 요율표 검색",
-      "group": "통계",
-      "icon": "icons/app4.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
-    },
-    {
       "id": "officeboard",
       "name": "공유오피스 대시보드",
       "desc": "호실·계약·비상주 운영 현황",
@@ -175,17 +120,6 @@
       "url": "https://www.miricanvas.com/ko/workspace/drive"
     },
     {
-      "id": "custom12",
-      "name": "정산스케줄",
-      "desc": "정산알리미",
-      "group": "통계",
-      "icon": "icons/custom12.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_checker\\dist\\정산알림.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_checker\\dist"
-    },
-    {
       "id": "custom5",
       "name": "CSO 뉴스올리기",
       "desc": "",
@@ -204,6 +138,72 @@
       "type": "url",
       "url": "https://www.jungwonunius.co.kr/",
       "icon_custom": true
+    },
+    {
+      "id": "app5",
+      "name": "사이즈조절기",
+      "desc": "사진 원근 보정 · 크기 조절",
+      "group": "통계",
+      "icon": "icons/app5.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist\\photo_converter.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_resizer\\dist"
+    },
+    {
+      "id": "custom10",
+      "name": "사진문구넣기",
+      "desc": "병원별 문구, 제약사별 구분",
+      "group": "통계",
+      "icon": "icons/custom10.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist\\사진문구넣기.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist"
+    },
+    {
+      "id": "app4",
+      "name": "요율표검색기",
+      "desc": "정원유니어스 요율표 검색",
+      "group": "통계",
+      "icon": "icons/app4.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
+    },
+    {
+      "id": "app6",
+      "name": "사진분류",
+      "desc": "제약사 통계 사진 자동 분류",
+      "group": "통계",
+      "icon": "icons/app6.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter\\사진분류프로그램.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_pharma_photo_sorter"
+    },
+    {
+      "id": "custom7",
+      "name": "정원유니어스정산대시보드",
+      "desc": "정산대시보드",
+      "group": "통계",
+      "icon": "icons/custom7.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist\\정원유니어스정산대시보드.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_dashboard\\dist"
+    },
+    {
+      "id": "custom12",
+      "name": "정산스케줄",
+      "desc": "정산알리미",
+      "group": "통계",
+      "icon": "icons/custom12.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_checker\\dist\\정산알림.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_settlement_checker\\dist"
     }
   ]
 }

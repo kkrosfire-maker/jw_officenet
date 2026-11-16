@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+  .card-title { font-size: 42px; font-weight: 900; color: #1A2340; text-align: center; margin-bottom: 8px; }
+  .card-title .accent { color: #F4803A; }
+  .row { display: flex; align-items: center; gap: 22px; background: #FFF6EE; border-left: 8px solid #F4803A; border-radius: 16px; padding: 22px 28px; }
+  .row-icon { width: 66px; height: 66px; border-radius: 50%; background: #F4803A; color: #fff; font-size: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .row-text { font-size: 25px; font-weight: 700; color: #1A2340; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">올바른 <span class="accent">손 위생·소독</span></div>
+    <div class="row"><div class="row-icon">🧼</div><div class="row-text">비누와 흐르는 물에 30초 이상 손씻기</div></div>
+    <div class="row"><div class="row-icon">⚠️</div><div class="row-text">알코올 손소독제만으로는 부족할 수 있음</div></div>
+    <div class="row"><div class="row-icon">🧴</div><div class="row-text">염소계 소독제 병용</div></div>
+    <div class="row"><div class="row-icon">🧸</div><div class="row-text">표면은 세척 먼저, 그다음 소독</div></div>
+    <div class="row"><div class="row-icon">🏠</div><div class="row-text">수포가 나을 때까지 등원·등교 자제</div></div>
+  </div>
+</div>
+</body>
+</html>

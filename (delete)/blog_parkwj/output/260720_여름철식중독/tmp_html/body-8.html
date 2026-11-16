@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .card-title {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .section-label {
+    font-size: 22px;
+    font-weight: 700;
+    color: #888;
+    text-align: center;
+  }
+
+  .rule-row {
+    display: flex;
+    gap: 14px;
+  }
+  .rule-chip {
+    flex: 1;
+    background: #FFF6EE;
+    border-radius: 16px;
+    padding: 18px 10px;
+    text-align: center;
+  }
+  .rule-chip .icon { font-size: 32px; }
+  .rule-chip .txt {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A2340;
+    margin-top: 6px;
+  }
+
+  .warn-badge {
+    text-align: center;
+    font-size: 23px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(160deg, #E24C4C, #C93838);
+    border-radius: 16px;
+    padding: 22px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">여름철 식중독 <span class="accent">예방·대처 요약</span></div>
+
+    <div class="section-label">예방 3대 원칙</div>
+    <div class="rule-row">
+      <div class="rule-chip"><div class="icon">🧼</div><div class="txt">비누로<br>손 씻기</div></div>
+      <div class="rule-chip"><div class="icon">💧</div><div class="txt">물은<br>끓여 마시기</div></div>
+      <div class="rule-chip"><div class="icon">🔥</div><div class="txt">음식은<br>익혀 먹기</div></div>
+    </div>
+
+    <div class="warn-badge">탈수·혈변·고열 등 경고 신호가 있다면<br>참지 말고 가까운 내과를 방문하세요</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 32px; }
+  .card-title { font-size: 42px; font-weight: 900; color: #1A2340; text-align: center; }
+  .card-title .accent { color: #F4803A; }
+  .compare-wrap { display: flex; gap: 22px; }
+  .compare-col { flex: 1; border-radius: 20px; padding: 40px 30px; color: #fff; }
+  .compare-col.a { background: linear-gradient(160deg, #F4803A, #E8963F); }
+  .compare-col.b { background: linear-gradient(160deg, #3C4A6B, #2A3550); }
+  .col-title { font-size: 30px; font-weight: 900; text-align: center; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 3px solid rgba(255,255,255,0.5); }
+  .col-item { font-size: 22px; line-height: 1.5; margin-bottom: 16px; padding-left: 20px; position: relative; word-break: keep-all; }
+  .col-item:last-child { margin-bottom: 0; }
+  .col-item::before { content: "•"; position: absolute; left: 0; }
+  .hl { text-align: center; font-size: 24px; font-weight: 700; color: #1A2340; background: #FFF0DC; border-radius: 16px; padding: 24px; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">수족구병 vs <span class="accent">헤르판지나</span></div>
+    <div class="compare-wrap">
+      <div class="compare-col a">
+        <div class="col-title">수족구병</div>
+        <div class="col-item">입안 수포·궤양</div>
+        <div class="col-item">손·발에도 수포성 발진</div>
+        <div class="col-item">둘이 함께 나타남</div>
+      </div>
+      <div class="compare-col b">
+        <div class="col-title">헤르판지나</div>
+        <div class="col-item">목젖·입천장에만 수포</div>
+        <div class="col-item">손발 발진 없음</div>
+        <div class="col-item">고열·목 통증이 더 심함</div>
+      </div>
+    </div>
+    <div class="hl">실제 구분은 진찰을 통해 이뤄집니다</div>
+  </div>
+</div>
+</body>
+</html>

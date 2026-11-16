@@ -1,0 +1,88 @@
+{
+  "corner_label_text": "독감예방접종, 언제 맞아야 할까?",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "독감, 단순한<br>감기가 아닙니다",
+      "body_html": "인플루엔자(독감)는 <strong>38℃ 이상의 고열</strong>과 두통, 근육통, 기침이 함께 나타나는 급성 호흡기 감염병입니다. 건강한 성인은 대부분 며칠 앓고 지나가지만, 영유아·고령자·임신부·만성질환자는 <strong>폐렴 등 합병증</strong>으로 이어질 수 있어 주의가 필요합니다.",
+      "illustration_desc": "고열로 이마에 손을 얹고 힘들어하는 사람 상반신, 온도계 소품",
+      "illustration_file": "1.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 2,
+      "title": "4가에서 3가로,<br>달라진 백신 구성",
+      "body_html": "WHO가 B형 야마가타 계통의 사실상 소멸을 확인하면서, 기존 <strong>4가 백신에서 3가 백신</strong>으로 구성이 바뀌었습니다. 백신은 매년 유행 예상 균주에 맞춰 새로 만들어지므로, 지난해 접종했더라도 <strong>올해 다시 접종</strong>해야 합니다.",
+      "illustration_desc": "주사기와 백신 바이알을 양손에 들고 비교하는 의료진 상반신",
+      "illustration_file": "2.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "대상군별<br>접종 시작 시기",
+      "items": [
+        "2회 접종 대상 어린이: 9월 22일부터",
+        "1회 접종 대상 어린이·임신부: 9월 29일부터",
+        "65세 이상(75세 이상 우선): 10월 15일부터"
+      ],
+      "illustration_desc": "달력을 손으로 짚으며 접종 일정을 확인하는 사람 전신",
+      "illustration_file": "3.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "A",
+      "seq": 4,
+      "title": "무료 접종<br>대상 안내",
+      "items": [
+        "생후 6개월~13세 어린이: 무료(1~2회)",
+        "임신부: 무료(임신 주수 무관)",
+        "65세 이상: 무료(연령대별 순차 시작)",
+        "만성질환자(65세 미만): 자비 접종, 우선 권장",
+        "건강한 성인(6~64세): 자비 접종"
+      ],
+      "illustration_desc": "가족 여러 세대(아이, 임산부, 노인)가 나란히 서 있는 전신 구성",
+      "illustration_file": "4.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "A",
+      "seq": 5,
+      "title": "접종 전<br>꼭 확인하세요",
+      "items": [
+        "생후 6개월 미만 영아: 접종 대상 아님",
+        "과거 아나필락시스 반응: 접종 금기",
+        "계란 알레르기: 경증이면 가능, 중증이면 상담",
+        "감기 등 급성질환: 회복 후 접종",
+        "길랭-바레 증후군 과거력: 사전 상담 필요"
+      ],
+      "illustration_desc": "체크리스트를 든 채 신중하게 확인하는 의료진 상반신",
+      "illustration_file": "5.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 6,
+      "title": "접종 후<br>이렇게 관리하세요",
+      "items": [
+        "접종 후 2~3일간 평소와 다른 고열이 계속된다",
+        "호흡곤란이나 심한 두드러기가 나타난다",
+        "심한 현기증이나 어지럼증이 지속된다"
+      ],
+      "illustration_desc": "팔에 반창고를 붙이고 편안하게 쉬고 있는 사람 상반신",
+      "illustration_file": "6.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 7,
+      "title": "고용량 백신,<br>효과가 확실할까요?",
+      "body_html": "덴마크의 대규모 연구(DANFLU-2)에서는 고용량 백신이 표준용량과 <strong>유의한 차이를 보이지 못했지만</strong>, 스페인 GALFLU 연구에서는 <strong>입원 예방에 더 우수한 효과</strong>를 보여 연구 결과가 아직 엇갈리고 있습니다.",
+      "illustration_desc": "저울 위에 두 개의 백신 바이알을 올려놓고 비교하는 인물 상반신, 고민하는 표정",
+      "illustration_file": "7.png"
+    }
+  ]
+}

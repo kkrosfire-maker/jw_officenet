@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .card-title {
+    font-size: 40px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: #FFF6EE;
+    border-left: 8px solid #F4803A;
+    border-radius: 18px;
+    padding: 24px 30px;
+  }
+
+  .item-badge {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: #F4803A;
+    color: #fff;
+    font-size: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-text .label {
+    font-size: 29px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+  .item-text .desc {
+    font-size: 21px;
+    color: #666;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">마이어스 칵테일 <span class="accent">구성성분</span></div>
+
+    <div class="item-row">
+      <div class="item-badge">💊</div>
+      <div class="item-text"><div class="label">비타민 B군 · C</div><div class="desc">대사·에너지 관련 비타민</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">🧂</div>
+      <div class="item-text"><div class="label">마그네슘 · 칼슘</div><div class="desc">필수 미네랄</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">⚡</div>
+      <div class="item-text"><div class="label">전해질</div><div class="desc">체액·전해질 균형 조절</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">💧</div>
+      <div class="item-text"><div class="label">수분</div><div class="desc">정맥으로 직접 주입</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

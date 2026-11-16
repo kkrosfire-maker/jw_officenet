@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 15px; }
+  .card-title { font-size: 42px; font-weight: 900; color: #1A2340; text-align: center; margin-bottom: 12px; }
+  .card-title .accent { color: #E24C4C; }
+  .check { display: flex; align-items: center; gap: 20px; background: #FDECEC; border-left: 8px solid #E24C4C; border-radius: 14px; padding: 19px 26px; }
+  .check-box { width: 42px; height: 42px; border-radius: 10px; background: #E24C4C; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check-t { font-size: 24px; font-weight: 700; color: #1A2340; }
+  .warn { text-align: center; font-size: 23px; font-weight: 700; color: #C93838; background: #FDE0E0; border-radius: 14px; padding: 20px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">이런 <span class="accent">위험 신호</span> 주의</div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">39도 이상의 고열</div></div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">38도 이상의 열이 48시간 이상 지속</div></div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">반복적인 구토</div></div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">축 처지는 무기력증</div></div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">호흡곤란·경련</div></div>
+    <div class="check"><div class="check-box">✓</div><div class="check-t">걸을 때 비틀거림, 의식 저하</div></div>
+    <div class="warn">하나라도 해당되면 의료기관 진료가 필요합니다</div>
+  </div>
+</div>
+</body>
+</html>

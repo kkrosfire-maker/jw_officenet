@@ -14,7 +14,7 @@
 thumbnail은 HTML/CSS로 새로 만드는 것이 아니라, 아래 방식으로 제작한다.
 
 **제작 방법:**
-1. 참조 이미지(`C:\Users\JW\Downloads\제목을 입력해주세요\1.png`)를 베이스로 사용
+1. 참조 이미지(`C:\Users\JW\Desktop\workspace\blog\제목을 입력해주세요\1.png`)를 베이스로 사용
 2. Python PIL로 기존 제목 텍스트 영역을 배경색(흰색)으로 덮기
 3. 동일한 폰트·크기·색상·정렬로 새 제목 텍스트 쓰기
 4. 1080×1080으로 리사이즈 (PIL `LANCZOS` 필터 사용)

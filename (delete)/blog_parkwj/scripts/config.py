@@ -9,8 +9,8 @@ import datetime
 
 # ── 기본 경로 ──────────────────────────────────────────────────────
 OUTPUT_BASE = r"C:\Users\JW\Desktop\workspace\blog\output"
-REF_DIR     = r"C:\Users\JW\Downloads\제목을 입력해주세요"
-FRAME_PNG   = r"C:\Users\JW\Downloads\클로드코드 교육용.png"
+REF_DIR     = r"C:\Users\JW\Desktop\workspace\blog\제목을 입력해주세요"
+FRAME_PNG   = r"C:\Users\JW\Desktop\workspace\blog\제목을 입력해주세요\클로드코드 교육용.png"
 
 # ── 이미지 캔버스 크기 ─────────────────────────────────────────────
 VIEWPORT_W = 1080

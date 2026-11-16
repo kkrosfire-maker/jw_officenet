@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .card-title {
+    font-size: 36px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .card-title .accent { color: #F4803A; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #FFF6EE;
+    border-left: 8px solid #F4803A;
+    border-radius: 16px;
+    padding: 18px 26px;
+  }
+
+  .item-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #F4803A;
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-text .label {
+    font-size: 25px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">영양수액, 맞기 전 <span class="accent">체크리스트</span></div>
+
+    <div class="item-row">
+      <div class="item-badge">✓</div>
+      <div class="item-text"><div class="label">질환 · 복용약물 고지</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">✓</div>
+      <div class="item-text"><div class="label">알레르기 · 임신여부 확인</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">✓</div>
+      <div class="item-text"><div class="label">기저질환 여부 점검</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">✓</div>
+      <div class="item-text"><div class="label">성분 · 무균환경 확인</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">✓</div>
+      <div class="item-text"><div class="label">반복사용 대신 생활습관 개선</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

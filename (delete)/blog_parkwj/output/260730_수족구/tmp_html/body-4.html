@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+  .inner-card { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+  .card-title { font-size: 44px; font-weight: 900; color: #1A2340; text-align: center; margin-bottom: 14px; }
+  .card-title .accent { color: #F4803A; }
+  .step { display: flex; align-items: center; gap: 24px; background: #FFF6EE; border-radius: 18px; padding: 24px 30px; }
+  .step-n { width: 62px; height: 62px; border-radius: 50%; background: #1A2340; color: #fff; font-size: 28px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-t { font-size: 26px; font-weight: 700; color: #1A2340; }
+  .arrow { text-align: center; color: #F4803A; font-size: 28px; font-weight: 900; line-height: 0.9; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">수족구병 <span class="accent">증상 진행 순서</span></div>
+    <div class="step"><div class="step-n">1</div><div class="step-t">발열·인후통·식욕부진 등 전신 증상</div></div>
+    <div class="arrow">▾</div>
+    <div class="step"><div class="step-n">2</div><div class="step-t">입안에 4~8mm 궤양, 삼키기 통증</div></div>
+    <div class="arrow">▾</div>
+    <div class="step"><div class="step-n">3</div><div class="step-t">손등·발등에 3~7mm 수포성 발진</div></div>
+    <div class="arrow">▾</div>
+    <div class="step"><div class="step-n">4</div><div class="step-t">대개 7~10일 후 자연 회복</div></div>
+  </div>
+</div>
+</body>
+</html>

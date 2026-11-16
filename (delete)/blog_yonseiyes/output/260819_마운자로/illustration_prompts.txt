@@ -1,0 +1,66 @@
+[thumbnail] 마운자로 — 가로 자리, 770x490px
+한글 요약: 진료실 책상에서 의사와 마주 앉아 체중·혈당 관리 상담을 받는 환자, 의사가 태블릿의 그래프를 함께 짚어 보여주는 장면.
+A realistic medical/clinical photography style photo of a doctor and a patient sitting at a
+consultation desk in a bright clinic room, the doctor pointing at a chart on a tablet while the
+patient listens attentively, both wearing plain clothing with no visible branding or logos,
+photorealistic photography, natural lighting, realistic medical/clinical photography style,
+candid consultation moment, generic-looking models not resembling any real identifiable person,
+isolated against a simple plain white or softly lit neutral studio background with no
+distracting scenery, no text, landscape orientation, wide horizontal composition, aspect ratio
+1.57:1, subject fills the frame edge-to-edge with only a ~5px margin on all four sides, no extra
+padding or empty space around the subject, tightly cropped full-bleed composition, image size
+770x490px.
+
+---
+
+[body-1] 마운자로, 무엇이 다르게 작용할까요 — Template B, 정사각형에 가까운 비율, 864x910px
+한글 요약: 진료 차트 위에 그려진 두 갈래(GIP·GLP-1) 호르몬 경로 도표를 의료진이 손으로 짚어가며 설명하는 모습.
+A realistic medical/clinical photography style photo of a doctor in a white coat pointing at a
+printed diagram showing two branching hormone pathway arrows on a clipboard or chart, explaining
+it to a patient in a bright consultation room, half-body to upper-body framing, photorealistic
+photography, natural lighting, realistic medical/clinical photography style, generic-looking
+medical professional not resembling any real identifiable person, isolated against a simple
+plain white or softly lit neutral studio background with no distracting scenery, no text,
+near-square composition, aspect ratio 0.95:1, subject fills the frame edge-to-edge with only a
+~5px margin on all four sides, no extra padding or empty space around the subject, tightly
+cropped full-bleed composition, image size 864x910px.
+
+---
+
+[body-2] SURMOUNT-1, 72주 체중 변화는 — Template B, 정사각형에 가까운 비율, 864x910px
+한글 요약: 하락하는 꺾은선 그래프가 표시된 태블릿 화면을 손으로 짚으며 확인하는 인물.
+A realistic medical/clinical photography style photo of a person looking closely at a
+downward-trending line graph displayed on a tablet screen, pointing at the chart with one finger
+and a focused expression, half-body framing, photorealistic photography, natural lighting,
+realistic medical/clinical photography style, generic-looking person not resembling any real
+identifiable individual, isolated against a simple plain white or softly lit neutral studio
+background with no distracting scenery, no text, near-square composition, aspect ratio 0.95:1,
+subject fills the frame edge-to-edge with only a ~5px margin on all four sides, no extra padding
+or empty space around the subject, tightly cropped full-bleed composition, image size 864x910px.
+
+---
+
+[body-3] 마운자로 vs 위고비, SURMOUNT-5 비교 — Template A, 세로형, 1000x1435px
+한글 요약: 두 개의 저울(체중계)을 나란히 놓고 눈금을 비교하며 살펴보는 인물의 전신 모습.
+A realistic medical/clinical photography style photo of a full-body figure standing between two
+bathroom scales placed side by side, looking down and comparing the readings on each scale with
+a thoughtful expression, photorealistic photography, natural lighting, realistic medical/clinical
+photography style, generic-looking person not resembling any real identifiable individual,
+isolated against a simple plain white or softly lit neutral studio background with no distracting
+scenery, no text, portrait orientation, vertical composition, aspect ratio 0.70:1, subject fills
+the frame edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1435px.
+
+---
+
+[body-4] 부작용, 이것만은 확인하세요 — Template A, 세로형, 1000x1435px
+한글 요약: 진료실에서 의료진과 마주 앉아 문진표를 함께 확인하며 상담받는 인물의 전신 모습.
+A realistic medical/clinical photography style photo of a full-body figure sitting across from a
+doctor in a clinic room, both looking down together at a medical questionnaire/checklist form on
+the desk, the patient listening attentively with a calm expression, photorealistic photography,
+natural lighting, realistic medical/clinical photography style, generic-looking people not
+resembling any real identifiable individuals, isolated against a simple plain white or softly lit
+neutral studio background with no distracting scenery, no text, portrait orientation, vertical
+composition, aspect ratio 0.70:1, subject fills the frame edge-to-edge with only a ~5px margin on
+all four sides, no extra padding or empty space around the subject, tightly cropped full-bleed
+composition, image size 1000x1435px.

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .card-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .card-title .accent { color: #E24C4C; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-radius: 16px;
+    padding: 18px 28px;
+  }
+
+  .item-badge {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-text .label {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+  .item-text .desc {
+    font-size: 20px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .lv1 { background: #FFF8E6; } .lv1 .item-badge { background: #FFD166; }
+  .lv2 { background: #FFF3E0; } .lv2 .item-badge { background: #FFB347; }
+  .lv3 { background: #FFEBDC; } .lv3 .item-badge { background: #FF8C42; }
+  .lv4 { background: #FFE3D3; } .lv4 .item-badge { background: #F4803A; }
+  .lv5 { background: #FDE0E0; } .lv5 .item-badge { background: #E24C4C; }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">온열질환의 <span class="accent">스펙트럼</span></div>
+
+    <div class="item-row lv1">
+      <div class="item-badge">1</div>
+      <div class="item-text"><div class="label">열부종·열발진</div><div class="desc">손발 붓기, 피부 발진 (경미)</div></div>
+    </div>
+    <div class="item-row lv2">
+      <div class="item-badge">2</div>
+      <div class="item-text"><div class="label">열경련</div><div class="desc">근육 경련 (30초~3분)</div></div>
+    </div>
+    <div class="item-row lv3">
+      <div class="item-badge">3</div>
+      <div class="item-text"><div class="label">열실신</div><div class="desc">어지럼증·일시적 실신</div></div>
+    </div>
+    <div class="item-row lv4">
+      <div class="item-badge">4</div>
+      <div class="item-text"><div class="label">열탈진</div><div class="desc">두통·무력감·차가운 피부</div></div>
+    </div>
+    <div class="item-row lv5">
+      <div class="item-badge">5</div>
+      <div class="item-text"><div class="label">열사병</div><div class="desc">고체온·의식저하 (가장 위급)</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

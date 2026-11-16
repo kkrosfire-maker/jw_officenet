@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .card-title {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .card-title .accent { color: #3FA75A; }
+
+  .rule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .rule-card {
+    background: #EAF6EE;
+    border-radius: 16px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .rule-icon { font-size: 36px; }
+  .rule-label {
+    font-size: 21px;
+    font-weight: 700;
+    color: #1A2340;
+    margin-top: 6px;
+  }
+  .rule-desc {
+    font-size: 15px;
+    color: #666;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">식중독 예방 <span class="accent">6대 수칙</span></div>
+
+    <div class="rule-grid">
+      <div class="rule-card"><div class="rule-icon">🧼</div><div class="rule-label">손 씻기</div><div class="rule-desc">비누로 30초 이상</div></div>
+      <div class="rule-card"><div class="rule-icon">🔪</div><div class="rule-label">구분 사용하기</div><div class="rule-desc">채소·육류·어류 조리도구 구분</div></div>
+      <div class="rule-card"><div class="rule-icon">🔥</div><div class="rule-label">익혀 먹기</div><div class="rule-desc">육류 75℃·어패류 85℃ 1분↑</div></div>
+      <div class="rule-card"><div class="rule-icon">🧽</div><div class="rule-label">세척·소독하기</div><div class="rule-desc">식재료 세척, 조리기구 소독</div></div>
+      <div class="rule-card"><div class="rule-icon">💧</div><div class="rule-label">끓여 먹기</div><div class="rule-desc">물은 끓여서 섭취</div></div>
+      <div class="rule-card"><div class="rule-icon">❄️</div><div class="rule-label">보관 온도 지키기</div><div class="rule-desc">냉장 5℃↓·냉동 -18℃↓</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

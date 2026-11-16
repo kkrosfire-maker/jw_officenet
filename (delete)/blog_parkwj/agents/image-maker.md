@@ -49,7 +49,7 @@ python scripts/make_thumbnail.py 여름철식중독 "여름철 식중독" "원�
 ```
 
 공유 스크립트가 없는 경우 직접 PIL로 구현:
-1. `C:\Users\JW\Downloads\제목을 입력해주세요\1.png` 열기
+1. `C:\Users\JW\Desktop\workspace\blog\제목을 입력해주세요\1.png` 열기
 2. 제목 영역 (x=390~945, y=375~585) 흰색으로 덮기
 3. 같은 색상(#5F6B8D)·우측 정렬로 새 제목 그리기
 4. 저장: `output/[yymmdd_주제]/images/thumbnail.png`
@@ -104,7 +104,7 @@ page.screenshot(path=output_path, full_page=True)
 
 - `full_page=True` 로 실제 콘텐츠 높이만큼만 캡처
 - 저장 경로: `output/[yymmdd_주제]/images/body-{n}.png` (n은 마커 순서, 1부터 시작)
-- 마지막 이미지: `C:\Users\JW\Downloads\제목을 입력해주세요\4.png` 를 `body-{last}.png` 로 복사
+- 마지막 이미지: `C:\Users\JW\Desktop\workspace\blog\제목을 입력해주세요\4.png` 를 `body-{last}.png` 로 복사
 
 ---
 

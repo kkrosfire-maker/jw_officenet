@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .card-title {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .card-title .accent { color: #E24C4C; }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #FDE0E0;
+    border-left: 8px solid #E24C4C;
+    border-radius: 14px;
+    padding: 16px 24px;
+  }
+  .check-icon { font-size: 28px; flex-shrink: 0; }
+  .check-text {
+    font-size: 23px;
+    font-weight: 700;
+    color: #1A2340;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">이럴 땐 <span class="accent">병원 방문</span> 미루지 마세요</div>
+
+    <div class="check-row"><div class="check-icon">⚠️</div><div class="check-text">구토가 지속되어 물을 전혀 마실 수 없다</div></div>
+    <div class="check-row"><div class="check-icon">⚠️</div><div class="check-text">어지러움·소변량 급감 등 탈수 증상이 심해졌다</div></div>
+    <div class="check-row"><div class="check-icon">⚠️</div><div class="check-text">혈변이 나타난다</div></div>
+    <div class="check-row"><div class="check-icon">⚠️</div><div class="check-text">발열이 심하거나 계속된다</div></div>
+    <div class="check-row"><div class="check-icon">⚠️</div><div class="check-text">소아·노인·면역저하자에서 증상이 빠르게 악화된다</div></div>
+  </div>
+</div>
+</body>
+</html>

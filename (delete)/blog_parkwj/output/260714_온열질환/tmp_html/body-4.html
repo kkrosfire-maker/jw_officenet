@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .card-title {
+    font-size: 42px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 2px;
+  }
+
+  .card-sub {
+    font-size: 21px;
+    color: #888;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .branch-wrap {
+    display: flex;
+    gap: 22px;
+  }
+
+  .branch-col {
+    flex: 1;
+    min-height: 520px;
+    border-radius: 20px;
+    padding: 30px 26px;
+  }
+
+  .branch-head {
+    font-size: 30px;
+    font-weight: 900;
+    text-align: center;
+    color: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 28px;
+  }
+
+  .conscious { background: #EAF6EE; }
+  .conscious .branch-head { background: #3FA75A; }
+
+  .unconscious { background: #FDE0E0; }
+  .unconscious .branch-head { background: #E24C4C; }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .step .num {
+    font-weight: 900;
+    color: #1A2340;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .step .txt {
+    font-size: 25px;
+    font-weight: 700;
+    color: #1A2340;
+    line-height: 1.4;
+  }
+  .step .sub {
+    font-size: 19px;
+    font-weight: 400;
+    color: #777;
+    margin-top: 4px;
+  }
+
+  .warn-badge {
+    text-align: center;
+    font-size: 23px;
+    font-weight: 700;
+    color: #C93838;
+    background: #FDE0E0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 22px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">의식 유무에 따른 응급처치</div>
+    <div class="card-sub">가장 중요한 신호는 '의식 상태'입니다</div>
+
+    <div class="branch-wrap">
+      <div class="branch-col conscious">
+        <div class="branch-head">의식 있음</div>
+        <div class="step"><span class="num">1</span><div><div class="txt">그늘·시원한 실내로 이동</div></div></div>
+        <div class="step"><span class="num">2</span><div><div class="txt">옷 풀고 물 뿌려 식히기</div><div class="sub">겨드랑이·사타구니에 얼음주머니</div></div></div>
+        <div class="step"><span class="num">3</span><div><div class="txt">의식 명료 시 물 조금씩</div></div></div>
+      </div>
+      <div class="branch-col unconscious">
+        <div class="branch-head">의식 없음</div>
+        <div class="step"><span class="num">1</span><div><div class="txt">물 절대 먹이지 않기</div><div class="sub">기도로 넘어가면 질식 위험</div></div></div>
+        <div class="step"><span class="num">2</span><div><div class="txt">즉시 119 신고</div><div class="sub">몸을 식히며 구급대 기다리기</div></div></div>
+      </div>
+    </div>
+
+    <div class="warn-badge">30분 내 신속 처치 시 사망률 거의 0%</div>
+  </div>
+</div>
+</body>
+</html>

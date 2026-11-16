@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .card-title {
+    font-size: 44px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .card-title .accent { color: #2F8FED; }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: #F0F7FF;
+    border-radius: 16px;
+    padding: 22px 30px;
+  }
+
+  .item-badge {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background: #2F8FED;
+    color: #fff;
+    font-size: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .item-text .label {
+    font-size: 29px;
+    font-weight: 700;
+    color: #1A2340;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">온열질환 <span class="accent">예방수칙</span></div>
+
+    <div class="item-row">
+      <div class="item-badge">💧</div>
+      <div class="item-text"><div class="label">20분마다 물 한 컵</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">👕</div>
+      <div class="item-text"><div class="label">밝고 헐렁한 옷 착용</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">⏰</div>
+      <div class="item-text"><div class="label">오후 2~5시 야외활동 자제</div></div>
+    </div>
+    <div class="item-row">
+      <div class="item-badge">🧴</div>
+      <div class="item-text"><div class="label">SPF15+ 자외선차단제</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

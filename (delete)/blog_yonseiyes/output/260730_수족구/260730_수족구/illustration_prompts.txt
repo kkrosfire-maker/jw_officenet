@@ -1,0 +1,158 @@
+※ 260730_수족구 — 일러스트 프롬프트 (썸네일 1장 + 본문 10장 = 총 11장)
+   신규 프레임 시스템(Template A/B) 기준. 코너 라벨 "수족구병 알아두면 좋은 정보! ①~⑩" 은 이미 프레임에 합성 완료.
+   제목 190px 정중앙 정렬 / 본문·리스트 60px.
+   Template A(리스트형, 세로 자리) = body-1, 2, 4, 5, 6, 8  → 1000x1355px
+   Template B(본문형, 정사각에 가까운 자리) = body-3, 7, 9, 10 → 902x950px
+   썸네일(가로 자리) = 770x490px
+   모든 자리에 인물을 포함한다 (§4-1 규칙 2). 배경은 넣지 않거나 흰색 단색으로 통일 (§4-1 규칙 1).
+   인물은 전신 또는 상반신 (§4-1 규칙 3). 여백은 상하좌우 거의 없이 프레임을 꽉 채운다 (§4-1 규칙 5).
+   아래 11개 프롬프트로 이미지를 생성해서 전달해 주시면 각 자리에 합성하겠습니다.
+
+
+[thumbnail] 수족구병 증상과 예방법 — 가로 자리, 770x490px
+한글 설명: 손등에 붉은 발진이 돋은 아이가 입이 아파 찡그린 표정으로 보호자의 손을 잡고 서 있는 모습. 배경 없음.
+```
+A flat vector illustration of a young child standing next to a parent and holding the
+parent's hand, the child has small red spots and blisters on the back of the hand and
+wincing with mouth pain, the parent looking down with a caring and slightly worried
+expression, full-body figures, flat vector illustration, isolated on a plain white
+background with no background scenery or elements, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, landscape
+orientation, wide horizontal composition, aspect ratio 1.57:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 770x490px.
+```
+
+[body-1] 2026년 여름 수족구병 유행 상황 — Template A, 세로 자리, 1000x1355px
+한글 설명: 의료진이 오른쪽으로 계속 올라가는 막대그래프 보드를 손으로 가리키며 유행이 늘고 있다고 설명하는 모습. 배경 없음.
+```
+A flat vector illustration of a doctor in a white coat pointing at a large upward-trending
+bar chart board with a rising arrow, explaining the increase with a serious but calm
+expression, full-body figure, flat vector illustration, isolated on a plain white
+background with no background scenery or elements, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, vertical composition, aspect ratio 0.74:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1355px.
+```
+
+[body-2] 수족구병 원인은 한 가지가 아닙니다 — Template A, 세로 자리, 1000x1355px
+한글 설명: 연구자가 큰 확대경으로 여러 종류의 바이러스 아이콘을 들여다보며 서로 다른 바이러스를 구분해 보는 모습. 배경 없음.
+```
+A flat vector illustration of a researcher or lab scientist holding a large magnifying
+glass and examining several different floating virus icons of varying shapes and colors,
+curious and focused expression, full-body figure, flat vector illustration, isolated on a
+plain white background with no background scenery or elements, Freepik "flat illustration"
+/ Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, vertical composition, aspect ratio 0.74:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1355px.
+```
+
+[body-3] 수족구병은 어떻게 옮을까요? — Template B, 정사각에 가까운 자리, 902x950px
+한글 설명: 장난감을 만진 손을 입으로 가져가려는 아이를 보호자가 부드럽게 손을 뻗어 막아 세우는 모습. 배경 없음.
+```
+A flat vector illustration of a toddler holding a toy and raising the hand toward the
+mouth, while a parent gently reaches out to stop the hand mid-air with a caring
+expression, a few small germ icons floating near the toy, full-body figures, flat vector
+illustration, isolated on a plain white background with no background scenery or elements,
+Freepik "flat illustration" / Storyset-style stock illustration, soft pastel color
+palette, no text, portrait orientation, near-square composition, aspect ratio 0.95:1,
+subject fills the frame edge-to-edge with only a ~5px margin on all four sides, no extra
+padding or empty space around the subject, tightly cropped full-bleed composition,
+image size 902x950px.
+```
+
+[body-4] 수족구병 증상, 이 순서로 나타납니다 — Template A, 세로 자리, 1000x1355px
+한글 설명: 아이가 입이 아파 입을 벌린 채, 붉은 발진이 돋은 손등을 앞으로 내밀어 보여주는 모습. 배경 없음.
+```
+A flat vector illustration of a young child opening the mouth because of painful mouth
+sores, holding out the back of the hand toward the viewer to show small red blisters and
+spots on the hand, uncomfortable expression, full-body or upper-body figure, flat vector
+illustration, isolated on a plain white background with no background scenery or elements,
+Freepik "flat illustration" / Storyset-style stock illustration, soft pastel color
+palette, no text, portrait orientation, vertical composition, aspect ratio 0.74:1,
+subject fills the frame edge-to-edge with only a ~5px margin on all four sides, no extra
+padding or empty space around the subject, tightly cropped full-bleed composition,
+image size 1000x1355px.
+```
+
+[body-5] 헤르판지나와 어떻게 다를까요? — Template A, 세로 자리, 1000x1355px
+한글 설명: 의료진이 펜라이트로 아이의 입안을 들여다보며 아이의 손도 함께 살펴 감별하는 모습. 배경 없음.
+```
+A flat vector illustration of a doctor holding a small penlight and examining the inside
+of a child's mouth while also checking the child's hand, the child sitting and opening the
+mouth, attentive and gentle expression, full-body figures, flat vector illustration,
+isolated on a plain white background with no background scenery or elements, Freepik "flat
+illustration" / Storyset-style stock illustration, soft pastel color palette, no text,
+portrait orientation, vertical composition, aspect ratio 0.74:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1355px.
+```
+
+[body-6] 이런 위험 신호는 놓치지 마세요 — Template A, 세로 자리, 1000x1355px
+한글 설명: 보호자가 체온계로 아이의 높은 열을 확인하고 놀란 표정으로 아이를 안아 올리려는 모습. 배경 없음.
+```
+A flat vector illustration of a parent holding a digital thermometer and checking a
+child's high fever, the parent's face showing alarm and urgency while starting to pick the
+child up, the child looking limp and drowsy, full-body figures, flat vector illustration,
+isolated on a plain white background with no background scenery or elements, Freepik "flat
+illustration" / Storyset-style stock illustration, soft pastel color palette, no text,
+portrait orientation, vertical composition, aspect ratio 0.74:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1355px.
+```
+
+[body-7] 특이 치료제가 없어 탈수 관리가 핵심 — Template B, 정사각에 가까운 자리, 902x950px
+한글 설명: 보호자가 빨대컵에 담긴 물을 아이에게 조심스럽게 건네며 한 모금씩 마시도록 돕는 모습. 배경 없음.
+```
+A flat vector illustration of a parent gently handing a straw cup of water to a child and
+encouraging the child to sip slowly, the child holding the cup with both hands, warm and
+reassuring expressions, full-body figures, flat vector illustration, isolated on a plain
+white background with no background scenery or elements, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, near-square composition, aspect ratio 0.95:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 902x950px.
+```
+
+[body-8] 손소독제만으로는 부족할 수 있습니다 — Template A, 세로 자리, 1000x1355px
+한글 설명: 아이가 세면대에서 비누를 손에 문지르며 흐르는 물에 30초간 꼼꼼히 손을 씻는 모습. 배경 없음.
+```
+A flat vector illustration of a child standing at a washbasin rubbing a bar of soap
+between both hands and washing them thoroughly under running water, a bar of soap and
+lather visible on the hands, cheerful and diligent expression, full-body figure, only the
+minimal washbasin and faucet as props, flat vector illustration, isolated on a plain white
+background with no background scenery or elements, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, vertical composition, aspect ratio 0.74:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 1000x1355px.
+```
+
+[body-9] 예방백신은 맞을 수 있나요? — Template B, 정사각에 가까운 자리, 902x950px
+한글 설명: 보호자가 백신 주사기와 물음표 아이콘 옆에서 팔을 모으고 접종 가능 여부를 고민하는 모습. 배경 없음.
+```
+A flat vector illustration of a parent standing with arms folded and a thoughtful, puzzled
+expression next to a large vaccine syringe icon and a floating question mark icon,
+considering whether a vaccine is available, upper-body to full-body figure, flat vector
+illustration, isolated on a plain white background with no background scenery or elements,
+Freepik "flat illustration" / Storyset-style stock illustration, soft pastel color
+palette, no text, portrait orientation, near-square composition, aspect ratio 0.95:1,
+subject fills the frame edge-to-edge with only a ~5px margin on all four sides, no extra
+padding or empty space around the subject, tightly cropped full-bleed composition,
+image size 902x950px.
+```
+
+[body-10] 어른도 안심할 수 없습니다 — Template B, 정사각에 가까운 자리, 902x950px
+한글 설명: 아이를 품에 안은 성인이 자신의 손등에 돋아난 발진을 걱정스럽게 내려다보는 모습. 배경 없음.
+```
+A flat vector illustration of an adult holding a small child in their arms and looking
+down with a worried expression at small red blisters and spots that have appeared on the
+back of their own hand, full-body figures, flat vector illustration, isolated on a plain
+white background with no background scenery or elements, Freepik "flat illustration" /
+Storyset-style stock illustration, soft pastel color palette, no text, portrait
+orientation, near-square composition, aspect ratio 0.95:1, subject fills the frame
+edge-to-edge with only a ~5px margin on all four sides, no extra padding or empty space
+around the subject, tightly cropped full-bleed composition, image size 902x950px.
+```

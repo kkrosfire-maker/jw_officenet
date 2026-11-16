@@ -155,6 +155,17 @@ def md_to_html(text, img_base=""):
             html_lines.append("<hr>")
             continue
 
+        # 체크박스 항목 ([   ] 텍스트 — 대괄호 안 공백 3칸, writer.md 규칙)
+        # HTML은 연속 공백을 1칸으로 접어버려 소스에 공백 3칸을 넣어도 브라우저에는
+        # 1칸으로만 보인다. &nbsp;로 바꿔 실제로 3칸 폭이 보이게 하고, 본문 문단과
+        # 시각적으로 구분되도록 전용 클래스(.checkbox-item)를 붙인다.
+        m_chk = re.match(r"^\[ {3}\]\s*(.*)$", line)
+        if m_chk:
+            html_lines.append(
+                f'<p class="checkbox-item">[&nbsp;&nbsp;&nbsp;] {inline(m_chk.group(1))}</p>'
+            )
+            continue
+
         # 제목 · 빈 줄 · 문단
         if line.startswith("# "):
             html_lines.append(f"<h1>{inline(line[2:].strip())}</h1>")

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans KR', sans-serif; }
+  html, body { width: 1080px; height: 1080px; background: white; }
+
+  .clipboard-frame { width: 907px; height: 903px; }
+  .clip-wrapper { display: none; }
+
+  .inner-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .card-title {
+    font-size: 40px;
+    font-weight: 900;
+    color: #1A2340;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .compare-wrap {
+    display: flex;
+    gap: 20px;
+  }
+
+  .compare-col {
+    flex: 1;
+    border-radius: 20px;
+    padding: 26px 22px;
+    text-align: center;
+  }
+
+  .col-pct {
+    font-size: 60px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .col-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    margin: 10px 0 18px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid rgba(255,255,255,0.5);
+  }
+
+  .col-item {
+    font-size: 21px;
+    color: #fff;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    text-align: left;
+    padding-left: 16px;
+    position: relative;
+  }
+  .col-item::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+  }
+
+  .salmonella { background: linear-gradient(160deg, #F4803A, #E8963F); }
+  .ecoli { background: linear-gradient(160deg, #2F8FED, #4CA8F5); }
+
+  .warn-badge {
+    text-align: center;
+    font-size: 23px;
+    font-weight: 700;
+    color: #C93838;
+    background: #FDE0E0;
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="clipboard-frame">
+  <div class="clip-wrapper"></div>
+  <div class="inner-card">
+    <div class="card-title">여름철 식중독 원인균 비교</div>
+
+    <div class="compare-wrap">
+      <div class="compare-col salmonella">
+        <div class="col-pct">38%</div>
+        <div class="col-title">살모넬라균</div>
+        <div class="col-item">달걀·김밥 등에서 검출</div>
+        <div class="col-item">약 37℃ 내외에서 활발히 증식</div>
+      </div>
+      <div class="compare-col ecoli">
+        <div class="col-pct">23%</div>
+        <div class="col-title">병원성 대장균</div>
+        <div class="col-item">단체급식·육회·김치 등에서 검출</div>
+        <div class="col-item">오염된 조리도구 통해 전파</div>
+      </div>
+    </div>
+
+    <div class="warn-badge">두 원인균이 여름철 식중독의 60% 이상 차지</div>
+  </div>
+</div>
+</body>
+</html>

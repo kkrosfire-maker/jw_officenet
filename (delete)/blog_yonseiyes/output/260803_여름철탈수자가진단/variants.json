@@ -1,0 +1,76 @@
+{
+  "corner_label_text": "탈수 자가진단법과 수액치료 원리 총정리",
+  "variants": [
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 1,
+      "title": "폭염철, 탈수 환자<br>얼마나 될까요?",
+      "body_html": "2026년 5월 15일~7월 26일 누적 온열질환자는 <strong>1,399명</strong>, 사망 8명에 달합니다. 특히 <strong>65세 이상이 전체 환자의 30.2%</strong>를 차지했고, 발생 장소는 실외가 81.8%로 대부분이었습니다.",
+      "illustration_desc": "폭염 속 야외에서 땀을 닦으며 지쳐 있는 사람",
+      "illustration_file": "images/7.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "A",
+      "seq": 2,
+      "title": "탈수 자가진단<br>4가지 신호",
+      "items": [
+        "소변 색 — 진한 노란색·갈색이면 수분 부족 의심",
+        "갈증·구강 건조 — 고령층은 갈증 감각이 둔해질 수 있음",
+        "어지럼증·전신 증상 — 정신이 혼미해지면 위험 신호",
+        "체중 변화 — 평소 대비 급격한 감소 여부 확인"
+      ],
+      "illustration_desc": "머리를 짚으며 어지러움을 느끼는 사람",
+      "illustration_file": "images/1_crop.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 3,
+      "title": "열탈진 vs 열사병<br>이렇게 구분하세요",
+      "items": [
+        "피부 상태 — 열탈진은 차갑고 축축, 열사병은 뜨겁고 건조",
+        "체온 — 열탈진은 크게 안 오름, 열사병은 40°C 이상",
+        "의식 — 열탈진은 대체로 명료, 열사병은 저하·착란·경련",
+        "국내 비중 — 열탈진 약 56.7%, 열사병 약 17.5%"
+      ],
+      "illustration_desc": "체온계를 들고 걱정스러운 표정을 짓는 사람",
+      "illustration_file": "images/3.png"
+    },
+    {
+      "frame": "fraim1.png",
+      "template": "B",
+      "seq": 4,
+      "title": "물만 마시면 될까?<br>경구수액의 원리",
+      "body_html": "경구수액(ORS)은 소장에서 나트륨과 포도당이 함께 흡수되는 <strong>공동수송 원리</strong>를 이용해 맹물보다 수분 흡수 효율을 높인 것입니다. 2024년 개정된 국제 가이드라인도 운동 중 <strong>갈증에 따라 마시기</strong>를 권고합니다.",
+      "illustration_desc": "경구수액이나 물을 마시는 사람",
+      "illustration_file": "images/4.png"
+    },
+    {
+      "frame": "fraim2.png",
+      "template": "B",
+      "seq": 5,
+      "title": "정맥 수액이<br>필요한 순간",
+      "body_html": "경구 섭취로 회복이 어려운 중증 탈수에는 <strong>정맥(IV) 수액</strong>이 필요합니다. 위장관을 거치지 않고 혈관에 직접 주입되어 흡수 과정 없이 순환 혈액량을 빠르게 채울 수 있습니다.",
+      "illustration_desc": "병원에서 정맥주사로 수액을 맞고 있는 사람",
+      "illustration_file": "images/5.png"
+    },
+    {
+      "frame": "fraim3.png",
+      "template": "A",
+      "seq": 6,
+      "title": "이런 신호가 있다면<br>바로 병원으로",
+      "items": [
+        "의식이 흐려지거나 혼돈·경련·실신",
+        "체온이 40°C 이상으로 확인됨",
+        "땀 없이 뜨겁고 건조한 피부",
+        "물을 마셔도 지속되는 갈증·어지럼증",
+        "구토가 지속돼 물을 삼키지 못함",
+        "소변량이 현저히 줄거나 나오지 않음"
+      ],
+      "illustration_desc": "다급하게 전화로 도움을 요청하는 사람",
+      "illustration_file": "images/6.png"
+    }
+  ]
+}
