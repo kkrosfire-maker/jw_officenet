@@ -31,5 +31,5 @@
 - 어떤 컨설팅을 받을 수 있나요? CSO 최근 동향과 제품 매출 분석 자료, 병·의원 영업에 필요한 제품·학술 정보, 전략 마케팅 컨설팅을 제공합니다.
 
 ## Optional
-- [이용약관](https://jwunius.imweb.me/?mode=policy)
-- [개인정보처리방침](https://jwunius.imweb.me/?mode=privacy)
+- [이용약관](https://jungwonunius.co.kr/terms.html)
+- [개인정보처리방침](https://jungwonunius.co.kr/privacy.html)
