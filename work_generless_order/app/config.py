@@ -20,7 +20,7 @@ ORDER_LOG_XLSX = DATA_DIR / "주문기록.xlsx"
 
 # 한 달에 주문할 수 있는 낱개 수량(마스터의 '항목' 분류 기준).
 # 주문 화면의 수량은 박스 단위라서 PIECES_PER_BOX를 곱해 낱개로 바꿔 비교한다.
-MONTHLY_QUOTA = {"니들": 400, "시린지": 1400}
+COUNTED_CATEGORIES = ("니들", "시린지")  # 낱개 수로 환산해 기록하는 항목
 PIECES_PER_BOX = 100
 
 # 최초 실행 시 읽어들이는 기본 마스터 엑셀. 사용자가 교체하면 그 경로를

@@ -1,4 +1,4 @@
-"""주문 기록(언제 얼마나 나갔는지)과 니들·시린지 월 주문 한도 계산.
+"""주문 기록(언제 얼마나 나갔는지)과 니들·시린지 낱개 환산.
 
 tkinter/DB에 의존하지 않는 순수 로직만 둔다.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
-from app.config import MONTHLY_QUOTA, PIECES_PER_BOX
+from app.config import COUNTED_CATEGORIES, PIECES_PER_BOX
 
 
 # 마스터 제품명·규격에 적힌 박스당 수량 표기: 25/B, 100개, 100ea, 100(1박스), 100/개
@@ -51,39 +51,15 @@ def parse_order_date(text: str | None) -> dt.date | None:
     return None
 
 
-def month_usage(rows, year: int, month: int) -> dict[str, float]:
-    """rows: [{order_date, category, quantity(박스), item_product, item_spec}, ...]
-    → 해당 월 한도 품목별 낱개 합계."""
-    usage = {cat: 0.0 for cat in MONTHLY_QUOTA}
-    for row in rows:
-        cat = row.get("category")
-        if cat not in usage:
-            continue
-        d = parse_order_date(row.get("order_date"))
-        if d and d.year == year and d.month == month:
-            usage[cat] += to_pieces(row.get("quantity"), _row_item(row))
-    return usage
-
-
 def order_summaries(rows) -> dict[int, dict]:
-    """기록 불러오기 목록용: 주문 번호별 {"names": [품목...], 한도 품목: 낱개 합계}."""
+    """기록 불러오기 목록용: 주문 번호별 {"names": [품목...], 니들·시린지 낱개 합계}."""
     result: dict[int, dict] = {}
     for row in rows:
-        s = result.setdefault(row.get("order_id"), {"names": [], **{c: 0.0 for c in MONTHLY_QUOTA}})
+        s = result.setdefault(row.get("order_id"), {"names": [], **{c: 0.0 for c in COUNTED_CATEGORIES}})
         s["names"].append(row.get("raw_text") or "")
         cat = row.get("category")
-        if cat in MONTHLY_QUOTA:
+        if cat in COUNTED_CATEGORIES:
             s[cat] += to_pieces(row.get("quantity"), _row_item(row))
-    return result
-
-
-def quota_status(saved: dict[str, float], current: dict[str, float]) -> list[dict]:
-    """한도 품목별 [{category, ordered, limit, remaining}] — ordered는 저장된 주문 + 지금 입력 중인 주문."""
-    result = []
-    for cat, limit in MONTHLY_QUOTA.items():
-        ordered = saved.get(cat, 0) + current.get(cat, 0)
-        result.append({"category": cat, "ordered": ordered, "limit": limit,
-                       "remaining": limit - ordered})
     return result
 
 
@@ -139,29 +115,11 @@ def write_order_log(rows, output_path: Path) -> Path:
         ws, LOG_HEADER, LOG_WIDTHS,
         [(_date_label(r.get("order_date")), r.get("category") or "", r.get("raw_text") or "",
           r.get("quantity"),
-          to_pieces(r.get("quantity"), _row_item(r)) if r.get("category") in MONTHLY_QUOTA else None,
+          to_pieces(r.get("quantity"), _row_item(r)) if r.get("category") in COUNTED_CATEGORIES else None,
           r.get("requirement_text") or "", r.get("spec_text") or "",
           r.get("applied_buy"), r.get("applied_sell"), r.get("remark") or "") for r in rows],
         centered={1, 2, 4, 5, 7}, price_cols={8, 9},
     )
-
-    # 월별 니들·시린지 합계(한도 대비)
-    months: dict[tuple[int, int], dict[str, float]] = {}
-    for r in rows:
-        d = parse_order_date(r.get("order_date"))
-        if d and r.get("category") in MONTHLY_QUOTA:
-            bucket = months.setdefault((d.year, d.month), {c: 0.0 for c in MONTHLY_QUOTA})
-            bucket[r["category"]] += to_pieces(r.get("quantity"), _row_item(r))
-    summary = wb.create_sheet("월별 한도")
-    header = ["월"] + [f"{c} 주문(개, 한도 {limit:,})" for c, limit in MONTHLY_QUOTA.items()] \
-        + [f"{c} 남은 개수" for c in MONTHLY_QUOTA]
-    summary_rows = []
-    for (y, m) in sorted(months, reverse=True):
-        used = months[(y, m)]
-        summary_rows.append([f"{y}-{m:02d}"] + [used[c] for c in MONTHLY_QUOTA]
-                            + [MONTHLY_QUOTA[c] - used[c] for c in MONTHLY_QUOTA])
-    _write_table(summary, header, [10] + [22] * (len(header) - 1), summary_rows,
-                 centered=set(range(1, len(header) + 1)))
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -56,19 +56,6 @@ class OrderTab(ttk.Frame):
                                       font=theme.FONT_BOLD)
         self.editing_label.pack(side="right")
 
-        # 니들·시린지 이번 달 주문량 / 한도
-        quota_row = ttk.Frame(top_card, style="Card.TFrame")
-        quota_row.pack(fill="x", pady=(10, 0))
-        self.quota_title = ttk.Label(quota_row, text="", style="Card.TLabel", font=theme.FONT_BOLD)
-        self.quota_title.pack(side="left")
-        self.quota_labels = {}
-        for cat in order_log.MONTHLY_QUOTA:
-            lbl = tk.Label(quota_row, text="", bg=theme.CARD_BG, font=theme.FONT_BOLD,
-                           padx=10, pady=3)
-            lbl.pack(side="left", padx=(12, 0))
-            self.quota_labels[cat] = lbl
-        self.date_var.trace_add("write", lambda *_: self._refresh_quota())
-
         # 그리드
         grid_card = theme.card(self)
         grid_card.pack(fill="both", expand=True, pady=(0, 12))
@@ -183,38 +170,6 @@ class OrderTab(ttk.Frame):
         self.tree.insert("", "end", iid=self.NEW_ROW_IID, tags=("new_row",), values=(
             "", self.session.pending_qty, "", "", "", "", "",
         ))
-        self._refresh_quota()
-
-    # ---- 니들·시린지 월 한도 ----
-    def _current_usage(self) -> dict:
-        usage = {cat: 0.0 for cat in order_log.MONTHLY_QUOTA}
-        for line in self.session.lines:
-            cat = (line.item or {}).get("category")
-            if cat in usage:
-                # 수량은 박스 → 마스터에 적힌 박스당 수량으로 낱개 환산
-                usage[cat] += order_log.to_pieces(line.quantity, line.item)
-        return usage
-
-    def _quota_status(self):
-        """주문일자가 속한 달 기준. 날짜를 못 읽으면 오늘 날짜의 달로 계산한다."""
-        d = order_log.parse_order_date(self.date_var.get()) or dt.date.today()
-        saved = order_log.month_usage(db.order_log_rows(exclude_order_id=self.saved_order_id),
-                                      d.year, d.month)
-        return d, order_log.quota_status(saved, self._current_usage())
-
-    def _refresh_quota(self):
-        if not hasattr(self, "quota_labels"):
-            return
-        d, status = self._quota_status()
-        self.quota_title.config(text=f"{d.month}월 주문 가능량 (지금 입력분 포함, 낱개 기준)")
-        for s in status:
-            over = s["remaining"] < 0
-            rest = f'{-s["remaining"]:g}개 초과' if over else f'남은 {s["remaining"]:g}개'
-            self.quota_labels[s["category"]].config(
-                text=f'{s["category"]}  {s["ordered"]:g} / {s["limit"]:,}개   {rest}',
-                fg=theme.DANGER if over else theme.ACCENT,
-                bg=theme.DANGER_SOFT if over else theme.ACCENT_SOFT,
-            )
 
     def _sort_by(self, col: str):
         self.session.sort(col)
@@ -263,8 +218,7 @@ class OrderTab(ttk.Frame):
         if dialog.deleted:
             if self.saved_order_id in dialog.deleted:
                 self._set_saved_order(None)  # 지운 기록이면 지금 화면은 새 주문으로 취급
-            self._refresh_quota()
-            self._rewrite_order_log(quiet=True)
+                self._rewrite_order_log(quiet=True)
 
         order_id = dialog.result
         if order_id is None or order_id == self.saved_order_id:
@@ -364,14 +318,6 @@ class OrderTab(ttk.Frame):
             if not messagebox.askyesno("마스터 가격 업데이트", f"다음 품목의 마스터 단가를 갱신합니다:\n{preview}\n\n계속할까요?"):
                 return
 
-        _, status = self._quota_status()
-        over = [s for s in status if s["remaining"] < 0]
-        if over:
-            msg = "\n".join(f'- {s["category"]}: {s["ordered"]:g} / {s["limit"]:,}개 ({-s["remaining"]:g}개 초과)'
-                            for s in over)
-            if not messagebox.askyesno("월 주문 한도 초과", f"이번 달 주문 가능량을 넘습니다:\n{msg}\n\n그대로 저장할까요?"):
-                return
-
         order_id = None
         if self.saved_order_id is not None:
             if not messagebox.askyesno("다시 저장", "이미 저장된 주문입니다.\n지금 내용으로 기록을 고칠까요?"):
@@ -400,7 +346,6 @@ class OrderTab(ttk.Frame):
                 line.match_type, line.remark,
             )
         self._set_saved_order(order_id)
-        self._refresh_quota()
 
         if not self._rewrite_order_log():
             return

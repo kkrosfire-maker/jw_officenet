@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app import db
 from app.order import OrderEditSession, find_price_updates, line_from_saved
-from app.order_log import month_usage, order_summaries
+from app.order_log import order_summaries
 
 
 class OrderReloadTest(unittest.TestCase):
@@ -29,9 +29,9 @@ class OrderReloadTest(unittest.TestCase):
                           buy, sell, "자동확인", "")
         return order_id
 
-    def test_reload_and_edit_keeps_same_order_and_fixes_quota(self):
+    def test_reload_and_edit_keeps_same_order(self):
         order_id = self._save(None, "261027", 3)
-        self.assertEqual(month_usage(db.order_log_rows(), 2026, 10)["니들"], 300)
+        self.assertEqual(order_summaries(db.order_log_rows())[order_id]["니들"], 300)
 
         order, rows = db.get_order(order_id)
         self.assertEqual(order["order_date"], "261027")
@@ -44,7 +44,6 @@ class OrderReloadTest(unittest.TestCase):
         again = self._save(order_id, "261027", 1)
         self.assertEqual(again, order_id)
         self.assertEqual(len(db.list_orders()), 1)
-        self.assertEqual(month_usage(db.order_log_rows(), 2026, 10)["니들"], 100)
         self.assertEqual(order_summaries(db.order_log_rows())[order_id]["니들"], 100)
 
     def test_master_price_change_does_not_prompt_revert(self):
@@ -55,11 +54,11 @@ class OrderReloadTest(unittest.TestCase):
         self.assertEqual((line.buy_price, line.sell_price), (1800, 2500))  # 그때 적용한 가격
         self.assertEqual(find_price_updates([line]), [])                    # 마스터 되돌리기 안 물음
 
-    def test_deleted_order_leaves_quota_and_reset_falls_back(self):
+    def test_deleted_order_leaves_summary_and_reset_falls_back(self):
         order_id = self._save(None, "261027", 2)
         db.delete_order(order_id)
         self.assertEqual(db.list_orders(), [])
-        self.assertEqual(month_usage(db.order_log_rows(), 2026, 10)["니들"], 0)
+        self.assertEqual(order_summaries(db.order_log_rows()), {})
         self.assertFalse(db.reset_order(order_id, "261027"))
 
     def test_line_without_master_item(self):
