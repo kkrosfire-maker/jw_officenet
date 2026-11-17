@@ -11,7 +11,7 @@
 :root{
   --green:#0D4A32; --green-dark:#0A3A28; --green-tint:#5E8168;
   --border:#C6D3CC; --hover:#EAF1ED; --ink:#1F2A24; --bg:#FFFFFF; --card:#FFFFFF;
-  --tw:0px; /* 오늘의 할 일 패널이 펼쳐진 너비 */
+  --tw:371px; /* 오늘의 할 일 패널이 펼쳐진 너비 */
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -110,7 +110,7 @@ body.todo-open #todo{display:block}
 @media(max-width:640px){header{flex-wrap:wrap}.clock{margin-left:0;text-align:left;width:100%}}
 </style>
 </head>
-<body>
+<body class="todo-open">
 <div class="wrap">
   <header>
     <img src="assets/logo.png" alt="정원유니어스">
@@ -135,8 +135,7 @@ body.todo-open #todo{display:block}
 </form></dialog>
 <dialog id="cfm"><h3>삭제 확인</h3><p id="cMsg"></p>
   <div class="acts"><span class="sp"></span><button type="button" class="btn" id="cNo">취소</button><button type="button" class="btn del" id="cYes">삭제</button></div></dialog>
-<aside id="todo"><iframe id="todoFrame" title="오늘의 할 일"></iframe></aside>
-<button id="tgl" title="오늘의 할 일 펼치기" aria-expanded="false"><i>▶</i></button>
+<aside id="todo"><iframe id="todoFrame" title="오늘의 할 일" src="/todo/index.html"></iframe></aside>
 <div id="foot"></div>
 <div id="toast" popover="manual"></div>
 <script>
@@ -232,7 +231,7 @@ function render(){
     if(!main.children.length)s.querySelector('h2').appendChild(tools); // 첫 주제와 같은 줄에 둔다
     list.forEach(p=>{
       const b=document.createElement('button');b.className='card';
-      b.innerHTML=`${p.icon?`<img src="${iconUrl(p)}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span>${p.type==='url'?'<i class="tag">웹</i>':''}</div>`;
+      b.innerHTML=`${p.icon?`<img src="${iconUrl(p)}" alt="">`:'<div class="ph"></div>'}<div><b></b><span></span></div>`;
       if(!p.icon)b.querySelector('.ph').textContent=p.name.trim().charAt(0);
       b.querySelector('b').textContent=p.name;b.querySelector('span').textContent=p.desc||'';
       b.onclick=()=>launch(p);
@@ -334,47 +333,6 @@ async function delProg(p){
 }
 $('bDel').onclick=()=>delProg(cur);
 $('bBrowse').onclick=async()=>{const j=await post('/api/browse','');if(j.path){$('fPath').value=j.path;if(!$('fName').value)$('fName').value=j.name;if(!$('fDesc').value)$('fDesc').value=j.desc}};
-// 삼각형 버튼은 끌어서 위아래로 옮길 수 있다(4px 넘게 움직이면 끌기, 아니면 클릭)
-{
-  const b=$('tgl');let sy=0,st=0,drag=false,moved=false;
-  b.onpointerdown=e=>{sy=e.clientY;st=b.getBoundingClientRect().top;drag=true;moved=false;b.setPointerCapture(e.pointerId)};
-  b.onpointermove=e=>{
-    if(!drag)return;
-    if(!moved&&Math.abs(e.clientY-sy)<4)return;
-    moved=true;b.classList.add('moving');
-    const top=Math.min(Math.max(st+e.clientY-sy,0),innerHeight-b.offsetHeight);
-    b.style.transform='none';b.style.top=top+'px';
-  };
-  b.onpointerup=b.onpointercancel=()=>{drag=false;b.classList.remove('moving');if(moved)setTimeout(()=>moved=false,0)};
-  b.addEventListener('click',e=>{if(moved){e.stopImmediatePropagation();e.preventDefault()}},true);
-  addEventListener('resize',()=>{if(b.style.top)b.style.top=Math.min(parseFloat(b.style.top),Math.max(innerHeight-b.offsetHeight,0))+'px'});
-}
-// 오늘의 할 일 패널: 평소엔 접혀 있고, 삼각형을 누르면 창이 오른쪽으로 늘어나며 펼쳐진다. 펼침 여부는 기억해 다음 실행 때 복원한다
-async function setTodo(open){
-  if(open===document.body.classList.contains('todo-open'))return;
-  const hasApi=window.pywebview&&pywebview.api&&pywebview.api.set_todo;
-  if(open){
-    if(hasApi)await pywebview.api.set_todo(true);
-    const f=$('todoFrame');if(!f.src)f.src='/todo/index.html';
-  }
-  document.body.classList.toggle('todo-open',open);
-  document.documentElement.style.setProperty('--tw',open?'371px':'0px');
-  $('tgl').firstChild.textContent=open?'◀':'▶';$('tgl').title=open?'오늘의 할 일 접기':'오늘의 할 일 펼치기';$('tgl').setAttribute('aria-expanded',open);
-  if(!open&&hasApi)await pywebview.api.set_todo(false);
-  syncHH();
-}
-$('tgl').onclick=async()=>{
-  const open=!document.body.classList.contains('todo-open');
-  await setTodo(open);
-  post('/api/ui',{todo_open:open}).catch(()=>{});
-};
-(async()=>{ // 지난번에 펼쳐 둔 채 닫았으면 앱 창 준비를 기다렸다가 다시 펼친다
-  try{
-    if(!(await (await fetch('/api/ui')).json()).todo_open)return;
-    for(let i=0;i<50&&!(window.pywebview&&pywebview.api);i++)await new Promise(r=>setTimeout(r,100));
-    setTodo(true);
-  }catch(e){}
-})();
 load();
 </script>
 </body>
