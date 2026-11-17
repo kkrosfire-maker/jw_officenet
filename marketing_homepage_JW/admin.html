@@ -46,6 +46,12 @@ textarea{resize:vertical;min-height:90px}
 .tmp{display:inline-block;margin-left:8px;background:#fff3cd;color:#8a6100;border:1px solid #ffe08a;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700}
 .bdg{display:inline-block;margin-left:8px;border-radius:99px;padding:1px 10px;font-size:11.5px;font-weight:700;border:1px solid}
 .bdg.rv{background:#e8f1ff;color:#1a56b0;border-color:#b9d3ff}.bdg.au{background:#f1ebff;color:#5b34b0;border-color:#d4c4ff}
+.cands{max-height:460px;overflow:auto;margin-top:6px}
+.cands .cd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.cands .cd:first-child{border-top:0}
+.cands .cd b{display:block;font-size:14.5px;letter-spacing:-.02em;line-height:1.4}.cands .cd small{color:var(--mute)}
+.cands .cd button{border:1.5px solid var(--g);color:var(--g);background:#fff;border-radius:99px;padding:7px 16px;font-size:13px;font-weight:700;white-space:nowrap}
+.cands .cd button:hover{background:var(--g);color:#fff}.cands .cd button:disabled{border-color:var(--line);color:var(--mute);background:#fff;cursor:default}
 .tabs{display:flex;gap:8px;margin:-4px 0 14px}
 .tabs button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:6px 16px;font-size:13px;font-weight:700}
 .tabs button.on{background:var(--g);color:#fff;border-color:var(--g)}
@@ -91,9 +97,15 @@ textarea{resize:vertical;min-height:90px}
     <div class="row"><button class="btn" id="save" type="submit">등록하기</button><button class="btn sub" id="cancel" type="button" style="display:none">수정 취소</button></div>
   </form>
 
-  <div class="card list"><h2>글 목록 <span id="cnt" style="color:var(--g3)"></span></h2>
+  <div>
+  <div class="card" id="cand"><h2>기사 후보 <small style="font-weight:600;color:var(--mute);font-size:13px">관련도 60점 이상 · 점수순</small></h2>
+    <div class="row" style="margin:-6px 0 8px"><button class="btn sub" id="candBtn" type="button" style="flex:none;padding:8px 20px;font-size:13px">후보 새로고침</button></div>
+    <p class="hint" id="candMsg"></p>
+    <div id="cands" class="cands"></div></div>
+  <div class="card list" style="margin-top:28px"><h2>글 목록 <span id="cnt" style="color:var(--g3)"></span></h2>
     <div class="tabs"><button class="on" data-f="all">전체</button><button data-f="draft">검토 대기</button></div>
     <div id="items"></div></div>
+  </div>
 </div>
 <input type="file" id="tfile" accept="image/jpeg,image/png,image/webp" hidden>
 <div class="toast" id="toast"></div>
@@ -104,7 +116,7 @@ textarea{resize:vertical;min-height:90px}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DEF='assets/news_thumbnail_default.webp';
-let posts=[],editId=null,thumbBlob=null,filter='all',thumbTarget=null;
+let posts=[],editId=null,thumbBlob=null,filter='all',thumbTarget=null,cands=null,rejected=new Set(),candInfo=null;
 // Storage 에 올린 이미지가 아니면(기존 assets/ 임시 이미지) '임시 이미지' 배지 표시
 const isTemp=p=>!!p.thumb&&p.thumb.indexOf('/storage/v1/object/public/news-thumbs/')<0&&p.thumb!==DEF;
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -125,7 +137,7 @@ const uploadThumb=blob=>NewsAuth.upload(Date.now()+'_'+Math.random().toString(36
 async function enter(){
   if(!NewsAuth.hasSession()){show(false);return}
   if(!(await NewsAuth.isAdmin())){NewsAuth.signOut();show(false,'관리자 권한이 없는 계정이거나 로그인이 만료되었습니다.');return}
-  show(true);reset();await load()}
+  show(true);reset();await load();loadCands()}
 function show(ok,msg){
   $('login').style.display=ok?'none':'';$('app').style.display=ok?'':'none';$('out').style.display=ok?'':'none';
   $('who').textContent=ok?NewsAuth.email():'';if(msg)$('lmsg').textContent=msg;if(!ok)$(($('em').value?'pw':'em')).focus()}
@@ -141,7 +153,7 @@ async function load(){
   try{posts=await NewsAuth.rest('GET','posts?select=*&order=date.desc,id.desc')||[]}catch(err){toast(err.message,1);posts=[]}
   const drafts=posts.filter(p=>!p.published).length,tc=posts.filter(isTemp).length;
   $('cnt').innerHTML='('+posts.length+')'+(drafts?' <span class="bdg rv" style="margin-left:6px">검토 대기 '+drafts+'</span>':'')+(tc?' <span class="tmp" style="margin-left:6px">임시 이미지 '+tc+'개</span>':'');
-  draw()}
+  draw();drawCands()}
 function draw(){
   const list=posts.filter(p=>filter==='all'||!p.published);
   $('items').innerHTML=list.length?list.map(p=>`<div class="it" data-id="${p.id}"><img src="${esc(p.thumb||DEF)}" alt=""><div><b class="ttl" data-e="${p.id}" title="클릭하면 수정">${esc(p.title)}</b><small>${esc(p.date)}${p.source?' · '+esc(p.source):''}${p.score!=null?' · 관련도 '+p.score:''}</small>${p.published?'':'<span class="bdg rv">검토 대기</span>'}${p.auto?'<span class="bdg au">자동</span>':''}${isTemp(p)?'<span class="tmp">임시 이미지</span>':''}</div><div class="acts"><button class="pub${p.published?' off':''}" data-p="${p.id}">${p.published?'비공개로':'공개하기'}</button>${p.link?`<a href="${esc(p.link)}" target="_blank" rel="noopener noreferrer"><button type="button">원문</button></a>`:''}<button data-c="${p.id}" title="ChatGPT에 붙여넣을 이미지 생성 문구를 복사합니다">프롬프트 복사</button><button data-t="${p.id}">썸네일 교체</button>${p.link?`<button data-o="${p.id}" title="원문 기사의 대표 이미지를 썸네일로 가져옵니다">원문 이미지</button>`:''}<button class="del" data-d="${p.id}">삭제</button></div></div>`).join(''):'<p style="color:var(--mute);padding:20px 0">'+(filter==='draft'?'검토 대기 중인 글이 없습니다.':'등록된 글이 없습니다.')+'</p>'}
@@ -149,7 +161,7 @@ document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');i
 
 // ---- 폼
 function reset(){
-  editId=null;thumbBlob=null;$('f').reset();$('date').value=today();$('pub').checked=true;
+  editId=null;thumbBlob=null;candInfo=null;$('f').reset();$('date').value=today();$('pub').checked=true;
   $('drop').classList.remove('has');$('prev').removeAttribute('src');$('dropTx').textContent='클릭 · 끌어다 놓기 · Ctrl+V 붙여넣기 (jpg·png·webp)';
   refreshPrompt();$('ft').textContent='새 글 등록';$('save').textContent='등록하기';$('cancel').style.display='none'}
 $('drop').onclick=()=>$('file').click();
@@ -158,6 +170,8 @@ $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 $('f').onsubmit=async e=>{e.preventDefault();const d=fields(),m=check(d);if(m)return toast(m,1);$('save').disabled=true;
   try{
     const cur=editId?posts.find(x=>x.id===editId):null;
+    // 기사 후보에서 채운 글은 원문 링크(중복 방지 키)·점수·분류를 같이 저장 -> 자동 등록이 같은 기사를 다시 올리지 않는다
+    if(!editId&&candInfo&&d.link===candInfo.src_key)Object.assign(d,candInfo);
     if(thumbBlob){d.thumb=await uploadThumb(thumbBlob);if(cur)await NewsAuth.removeFile(cur.thumb)}
     else if(!cur)d.thumb=DEF;
     if(editId)await NewsAuth.rest('PATCH','posts?id=eq.'+editId,d);else await NewsAuth.rest('POST','posts',{...d,body:''});
@@ -179,6 +193,32 @@ async function replaceThumb(p,f){
   try{const url=await uploadThumb(await toBlob(f));await NewsAuth.rest('PATCH','posts?id=eq.'+p.id,{thumb:url});await NewsAuth.removeFile(p.thumb);toast('썸네일이 교체되었습니다.');await load()}
   catch(err){toast(err.message||'이미지를 읽을 수 없습니다.',1)}}
 $('tfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!thumbTarget)return;const p=posts.find(x=>x.id==thumbTarget);thumbTarget=null;await replaceThumb(p,f)};
+
+// ---- 기사 후보: 목록에서 골라 폼에 채운다(제목·요약·출처·링크·원문 이미지). 등록은 폼의 '등록하기'로
+async function loadCands(){
+  $('candBtn').disabled=true;$('candMsg').textContent='후보를 불러오는 중…';
+  try{
+    const t=await NewsAuth.token();
+    const r=await fetch(OG_API+'/api/candidates?min=60',{headers:{Authorization:'Bearer '+t}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||'후보를 불러오지 못했습니다.');
+    cands=j.news||[];
+    try{rejected=new Set(((await NewsAuth.rest('GET','rejected_posts?select=src_key'))||[]).map(x=>x.src_key))}catch(_){}
+    $('candMsg').textContent=cands.length?'':'조건에 맞는 후보가 없습니다.';drawCands()
+  }catch(err){cands=null;$('cands').innerHTML='';$('candMsg').textContent=err.message}
+  finally{$('candBtn').disabled=false}}
+function drawCands(){
+  if(!cands)return;const have=new Set(posts.flatMap(p=>[p.src_key,p.link]).filter(Boolean));
+  $('cands').innerHTML=cands.map((c,i)=>{const on=have.has(c.link),gone=rejected.has(c.link);
+    return`<div class="cd"><div><b>${esc(c.title)}</b><small>${esc((c.pub_date||'').slice(0,10))} · ${esc(c.source)} · 관련도 ${c.score}${c.category?' · '+esc(c.category):''}</small></div>`+
+      `<button type="button" data-i="${i}"${on?' disabled':''}>${on?'등록됨':gone?'삭제한 글 · 올리기':'이 기사 올리기'}</button></div>`}).join('')}
+$('candBtn').onclick=loadCands;
+$('cands').onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const c=cands[+b.dataset.i];if(!c)return;
+  if(($('title').value.trim()||$('summary').value.trim()||thumbBlob)&&!confirm('작성 중인 내용이 있습니다. 이 기사로 바꿀까요?'))return;
+  reset();$('title').value=c.title;$('summary').value=c.summary;$('source').value=c.source;$('link').value=c.link;
+  candInfo={src_key:c.link,score:c.score,category:c.category};
+  refreshPrompt();$('ft').textContent='새 글 등록 (기사 후보)';scrollTo({top:0,behavior:'smooth'});
+  toast('폼에 채웠습니다. 내용을 확인하고 등록하세요.');$('ogb').click()};
 
 // ---- ChatGPT 이미지 생성용 문구 (글 제목·요약·분류로 만든다)
 function imgPrompt(p){
@@ -224,7 +264,7 @@ addEventListener('paste',async e=>{
   if(!it)return;const f=it.getAsFile();if(!isImg(f))return toast('jpg·png·webp 이미지만 붙여넣을 수 있습니다.',1);
   e.preventDefault();if(await setFormThumb(f,'붙여넣은 이미지 (다른 이미지로 바꾸려면 클릭)')){toast('붙여넣은 이미지를 썸네일로 넣었습니다.');scrollTo({top:0,behavior:'smooth'})}});
 
-function startEdit(id){const p=posts.find(x=>x.id==id);if(!p)return;editId=p.id;thumbBlob=null;
+function startEdit(id){const p=posts.find(x=>x.id==id);if(!p)return;editId=p.id;thumbBlob=null;candInfo=null;
     $('title').value=p.title;$('date').value=p.date;$('summary').value=p.summary||'';$('source').value=p.source||'';$('link').value=p.link||'';$('pub').checked=!!p.published;
     $('prev').src=p.thumb||DEF;$('drop').classList.add('has');$('dropTx').textContent='이미지를 바꾸려면 클릭 (안 바꾸면 그대로)';
     refreshPrompt();$('ft').textContent='글 수정 (#'+p.id+')';$('save').textContent='수정 저장';$('cancel').style.display='';scrollTo({top:0,behavior:'smooth'});}
