@@ -510,7 +510,7 @@ function openVirtualAdd(id, fromList) {
   document.getElementById('va-end').value    = d.end        || '';
   document.getElementById('va-memo').value   = d.memo       || '';
 
-  var months = inferContractMonths(d);
+  var months = id ? inferContractMonths(d) : 6; // 신규 등록 기본은 6개월
   document.querySelectorAll('.period-btn').forEach(function(b) {
     b.classList.remove('selected');
     if (parseInt(b.getAttribute('data-months'), 10) === months) b.classList.add('selected');
@@ -544,7 +544,7 @@ function closeVirtualAdd() {
 
 function getVaPeriodMonths() {
   var sel = document.querySelector('.period-btn.selected');
-  return sel ? parseInt(sel.getAttribute('data-months'), 10) : 12;
+  return sel ? parseInt(sel.getAttribute('data-months'), 10) : 6;
 }
 
 function selectVaPeriod(btn) {

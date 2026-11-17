@@ -877,17 +877,17 @@ label.vat-check-label input[type="checkbox"] {
 
 <!-- 비상주 목록 모달 -->
 <div class="modal-overlay" id="virtual-modal-overlay">
-  <div class="modal" style="width:720px;max-width:96vw;">
-    <div class="modal-type-bar" style="background:#546e7a;"></div>
-    <div class="modal-body">
-      <div class="modal-header">
+  <div class="modal" style="width:720px;max-width:96vw;height:calc(100vh - 32px);display:flex;flex-direction:column;">
+    <div class="modal-type-bar" style="background:#546e7a;flex-shrink:0;"></div>
+    <div class="modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+      <div class="modal-header" style="flex-shrink:0;">
         <div class="modal-title-row">
           <h2>비상주 고객 목록</h2>
           <span class="modal-type-label" style="background:#546e7a;">가상오피스</span>
         </div>
         <button class="btn-close" onclick="closeVirtualModal()">&#215;</button>
       </div>
-      <div style="overflow-x:auto;" id="virtual-list-content"></div>
+      <div style="overflow:auto;flex:1;min-height:0;" id="virtual-list-content"></div>
     </div>
   </div>
 </div>
@@ -928,8 +928,8 @@ label.vat-check-label input[type="checkbox"] {
       <div class="form-group">
         <label>계약 기간</label>
         <div class="contract-period-options">
-          <button type="button" class="period-btn" data-months="6" onclick="selectVaPeriod(this)">6개월</button>
-          <button type="button" class="period-btn selected" data-months="12" onclick="selectVaPeriod(this)">1년</button>
+          <button type="button" class="period-btn selected" data-months="6" onclick="selectVaPeriod(this)">6개월</button>
+          <button type="button" class="period-btn" data-months="12" onclick="selectVaPeriod(this)">1년</button>
           <button type="button" class="period-btn" data-months="24" onclick="selectVaPeriod(this)">2년</button>
           <button type="button" class="period-btn" data-months="36" onclick="selectVaPeriod(this)">3년</button>
         </div>
@@ -946,7 +946,7 @@ label.vat-check-label input[type="checkbox"] {
       </div>
       <div class="form-group">
         <label>계약 임대료 (원)</label>
-        <input type="text" id="va-rent" value="22,000" style="font-weight:700;">
+        <input type="text" id="va-rent" value="15,000" style="font-weight:700;">
       </div>
       <div class="form-group">
         <label>계약 상태</label>

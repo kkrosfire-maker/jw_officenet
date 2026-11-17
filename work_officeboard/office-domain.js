@@ -23,8 +23,8 @@ const BASE_RENT = {
   C015:430000, C016:430000, C017:430000, C018:430000,
 };
 
-const VIRTUAL_RENT_INDIVIDUAL = 22000;
-const VIRTUAL_RENT_CORP       = 44000;
+const VIRTUAL_RENT_INDIVIDUAL = 15000;
+const VIRTUAL_RENT_CORP       = 20000;
 
 const LAYOUT = [
   [null,null,null,null,null,null,null,null,null,null,'GAP',null,'GAP','A001'],
