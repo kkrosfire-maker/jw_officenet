@@ -941,7 +941,7 @@ label.vat-check-label input[type="checkbox"] {
         </div>
         <div class="form-group">
           <label>계약 만료일 (자동 계산)</label>
-          <input type="date" id="va-end" onchange="onVaEndChange()">
+          <input type="date" id="va-end">
         </div>
       </div>
       <div class="form-group">
@@ -955,13 +955,6 @@ label.vat-check-label input[type="checkbox"] {
           <button type="button" class="status-btn" data-status="계약만료" onclick="selectVaStatus(this)">계약만료</button>
           <button type="button" class="status-btn" data-status="계약해지" onclick="selectVaStatus(this)">계약해지</button>
         </div>
-      </div>
-      <div class="form-group">
-        <label>납부 현황</label>
-        <label class="prepaid-check-label" id="va-prepaid-wrap">
-          <input type="checkbox" id="va-prepaid" onchange="onVaPrepaidChange()"> 선납완료
-        </label>
-        <div id="va-month-pay-grid" class="month-pay-grid" style="margin-top:6px;"></div>
       </div>
       <div class="form-group">
         <label>메모</label>

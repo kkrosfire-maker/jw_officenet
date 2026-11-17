@@ -132,9 +132,6 @@ class PaymentGrid {
 const residentGrid = new PaymentGrid({
   gridId: 'month-pay-grid', cbClass: 'month-pay-checkbox',
 });
-const vaGrid = new PaymentGrid({
-  gridId: 'va-month-pay-grid', prepaidId: 'va-prepaid', wrapId: 'va-prepaid-wrap', cbClass: 'va-month-pay-cb',
-});
 
 // ── 공통 헬퍼 ──────────────────────────────────────
 function _addMonths(ym, n) {
@@ -525,12 +522,8 @@ function openVirtualAdd(id, fromList) {
     if (b.getAttribute('data-status') === cStatus) applyStatusClass(b);
   });
 
-  // prepaid 체크박스 상태를 먼저 정해야 vaComputeRent()가 선납/월납 여부를 올바르게 반영함
-  var isPrepaid = id ? !!(d.prepaid) : true; // 비상주는 계약 시작월에 전체 금액 일괄 선납이 기본
-  document.getElementById('va-prepaid').checked = isPrepaid;
-  document.getElementById('va-prepaid-wrap').classList.toggle('active', isPrepaid);
+  // 비상주는 항상 계약 시작월에 전체 금액 일괄 선납 (납부현황 입력 없음)
   document.getElementById('va-rent').value = fmtWon(d.rent || vaComputeRent());
-  vaGrid.load(d, _gridMonths(d.start));
 
   document.getElementById('virtual-add-overlay').classList.add('active');
   _pushModal(closeVirtualAdd);
@@ -558,17 +551,14 @@ function selectVaPeriod(btn) {
 function _updateVaEndFromPeriod(startVal) {
   var months = getVaPeriodMonths();
   document.getElementById('va-end').value = contractEndDate(startVal, months);
-  var storedData = getAllData()[document.getElementById('va-id').value] || {};
-  vaGrid.setMonths(_gridMonths(startVal), storedData);
 }
 
 // 폼에서 읽은 값을 순수 함수 computeVaRent()(office-domain.js)에 넘기기만 하는 얇은 어댑터.
 // 계산 공식/근거는 CONTEXT.md "비상주 임대료" 참고.
 function vaComputeRent() {
   var isCorp  = document.getElementById('va-corp').checked;
-  var prepaid = document.getElementById('va-prepaid').checked;
   var months  = getVaPeriodMonths();
-  return computeVaRent(isCorp, prepaid, months);
+  return computeVaRent(isCorp, true, months); // 비상주는 항상 선납
 }
 
 function onVaCorpChange() {
@@ -581,18 +571,6 @@ function onVaStartChange() {
   _updateVaEndFromPeriod(startVal);
 }
 
-function onVaEndChange() {
-  var startVal   = document.getElementById('va-start').value;
-  var storedData = getAllData()[document.getElementById('va-id').value] || {};
-  vaGrid.setMonths(_gridMonths(startVal), storedData);
-}
-
-function onVaPrepaidChange() {
-  var prepaid = document.getElementById('va-prepaid').checked;
-  document.getElementById('va-prepaid-wrap').classList.toggle('active', prepaid);
-  vaGrid.setAll(prepaid);
-  document.getElementById('va-rent').value = fmtWon(vaComputeRent());
-}
 
 function selectVaStatus(btn) {
   document.querySelectorAll('#va-status-options .status-btn').forEach(function(b) {
@@ -636,11 +614,9 @@ async function saveVirtualCustomer() {
     contractType:  '비상주',
     contractStatus: statusBtn ? statusBtn.getAttribute('data-status') : '계약중',
     memo:          document.getElementById('va-memo').value.trim(),
-    prepaid:       document.getElementById('va-prepaid').checked,
-    prepaidAt:     document.getElementById('va-prepaid').checked
-      ? (prevData.prepaidAt || (startVal ? startVal.slice(0, 7) : currentMonth))
-      : null,
-  }, vaGrid.getValues());
+    prepaid:       true, // 비상주는 항상 선납
+    prepaidAt:     startVal ? startVal.slice(0, 7) : (prevData.prepaidAt || currentMonth),
+  });
 
   try {
     await store(data);
@@ -874,7 +850,6 @@ function renderVirtualList(showInactive) {
     const rows = rooms.map(r => {
       const d   = data[r];
       const cs  = d.contractStatus || '계약중';
-      const pay = paymentStatusInfo(r, data, currentMonth);
       const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
       return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}', true)">
         <td><strong>${displayVaId(r)}</strong></td>
@@ -885,7 +860,6 @@ function renderVirtualList(showInactive) {
         <td>${d.start || '-'}</td>
         <td>${d.end || '-'}</td>
         <td>${fmtWon(d.rent) || '-'}</td>
-        <td><span style="color:${pay.color};font-weight:700;">${pay.label}</span></td>
         <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
       </tr>`;
     }).join('');
@@ -897,7 +871,7 @@ function renderVirtualList(showInactive) {
         <th>구분</th>
         <th>상호명</th><th>입주자</th><th>연락처</th>
         <th style="${thStyle}" onclick="_vaSortToggle('start')">계약시작${arrow('start')}</th>
-        <th>계약종료</th><th>계약금액(원)</th><th>납부현황</th><th>계약상태</th>
+        <th>계약종료</th><th>계약금액(원)</th><th>계약상태</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
