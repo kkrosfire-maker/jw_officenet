@@ -1,10 +1,11 @@
 # 로컬 도우미 서버: 화면(index.html) 제공 + docx를 바탕화면에 저장 + Word로 PDF 변환
 import os, re, sys, subprocess, json, threading
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+import roomlib
 from urllib.parse import urlparse, parse_qs, unquote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PORT = 8765
+PORT = int(os.environ.get("JW_PORT", "8771"))
 DESKTOP = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
 if not os.path.isdir(DESKTOP): DESKTOP = os.path.expanduser("~")
 LOCK = threading.Lock()   # Word 변환은 한 번에 하나씩
@@ -34,10 +35,24 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
-        if urlparse(self.path).path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP})
+        u = urlparse(self.path); q = parse_qs(u.query)
+        if u.path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP})
+        if u.path in ("/api/room", "/api/room-check"):
+            try:
+                st = roomlib.read_master()
+                if u.path == "/api/room": return self.reply(200, {"ok": True, "room": roomlib.next_room(st["rooms"], q.get("corp", ["0"])[0] == "1")})
+                return self.reply(200, {"ok": True, "room": roomlib.resolve_room(q.get("room", [""])[0], st["rooms"])})
+            except Exception as e:
+                return self.reply(200, {"ok": False, "error": "고객list 엑셀을 읽지 못했어요: " + str(e)})
         return super().do_GET()
     def do_POST(self):
         u = urlparse(self.path); q = parse_qs(u.query)
+        if u.path == "/api/register":
+            try:
+                c = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8"))
+                with LOCK: return self.reply(200, dict(roomlib.register(c), ok=True))
+            except Exception as e:
+                return self.reply(500, {"ok": False, "error": "고객list 등록 실패: " + str(e)})
         if u.path not in ("/api/docx", "/api/pdf"): return self.reply(404, {"ok": False, "error": "없는 주소"})
         try:
             data = self.rfile.read(int(self.headers.get("Content-Length", 0)))

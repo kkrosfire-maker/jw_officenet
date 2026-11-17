@@ -44,24 +44,15 @@
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_daily_todo"
     },
     {
-      "id": "custom9",
-      "name": "CSO 뉴스",
-      "desc": "뉴스",
+      "id": "app4",
+      "name": "요율표검색기",
+      "desc": "정원유니어스 요율표 검색",
       "group": "업무",
-      "icon": "icons/custom9.png",
-      "type": "url",
-      "url": "https://medicalnews-tau.vercel.app"
-    },
-    {
-      "id": "app3",
-      "name": "정산파일변경",
-      "desc": "수탁업체명 자동 변환",
-      "group": "업무",
-      "icon": "icons/app3.png",
+      "icon": "icons/app4.png",
       "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램\\수탁업체명자동변환프로그램.exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
       "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램"
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
     },
     {
       "id": "app7",
@@ -140,6 +131,26 @@
       "icon_custom": true
     },
     {
+      "id": "custom9",
+      "name": "CSO 뉴스",
+      "desc": "뉴스",
+      "group": "온라인마케팅",
+      "icon": "icons/custom9.png",
+      "type": "url",
+      "url": "https://medicalnews-tau.vercel.app"
+    },
+    {
+      "id": "app3",
+      "name": "정산파일변경",
+      "desc": "수탁업체명 자동 변환",
+      "group": "통계",
+      "icon": "icons/app3.png",
+      "type": "exe",
+      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램\\수탁업체명자동변환프로그램.exe",
+      "args": "",
+      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_vendor_name_converter\\수탁업체명자동변환프로그램"
+    },
+    {
       "id": "app5",
       "name": "사이즈조절기",
       "desc": "사진 원근 보정 · 크기 조절",
@@ -160,17 +171,6 @@
       "path": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist\\사진문구넣기.exe",
       "args": "",
       "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_photo_rename\\dist"
-    },
-    {
-      "id": "app4",
-      "name": "요율표검색기",
-      "desc": "정원유니어스 요율표 검색",
-      "group": "통계",
-      "icon": "icons/app4.png",
-      "type": "exe",
-      "path": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist\\요율표검색기.exe",
-      "args": "",
-      "cwd": "C:\\Users\\JW\\Desktop\\workspace\\work_drug_search\\dist"
     },
     {
       "id": "app6",

@@ -50,6 +50,7 @@ button.sub:hover{background:#d5dde6}
 textarea{width:100%;padding:6px 8px;border:1px dashed #94a3b8;border-radius:6px;font:inherit;resize:vertical;background:#f8fafc}
 textarea.drag{border-color:var(--pri);background:#ecfdf5}
 .mrow{display:flex;align-items:center;gap:6px}.mrow input{width:52px!important;text-align:center}.mbtn{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px}.mbtn{background:var(--pri);color:#fff;border-color:var(--pri);}.mbtn:hover{filter:brightness(1.15)}.mbtn.on{font-weight:700;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pri)}
+.hint{font-size:12px;color:#0f766e;margin:-2px 0 6px 0;min-height:0}.hint:empty{display:none}.hint.warn{color:#b45309}
 .pbtns{display:flex;gap:6px;margin:6px 0}.pbtns button{padding:6px 8px;font-size:12.5px}
 .inl{font-weight:400;color:var(--ink);margin-left:10px;cursor:pointer}.inl input{vertical-align:-2px}
 </style>
@@ -83,6 +84,7 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
 
   <h2>계약 내용</h2>
   <div class="row"><label>호실</label><input type="text" id="room" placeholder="예: 412 / G01 / D15"></div>
+  <div id="roomHint" class="hint"></div>
   <div class="row"><label>시작일</label><input type="date" id="start"></div>
   <div class="row"><label>계약 개월수</label><div class="mrow"><input type="number" id="months" min="1" max="99" value="12"><span>개월</span><button type="button" class="mbtn" data-m="1">1</button><button type="button" class="mbtn" data-m="3">3</button><button type="button" class="mbtn" data-m="6">6</button><button type="button" class="mbtn" data-m="12">12</button></div></div>
   <div class="row"><label>종료일</label><input type="date" id="end"></div>
@@ -112,6 +114,7 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
   <div class="btns">
     <button id="btnPdf">PDF 저장 (바탕화면)</button>
     <button id="btnDocx" class="sub">Word만 저장</button>
+    <button id="btnReg" class="sub">고객list 등록</button>
   </div>
 </section>
 <section id="pv"><div id="doc"></div></section>
@@ -466,6 +469,7 @@ function parseKakao(text){
   return out;
 }
 function applyParsed(p){
+  { const rm=$("room"); rm.dataset.manual=""; }   // 새 고객: 호실은 다시 자동 배정
   const set=(id,val)=>{ $(id).value=val||""; };
   document.querySelector("input[name=type][value=virtual]").checked=true;
   set("company",p.company); set("rep",p.rep); set("bizNo",p.bizNo); set("corpNo",p.corpNo);
@@ -474,7 +478,7 @@ function applyParsed(p){
   const sd=parseDateKo(p.start||""); if(sd){ $("start").value=sd; $("end").dataset.manual=""; }
   const mm=/(\d+)/.exec(p.months||""); if(mm){ $("months").value=/년/.test(p.months)&&!/개월/.test(p.months) ? +mm[1]*12 : +mm[1]; $("end").dataset.manual=""; }
   $("fname").dataset.manual="";
-  autoCalc(); autoFname(); schedule();
+  autoCalc(); autoFname(); schedule(); if(window.refreshRoom) refreshRoom();
   const got=Object.keys(KEY_LABEL).filter(k=>p[k]).map(k=>KEY_LABEL[k]);
   const miss=Object.keys(KEY_LABEL).filter(k=>!p[k] && !(k==="corpNo"&&!$("isCorp").checked) && !(k==="company"&&!$("isCorp").checked) && !["start","months"].includes(k)).map(k=>KEY_LABEL[k]);
   $("pasteInfo").textContent = got.length ? `반영: ${got.join(", ")}` + (miss.length?` / 비어 있음: ${miss.join(", ")}`:"") : "인식된 항목이 없어요. '고객용 양식 복사'로 보낸 양식 형태인지 확인해 주세요.";
@@ -546,6 +550,44 @@ function bind(){
     ["btnPdf","btnDocx"].forEach(id=>$(id).disabled=false);
   };
   $("btnDocx").onclick=()=>send("docx");
+  // ---- 호실 자동 배정 (비상주): 직접 입력하면 그 번호 우선, 이미 있으면 (2),(3) ----
+  const room=$("room"), hint=$("roomHint"); let setting=false;
+  const setRoom=v=>{ setting=true; room.value=v; room.dispatchEvent(new Event("input",{bubbles:true})); setting=false; };
+  const jget=async u=>{ try{ const r=await fetch(u); return await r.json(); }catch(e){ return {ok:false,error:String(e)}; } };
+  window.refreshRoom=async()=>{
+    if(!viaServer) return;
+    if(vals().type!=="virtual"){ if(!room.dataset.manual){ setRoom(""); } hint.textContent=""; return; }
+    if(room.dataset.manual) return;
+    const j=await jget("/api/room?corp="+($("isCorp").checked?1:0));
+    if(j.ok){ setRoom(j.room); hint.className="hint"; hint.textContent="자동 배정 호실: "+j.room+" (직접 입력하면 그 번호가 우선)"; }
+    else { hint.className="hint warn"; hint.textContent=j.error||"호실 자동 배정 실패"; }
+  };
+  room.addEventListener("input",()=>{ if(setting) return; if(room.value.trim()){ room.dataset.manual="1"; hint.textContent=""; } else { room.dataset.manual=""; refreshRoom(); } });
+  room.addEventListener("change",async()=>{
+    if(setting||!viaServer||!room.value.trim()) return;
+    const j=await jget("/api/room-check?room="+encodeURIComponent(room.value.trim()));
+    if(j.ok && j.room!==room.value.trim()){ const old=room.value.trim(); setRoom(j.room); hint.className="hint warn"; hint.textContent=old+" 은(는) 이미 사용 중이라 "+j.room+" 로 입력했어요."; }
+  });
+  document.querySelectorAll("input[name=type]").forEach(el=>el.addEventListener("change",refreshRoom));
+  $("isCorp").addEventListener("change",refreshRoom);
+  refreshRoom();
+  // ---- 고객list(엑셀) 등록 ----
+  let lastReg="";
+  $("btnReg").onclick=async()=>{
+    if(!viaServer){ msg("고객list 등록은 run.bat 으로 열어야 해요."); return; }
+    const v=vals(); const key=JSON.stringify([v.type,v.company,v.rep,v.phone,v.start,v.room]);
+    if(!v.rep){ msg("대표자(이름)를 입력해 주세요."); return; }
+    if(key===lastReg){ msg("이미 등록한 내용이에요. 내용을 바꾸면 다시 등록할 수 있어요."); return; }
+    msg("고객list 엑셀에 등록하는 중…"); $("btnReg").disabled=true;
+    try{
+      const r=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)});
+      const j=await r.json(); if(!j.ok) throw new Error(j.error);
+      lastReg=key; msg("✔ 고객list 등록 완료: 고객번호 "+j.num+" / 호실 "+(j.room||"-")+" ("+j.row+"행)");
+      if(j.room && j.room!==v.room) setRoom(j.room);
+      room.dataset.manual=""; 
+    }catch(e){ msg("등록 실패: "+e.message); }
+    $("btnReg").disabled=false;
+  };
   $("btnPdf").onclick=()=>send("pdf");
 }
 
