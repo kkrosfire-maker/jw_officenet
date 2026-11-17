@@ -1,7 +1,8 @@
-"""하루 1편 CSO 뉴스 자동 등록 (검토 대기로 저장)
+"""하루 1편 CSO 뉴스 자동 등록 (원문 이미지 포함, 바로 공개)
 
-흐름: 참고 사이트 API(medicalnews-tau) 후보 수집 -> 이미 올린 글과 중복 제거 -> 관련도 최고 1건을
-      Supabase posts 에 published=false, auto=true 로 저장 -> 관리자가 admin.html 에서 검토 후 공개.
+흐름: 참고 사이트 API(medicalnews-tau) 후보 수집 -> 이미 올린 글과 중복 제거 -> 관련도 최고 1건의 원문 대표 이미지를
+      Storage 에 올리고 -> Supabase posts 에 published=true, auto=true 로 저장(바로 공개).
+      이미지를 못 가져오면 기본 썸네일로 대신한다. 잘못 올라온 글은 admin.html 에서 비공개/삭제.
 
 환경변수
   SUPABASE_SECRET_KEY  (필수, 쓰기용 비밀 키. 절대 코드/채팅에 넣지 말 것 - GitHub Secrets 로만 보관)
@@ -19,6 +20,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import og_image  # noqa: E402  원문 대표 이미지 가져오기
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://mfbclctzkjdsrrsivlmg.supabase.co").rstrip("/")
 ANON_KEY = "sb_publishable_CKV18Z4BTPr0Z5huTM3d6A_xr07oeBc"  # 공개용 키(읽기 전용)
@@ -117,7 +121,7 @@ def to_post(n):
         "score": int(n["score"]),
         "thumb": DEFAULT_THUMB,
         "auto": True,
-        "published": False,  # 관리자 검토 후 공개
+        "published": True,  # 자동 공개 (잘못 올라온 글은 관리자에서 비공개/삭제)
     }
 
 
@@ -146,12 +150,17 @@ def main():
         post = to_post(n)
         print(f"선택: [{post['score']}점/{post['source']}] {post['title']}")
         if dry:
+            print("  원문 이미지:", og_image.check_image(post["link"]) or "가져오지 못함(기본 썸네일 사용)")
             print("  (dry-run: 저장하지 않음)")
             return
+        thumb = og_image.upload_thumb(post["link"], SUPABASE_URL, key)
+        if thumb:
+            post["thumb"] = thumb
+            print("  썸네일:", thumb)
         code, res = http("POST", f"{SUPABASE_URL}/rest/v1/posts",
                          {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "return=minimal"}, post)
         if code in (200, 201, 204):
-            print("검토 대기로 저장했습니다.")
+            print("공개 상태로 저장했습니다.")
             return
         if code == 409:  # src_key 중복 -> 다음 후보
             print("  이미 있는 기사, 다음 후보 확인")

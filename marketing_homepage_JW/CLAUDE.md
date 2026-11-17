@@ -31,3 +31,8 @@
 - 사용자가 보는 화면은 그대로 `news.html`/`news_view.html?id=`(자바스크립트 렌더링). 두 화면의 `canonical`은 `/news`, `/news/번호`로 서버 렌더 쪽에 모은다. 머리말/바닥글/메뉴를 바꾸면 `api/_lib.js`의 `layout()`도 같이 고칠 것.
 - 도메인을 연결하면 바꿀 곳: `api/_lib.js`의 `SITE`(또는 Vercel 환경변수 `SITE_URL`), 홈 모든 버전의 `index.html` og/canonical/JSON-LD, `news.html`·`news_view.html`의 정적 메타, `robots.txt`, `llms.txt`.
 - 로컬 시험: `api/`를 직접 Node로 불러 시험했다(`vercel dev` 불필요). 정적 `sitemap.xml` 파일을 두면 rewrites보다 파일이 우선될 수 있으니 만들지 말 것.
+
+## 자동 등록(2026-11-17 변경)
+
+- GitHub Actions `daily-news`(매일 07:00 KST)가 `news_auto/auto_post.py`로 CSO 기사 1건을 **원문 대표 이미지와 함께 바로 공개** 상태로 등록한다(예전엔 검토 대기). 이미지는 `news_auto/og_image.py`가 구글 뉴스 중계 주소를 실제 기사 주소로 풀어 가져오고 Pillow로 1000px JPEG로 줄여 Storage에 올린다. 못 가져오면 기본 썸네일.
+- 구글 뉴스 주소 풀이 로직은 `api/_og.js`(관리자 버튼)와 `og_image.py`(자동 등록) 두 곳에 같은 방식으로 있다. 한쪽을 고치면 다른 쪽도 확인할 것.

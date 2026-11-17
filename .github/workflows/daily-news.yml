@@ -1,6 +1,6 @@
 name: daily-news
 
-# 매일 오전 7시(KST) = 22:00 UTC 에 CSO 뉴스 1편을 '검토 대기'로 자동 등록.
+# 매일 오전 7시(KST) = 22:00 UTC 에 CSO 뉴스 1편을 원문 이미지와 함께 바로 공개 상태로 자동 등록.
 # 수동 실행: GitHub > Actions > daily-news > Run workflow
 on:
   schedule:
@@ -22,6 +22,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: marketing_homepage_JW/news_auto
+      - name: 이미지 처리 라이브러리 설치
+        run: python3 -m pip install --quiet pillow
       - name: 기사 선별 및 등록
         env:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

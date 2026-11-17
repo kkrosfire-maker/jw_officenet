@@ -69,8 +69,34 @@ function findImages(html, base) {
   return out.map((v) => { try { return new URL(decode(v.trim()), base).href; } catch (e) { return null; } }).filter(Boolean);
 }
 
+/* 구글 뉴스 중계 주소(news.google.com/rss/articles/...)는 HTTP 리다이렉트가 없어 그대로 열면 구글 뉴스 로고만 나온다.
+ * 구글 뉴스 페이지의 서명(data-n-a-sg/ts)으로 batchexecute 를 불러 실제 기사 주소를 얻는다(주소 호스트는 고정). */
+function isGoogleNews(u) { return u.hostname === 'news.google.com' && /\/(?:rss\/)?articles\/[^/]+/.test(u.pathname); }
+
+async function resolveGoogleNews(u) {
+  const gid = u.pathname.split('/articles/')[1].split('/')[0];
+  const r = await fetch('https://news.google.com/articles/' + encodeURIComponent(gid), { headers: { 'User-Agent': UA, 'Accept-Language': 'ko,en;q=0.8' }, signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error('구글 뉴스 페이지를 열지 못했습니다 (' + r.status + ').');
+  const html = await r.text();
+  const sg = (html.match(/data-n-a-sg="([^"]+)"/) || [])[1], ts = (html.match(/data-n-a-ts="([^"]+)"/) || [])[1];
+  if (!sg || !ts) throw new Error('구글 뉴스 주소에서 원문 주소를 찾지 못했습니다.');
+  const inner = JSON.stringify(['garturlreq', [['X', 'X', ['X', 'X'], null, null, 1, 1, 'US:en', null, 1, null, null, null, null, null, 0, 1], 'X', 'X', 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0], gid, Number(ts), sg]);
+  const body = new URLSearchParams({ 'f.req': JSON.stringify([[['Fbv4je', inner, null, 'generic']]]) });
+  const b = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', { method: 'POST', body, headers: { 'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, signal: AbortSignal.timeout(9000) });
+  const text = await b.text();
+  let real;
+  try {
+    const outer = JSON.parse(text.slice(text.indexOf('[')).split('\n')[0]);
+    real = JSON.parse(outer.find((x) => x[1] === 'Fbv4je')[2])[1];
+  } catch (e) { /* 아래에서 처리 */ }
+  if (!/^https?:\/\//.test(real || '')) throw new Error('구글 뉴스 주소에서 원문 주소를 찾지 못했습니다.');
+  return real;
+}
+
 async function fetchArticleImage(pageUrl) {
+  if (isGoogleNews(new URL(pageUrl))) pageUrl = await resolveGoogleNews(new URL(pageUrl));
   const page = await get(pageUrl, 'text/html,application/xhtml+xml', MAX_HTML);
+  if (page.url.hostname === 'news.google.com') throw Object.assign(new Error('구글 뉴스 페이지라 기사 이미지를 찾지 못했습니다. 언론사 원문 주소를 넣어 주세요.'), { notFound: true });
   const cands = findImages(page.buf.toString('utf8'), page.url);
   if (!cands.length) throw Object.assign(new Error('원문 페이지에서 대표 이미지를 찾지 못했습니다.'), { notFound: true });
   let lastErr;
@@ -85,4 +111,4 @@ async function fetchArticleImage(pageUrl) {
   throw lastErr || new Error('이미지를 가져오지 못했습니다.');
 }
 
-module.exports = { fetchArticleImage, findImages, privateIp, assertPublic };
+module.exports = { fetchArticleImage, resolveGoogleNews, isGoogleNews, findImages, privateIp, assertPublic };
