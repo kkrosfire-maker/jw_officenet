@@ -49,7 +49,7 @@ class CandidatePickerDialog(tk.Toplevel):
 
         columns = ("score", "matched_alias", "category", "order_name", "manufacturer", "spec", "buy", "sell", "margin", "base_date")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
-        headings = {"score": "유사도", "matched_alias": "일치한 별칭", "category": "항목", "order_name": "제너리스주문명",
+        headings = {"score": "유사도", "matched_alias": "일치한 별칭", "category": "항목", "order_name": "제품명",
                     "manufacturer": "제조사", "spec": "규격", "buy": "매입가", "sell": "매출가",
                     "margin": "마진율", "base_date": "기준일자"}
         widths = {"score": 60, "matched_alias": 130, "category": 90, "order_name": 150, "manufacturer": 110,
@@ -83,7 +83,7 @@ class CandidatePickerDialog(tk.Toplevel):
         for c in candidates:
             iid = str(c.item["id"])
             self.tree.insert("", "end", iid=iid, values=(
-                f'{c.score*100:.0f}%', c.matched_alias, c.item["category"], c.item["order_name"],
+                f'{c.score*100:.0f}%', c.matched_alias, c.item["category"], c.item["product_name"] or c.item["order_name"],
                 c.item["manufacturer"], c.item["spec"],
                 f'{c.item["buy_price"]:,.0f}', f'{c.item["sell_price"]:,.0f}',
                 _format_margin(c.item), c.item["base_date"] or "",
@@ -104,7 +104,7 @@ class CandidatePickerDialog(tk.Toplevel):
         for item in db.search_items(keyword):
             iid = str(item["id"])
             self.tree.insert("", "end", iid=iid, values=(
-                "-", "-", item["category"], item["order_name"], item["manufacturer"],
+                "-", "-", item["category"], item["product_name"] or item["order_name"], item["manufacturer"],
                 item["spec"], f'{item["buy_price"]:,.0f}', f'{item["sell_price"]:,.0f}',
                 _format_margin(item), item["base_date"] or "",
             ))
