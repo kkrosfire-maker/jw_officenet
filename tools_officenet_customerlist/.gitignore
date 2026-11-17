@@ -3,3 +3,5 @@
 templates.js
 test_fill.py
 test_paste.py
+officeboard_config.json
+app_config.json

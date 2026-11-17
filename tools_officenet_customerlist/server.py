@@ -2,6 +2,7 @@
 import os, re, sys, subprocess, json, threading
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import roomlib
+import officeboard
 from urllib.parse import urlparse, parse_qs, unquote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +38,18 @@ class H(SimpleHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
         if u.path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP})
+        if u.path == "/api/open-xlsx":
+            try:
+                if not os.path.exists(roomlib.XLSX): return self.reply(200, {"ok": False, "error": "엑셀 파일을 찾을 수 없어요: " + roomlib.XLSX})
+                os.startfile(roomlib.XLSX)
+                return self.reply(200, {"ok": True, "path": roomlib.XLSX})
+            except Exception as e:
+                return self.reply(200, {"ok": False, "error": str(e)})
         if u.path in ("/api/room", "/api/room-check"):
             try:
                 st = roomlib.read_master()
                 if u.path == "/api/room": return self.reply(200, {"ok": True, "room": roomlib.next_room(st["rooms"], q.get("corp", ["0"])[0] == "1")})
-                return self.reply(200, {"ok": True, "room": roomlib.resolve_room(q.get("room", [""])[0], st["rooms"])})
+                return self.reply(200, {"ok": True, "room": roomlib.resolve_room(q.get("room", [""])[0], st["active"])})
             except Exception as e:
                 return self.reply(200, {"ok": False, "error": "고객list 엑셀을 읽지 못했어요: " + str(e)})
         return super().do_GET()
@@ -49,10 +57,26 @@ class H(SimpleHTTPRequestHandler):
         u = urlparse(self.path); q = parse_qs(u.query)
         if u.path == "/api/register":
             try:
-                c = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8"))
-                with LOCK: return self.reply(200, dict(roomlib.register(c), ok=True))
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8"))
+                act = body.pop("action", "check")
+                with LOCK: res = {"check": roomlib.check, "insert": roomlib.insert, "update": roomlib.update, "remove": roomlib.remove}[act](body)
+                return self.reply(200, dict(res, ok=True))
             except Exception as e:
-                return self.reply(500, {"ok": False, "error": "고객list 등록 실패: " + str(e)})
+                return self.reply(500, {"ok": False, "error": "고객list 처리 실패: " + str(e)})
+        if u.path in ("/api/ob", "/api/ob-password"):
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8"))
+                if u.path == "/api/ob-password":
+                    officeboard.save_password(body.get("password", ""))
+                    officeboard.Client().login(wake_secs=100)           # 맞는 비밀번호인지 바로 확인
+                    return self.reply(200, {"ok": True})
+                act = body.pop("action", "check")
+                with LOCK: res = {"check": officeboard.check, "insert": officeboard.insert, "update": officeboard.update, "remove": officeboard.remove}[act](body)
+                return self.reply(200, dict(res, ok=True))
+            except officeboard.NeedPassword as e:
+                return self.reply(200, {"ok": False, "needPassword": True, "error": str(e)})
+            except Exception as e:
+                return self.reply(200, {"ok": False, "error": "officeboard 처리 실패: " + str(e)})
         if u.path not in ("/api/docx", "/api/pdf"): return self.reply(404, {"ok": False, "error": "없는 주소"})
         try:
             data = self.rfile.read(int(self.headers.get("Content-Length", 0)))

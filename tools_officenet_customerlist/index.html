@@ -8,12 +8,12 @@
 :root{--bg:#f4f6f8;--card:#fff;--ink:#1c2733;--mute:#6b7785;--line:#dde3ea;--pri:#0f766e;--pri2:#0b5c56;--warn:#b45309}
 *{box-sizing:border-box}
 body{margin:0;font-family:"Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
-header{background:#12303a;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px}
-header h1{font-size:17px;margin:0}
+header{background:#12303a;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:24px;margin:0}
 header .steps{margin-left:auto;display:flex;gap:6px;font-size:12px}
 header .steps span{padding:3px 10px;border-radius:12px;background:#ffffff22}
 header .steps span.on{background:#14b8a6;color:#04201d;font-weight:700}
-main{display:grid;grid-template-columns:400px 1fr;gap:16px;padding:16px;height:calc(100vh - 50px)}
+main{display:grid;grid-template-columns:400px 1fr;gap:16px;padding:16px;height:calc(100vh - var(--hh,92px))}
 #form{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
 #form h2{font-size:13px;color:var(--pri);margin:16px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
 #form h2:first-child{margin-top:0}
@@ -35,12 +35,12 @@ button.sub{background:#e5eaf0;color:var(--ink)}
 button.sub:hover{background:#d5dde6}
 #pv{background:#8a949e;border:1px solid var(--line);border-radius:10px;overflow:auto;padding:12px}
 #pv .docx-wrapper{background:transparent!important;padding:0!important}
-#msg{font-size:12px;color:var(--warn);margin-top:8px;min-height:16px}
+#msg{white-space:pre-line;font-size:12px;color:var(--warn);margin-top:8px;min-height:16px}
 .hide{display:none!important}
 @media print{
   @page{size:A4;margin:0}
   body{background:#fff}
-  header,#form{display:none!important}
+  header,#form,#btnXls{display:none!important}
   main{display:block;padding:0;height:auto}
   #pv{border:0;padding:0;background:#fff;overflow:visible}
   #pv .docx-wrapper{padding:0!important;background:#fff!important}
@@ -51,6 +51,15 @@ textarea{width:100%;padding:6px 8px;border:1px dashed #94a3b8;border-radius:6px;
 textarea.drag{border-color:var(--pri);background:#ecfdf5}
 .mrow{display:flex;align-items:center;gap:6px}.mrow input{width:52px!important;text-align:center}.mbtn{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px}.mbtn{background:var(--pri);color:#fff;border-color:var(--pri);}.mbtn:hover{filter:brightness(1.15)}.mbtn.on{font-weight:700;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pri)}
 .hint{font-size:12px;color:#0f766e;margin:-2px 0 6px 0;min-height:0}.hint:empty{display:none}.hint.warn{color:#b45309}
+#btnXls{position:fixed;right:34px;bottom:26px;z-index:50;padding:10px 18px;border-radius:24px;border:0;background:#12303a;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}#btnXls:hover{background:var(--pri)}
+#ov{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#ov.on{display:flex}
+#ovCard{background:#fff;border-radius:14px;padding:22px 26px;min-width:300px;max-width:520px;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center}
+#ovCard h3{margin:0 0 10px;font-size:17px}#ovCard .ovb{font-size:14px;line-height:1.55;text-align:left;margin-bottom:14px;max-height:50vh;overflow:auto}
+#ovCard table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}#ovCard td,#ovCard th{border:1px solid var(--line);padding:4px 8px}#ovCard th{background:#f1f5f9}
+.spin{width:38px;height:38px;border:4px solid #cbd5e1;border-top-color:var(--pri);border-radius:50%;margin:4px auto 12px;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+#ovBtns{display:flex;gap:8px;justify-content:center}
+.btns{flex-wrap:wrap}button.danger{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}button.danger:hover{background:#fecaca}
 .pbtns{display:flex;gap:6px;margin:6px 0}.pbtns button{padding:6px 8px;font-size:12.5px}
 .inl{font-weight:400;color:var(--ink);margin-left:10px;cursor:pointer}.inl input{vertical-align:-2px}
 </style>
@@ -112,11 +121,13 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
   <div class="row"><label>파일 제목</label><input type="text" id="fname"></div>
   <div id="msg"></div>
   <div class="btns">
-    <button id="btnPdf">PDF 저장 (바탕화면)</button>
+    <button id="btnPdf">PDF 저장<br>(바탕화면)</button>
     <button id="btnDocx" class="sub">Word만 저장</button>
-    <button id="btnReg" class="sub">고객list 등록</button>
+    <button id="btnCancel" class="danger" title="방금 등록한 고객을 고객list·officeboard에서 지웁니다">등록 취소</button>
   </div>
 </section>
+<button id="btnXls" title="고객list 엑셀 파일 열기">📊 고객list 엑셀 열기</button>
+<div id="ov"><div id="ovCard"></div></div>
 <section id="pv"><div id="doc"></div></section>
 </main>
 
@@ -321,7 +332,7 @@ function fillVirtual(doc, v){     // 비상주 법인 양식 기준
   setSegs(cellP(doc,0,1,1), ["경기 김포시 풍무로 146번길 26, 4층 (풍무동 952 프라미스 4층)     ", {v:v.room}, "호"]);
   setSegs(cellP(doc,0,4,1), dt(s));
   setSegs(cellP(doc,0,4,3), dt(e));
-  setSegs(cellP(doc,0,4,5), [{v:v.months},"개월"]);
+  setSegs(cellP(doc,0,4,5), [{v:mo2(v.months)},"개월"]);
   setSegs(cellP(doc,0,6,7), v.total ? ["\\  ", {v:fmt(v.total)}, "원"] : ["\\"]);   // 잔금 원정: VAT 포함 총액
   setSegs(cellP(doc,0,7,1), ["금"]);
   setSegs(cellP(doc,0,7,3), ["( \\ ", {v:fmt(v.std)}, " )"]);
@@ -375,9 +386,11 @@ function schedule(){ clearTimeout(renderTimer); renderTimer=setTimeout(render,50
 function autoFname(){
   const v=vals(), f=$("fname"); if(f.dataset.manual) return;
   const d=ymd(v.start), ds = d.y ? String(d.y).slice(2)+pad(d.m)+pad(d.d) : "";
-  const kind = v.type==="resident" ? "상주" : `비상주(${v.corp?"법인":"개인"})`;
-  f.value = `전대차계약서_${kind}_${v.company||v.rep||"고객"}${v.room?"_"+v.room:""}`;
+  f.value = `${v.company||v.rep||"고객"}${v.room?"_"+v.room:""}`;      // 앞부분(전대차계약서_종류_)은 공통이라 칸에는 뒷부분만
 }
+const FN_PREFIX_RE=/^전대차계약서_(상주|비상주\((개인|법인)\))_/;
+function fnamePrefix(){ const v=vals(); return "전대차계약서_"+(v.type==="resident" ? "상주" : `비상주(${v.corp?"법인":"개인"})`)+"_"; }
+function fullFname(){ const t=$("fname").value.trim().replace(FN_PREFIX_RE,""); return fnamePrefix()+(t||"고객"); }
 function autoCalc(){
   const v=vals(), res=v.type==="resident";
   $("gResident").classList.toggle("hide", !res);
@@ -403,7 +416,7 @@ function load(){ try{
   document.querySelectorAll("#form input").forEach(el=>{
     if(el.type==="radio") el.checked = el.value===o.type;
     else if(el.id in o){ if(el.type==="checkbox") el.checked=o[el.id]; else el.value=o[el.id]; }
-  }); return true; }catch(e){ return false; } }
+  }); { const f=$("fname"); f.value=f.value.replace(FN_PREFIX_RE,""); } return true; }catch(e){ return false; } }
 
 /* ---------- 카톡 텍스트 붙여넣기 → 입력칸 자동 채움 ---------- */
 const FORM_TEMPLATE = [
@@ -469,7 +482,7 @@ function parseKakao(text){
   return out;
 }
 function applyParsed(p){
-  { const rm=$("room"); rm.dataset.manual=""; }   // 새 고객: 호실은 다시 자동 배정
+  { const rm=$("room"); rm.dataset.manual=""; window.regNum=null; window.obId=null; }   // 새 고객: 호실은 다시 자동 배정
   const set=(id,val)=>{ $(id).value=val||""; };
   document.querySelector("input[name=type][value=virtual]").checked=true;
   set("company",p.company); set("rep",p.rep); set("bizNo",p.bizNo); set("corpNo",p.corpNo);
@@ -512,6 +525,18 @@ function bindPaste(){
   });
 }
 
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function busy(text){ $("ovCard").innerHTML='<div class="spin"></div><div>'+esc(text)+'</div>'; $("ov").classList.add("on"); }
+function idle(){ $("ov").classList.remove("on"); }
+function modal(title, bodyHtml, buttons){     // buttons: [{label, value, sub}] → 누른 value 반환
+  return new Promise(res=>{
+    const c=$("ovCard"); c.innerHTML='<h3>'+esc(title)+'</h3><div class="ovb">'+bodyHtml+'</div><div id="ovBtns"></div>';
+    buttons.forEach(b=>{ const el=document.createElement("button"); el.textContent=b.label; if(b.sub) el.className="sub"; el.onclick=()=>{ idle(); res(b.value); }; $("ovBtns").appendChild(el); });
+    $("ov").classList.add("on");
+  });
+}
+function fitHeader(){ const h=document.querySelector("header"); if(h) document.documentElement.style.setProperty("--hh",h.offsetHeight+"px"); }
+window.addEventListener("resize",fitHeader);
 function syncMonthBtns(){ document.querySelectorAll(".mbtn").forEach(b=>b.classList.toggle("on", b.dataset.m===$("months").value)); }
 function bind(){
   document.querySelectorAll(".mbtn").forEach(b=>b.onclick=()=>{ $("months").value=b.dataset.m; $("months").dispatchEvent(new Event("input",{bubbles:true})); });
@@ -530,24 +555,105 @@ function bind(){
   });
   // 도우미 서버(run.bat)로 열렸으면 바탕화면 저장 + PDF 자동 변환, 아니면 일반 다운로드
   const viaServer = location.protocol==="http:";
+  const post=async(act,v)=>{ const r=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},v,{action:act}))}); return r.json(); };
+  const obPost=async(act,v)=>{ try{ const r=await fetch("/api/ob",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({},v,{action:act}))}); return await r.json(); }catch(e){ return {ok:false,error:String(e)}; } };
+  const diffTable=d=>"<table><tr><th>항목</th><th>현재 값</th><th>새 값</th></tr>"+d.map(x=>"<tr><td>"+esc(x.label)+"</td><td>"+esc(x.old)+"</td><td>"+esc(x.new)+"</td></tr>").join("")+"</table>";
+  // officeboard 비밀번호 입력 (이 PC의 officeboard_config.json 에만 저장)
+  const askObPassword=async(first)=>{
+    for(;;){
+      const a=await modal("officeboard 비밀번호","<div>"+(first?"officeboard(온라인)에 자동 입력하려면 로그인 비밀번호가 한 번 필요해요.":"비밀번호가 맞지 않아요. 다시 입력해 주세요.")+"<br>이 PC에만 저장되고 다른 곳으로 보내지 않아요.</div><input type=\"password\" id=\"ovPw\" style=\"width:100%;margin-top:8px\" autocomplete=\"off\">",
+        [{label:"저장",value:"save"},{label:"이번엔 건너뛰기",value:"skip",sub:true}]);
+      if(a!=="save") return false;
+      const pw=$("ovPw").value; busy("비밀번호 확인 중… (서버가 잠들어 있으면 1분쯤 걸릴 수 있어요)");
+      let r; try{ r=await (await fetch("/api/ob-password",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})})).json(); }catch(e){ r={ok:false}; }
+      idle(); if(r.ok) return true; first=false;
+    }
+  };
+  // 어떤 버튼을 누르든 먼저 고객list·officeboard 와 대조: 신규→등록 / 같은 내용→알림 / 달라짐→물어보고 변경
+  const sync=async()=>{
+    if(!viaServer) return {proceed:true,notes:[]};
+    const v=vals();
+    if(!v.rep){ await modal("대표자 성명이 필요해요","고객list에 등록하려면 대표자(성명)를 입력해 주세요.",[{label:"확인",value:1}]); return {proceed:false}; }
+    v.num=window.regNum||""; v.obId=window.obId||"";
+    v.rentTotal = v.type==="virtual" ? Math.round(v.disc*v.months*1.1) : 0;
+    const useOb = v.type==="virtual";
+    let c;
+    busy("고객list 확인 중…");
+    try{ c=await post("check",v); }catch(e){ c={ok:false,error:String(e)}; }
+    idle();
+    if(!c.ok){ await modal("고객list 오류",esc(c.error||"확인 실패"),[{label:"확인",value:1}]); return {proceed:false}; }
+    let o=null;
+    if(useOb){
+      for(let tries=0;tries<3;tries++){
+        busy("officeboard 확인 중… (서버가 잠들어 있으면 1분쯤 걸릴 수 있어요)"); o=await obPost("check",v); idle();
+        if(o.ok) break;
+        if(o.needPassword){ if(await askObPassword(!tries)) continue; o=null; break; }
+        const a=await modal("officeboard에 연결하지 못했어요",esc(o.error||"")+"<br><br>officeboard에는 입력하지 않고 계속할까요?",[{label:"officeboard 없이 계속",value:"go"},{label:"취소",value:"no",sub:true}]);
+        if(a!=="go") return {proceed:false}; o=null; break;
+      }
+      if(o && !o.ok) o=null;
+    }
+    const notes=[]; if(useOb && !o) notes.push("officeboard는 입력하지 않았어요");
+    const sts=[c.status].concat(o?[o.status]:[]);
+    if(sts.every(x=>x==="dup")){
+      await modal("이미 등록된 고객이에요","고객list <b>"+esc(c.num)+"</b> ("+c.row+"행)"+(o?" 와 officeboard <b>"+esc(o.id)+"</b>":"")+" 에 같은 내용이 이미 있어요.<br>중복이라 등록하지 않았어요.",[{label:"확인",value:1}]);
+      window.regNum=c.num; if(o) window.obId=o.id; return {proceed:false};
+    }
+    if(c.status!=="new") window.regNum=c.num; if(o && o.status!=="new") window.obId=o.id;
+    // 달라진 내용은 한 번에 묻기
+    let doUpdate=false;
+    if(c.status==="changed" || (o && o.status==="changed")){
+      let html="";
+      if(c.status==="changed") html+="<b>고객list</b> "+esc(c.num)+" ("+c.row+"행)"+diffTable(c.diffs);
+      if(o && o.status==="changed") html+="<b>officeboard</b> "+esc(o.id)+diffTable(o.diffs);
+      const ans=await modal("변경된 내용이 있어요",html+"위 내용으로 변경할까요?",[{label:"예, 변경",value:"y"},{label:"아니요, 그대로 두기",value:"n",sub:true}]);
+      doUpdate=(ans==="y"); if(!doUpdate) notes.push("달라진 내용은 변경하지 않았어요");
+    }
+    // 실행
+    if(c.status==="new"){
+      busy("고객list에 등록하는 중…"); let n; try{ n=await post("insert",v); }catch(e){ n={ok:false,error:String(e)}; } idle();
+      if(!n.ok){ await modal("고객list 등록 실패",esc(n.error||""),[{label:"확인",value:1}]); return {proceed:false}; }
+      window.regNum=n.num; if(n.room && n.room!==v.room){ setRoom(n.room); v.room=n.room; }
+      notes.push("고객list 등록: "+n.num+" / "+(n.room||"-")+" ("+n.row+"행)");
+    }else if(c.status==="changed" && doUpdate){
+      busy("고객list를 변경하는 중…"); let u; try{ u=await post("update",v); }catch(e){ u={ok:false,error:String(e)}; } idle();
+      if(!u.ok){ await modal("고객list 변경 실패",esc(u.error||""),[{label:"확인",value:1}]); return {proceed:false}; }
+      if(u.room && u.room!==v.room){ setRoom(u.room); v.room=u.room; }
+      notes.push("고객list 변경: "+u.num+" ("+u.changed.join(", ")+")");
+    }
+    if(o && (o.status==="new" || (o.status==="changed" && doUpdate))){
+      busy("officeboard에 "+(o.status==="new"?"등록":"변경")+"하는 중…"); const r=await obPost(o.status==="new"?"insert":"update",v); idle();
+      if(r.ok){ window.obId=r.id; notes.push("officeboard "+(o.status==="new"?"등록":"변경")+": "+r.id); }
+      else notes.push("officeboard 실패: "+(r.error||""));
+    }
+    return {proceed:true,notes};
+  };
   const send=async(kind)=>{
+    // 1단계: 계약서 파일부터 만든다
     const blob=await buildDocx(vals(), true);   // 노란 음영 포함
-    const name=$("fname").value.trim()||"전대차계약서";
+    const name=fullFname();
     if(!viaServer){
       const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name+".docx"; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-      msg("서버 없이 열려서 다운로드 폴더로 저장했어요. 바탕화면 저장·PDF 자동 변환은 run.bat 으로 열어주세요."); return;
+      msg("서버 없이 열려서 다운로드 폴더로 저장했어요. 바탕화면 저장·PDF 자동 변환·대시보드 저장은 run.bat 으로 열어주세요."); return;
     }
-    msg(kind==="pdf" ? "저장하고 PDF로 변환하는 중… (Word 사용, 5~10초)" : "저장하는 중…");
-    ["btnPdf","btnDocx"].forEach(id=>$(id).disabled=true);
+    busy(kind==="pdf" ? "PDF로 변환하는 중이에요… 끝날 때까지 기다려 주세요 (5~10초)" : "Word 파일을 저장하는 중…");
+    let fileMsg;
     try{
       const r=await fetch("/api/"+kind+"?name="+encodeURIComponent(name),{method:"POST",body:blob});
       const j=await r.json();
       if(!j.ok) throw new Error(j.error||"저장 실패");
       const base=f=>f.split("\\").pop();
-      msg("✔ 바탕화면에 저장했어요: "+(j.pdf?base(j.pdf)+" (+ Word 파일)":base(j.docx)));
-    }catch(e){ msg("저장 실패: "+e.message); }
-    ["btnPdf","btnDocx"].forEach(id=>$(id).disabled=false);
+      fileMsg="✔ 바탕화면에 저장했어요: "+(j.pdf?base(j.pdf)+" (+ Word 파일)":base(j.docx));
+    }catch(e){ idle(); msg("저장 실패: "+e.message); return; }
+    idle(); msg(fileMsg);
+    // 2단계: 공유오피스 대시보드(고객list 엑셀·officeboard)에 저장할지 묻는다
+    const useOb=vals().type==="virtual";
+    const ask=await modal("공유오피스 대시보드에 저장할까요?","방금 만든 계약서 내용을 <b>"+(useOb?"고객list 엑셀과 officeboard":"고객list 엑셀")+"</b>에 저장해요.<br>(이미 있는 고객이면 중복 안내 또는 변경 확인이 먼저 나와요.)",
+      [{label:"예, 저장",value:"y"},{label:"아니요",value:"n",sub:true}]);
+    if(ask!=="y"){ msg(fileMsg+"\n(대시보드에는 저장하지 않았어요)"); return; }
+    const s=await sync();
+    msg(fileMsg+(s.notes&&s.notes.length?"\n✔ "+s.notes.join("\n✔ "):(s.proceed?"":"\n(대시보드 저장은 하지 않았어요)")));
   };
   $("btnDocx").onclick=()=>send("docx");
   // ---- 호실 자동 배정 (비상주): 직접 입력하면 그 번호 우선, 이미 있으면 (2),(3) ----
@@ -557,8 +663,9 @@ function bind(){
   window.refreshRoom=async()=>{
     if(!viaServer) return;
     if(vals().type!=="virtual"){ if(!room.dataset.manual){ setRoom(""); } hint.textContent=""; return; }
-    if(room.dataset.manual) return;
+    if(room.dataset.manual||window.regNum) return;
     const j=await jget("/api/room?corp="+($("isCorp").checked?1:0));
+    if(room.dataset.manual) return;     // 응답을 기다리는 사이에 직접 입력했으면 덮어쓰지 않음
     if(j.ok){ setRoom(j.room); hint.className="hint"; hint.textContent="자동 배정 호실: "+j.room+" (직접 입력하면 그 번호가 우선)"; }
     else { hint.className="hint warn"; hint.textContent=j.error||"호실 자동 배정 실패"; }
   };
@@ -571,27 +678,40 @@ function bind(){
   document.querySelectorAll("input[name=type]").forEach(el=>el.addEventListener("change",refreshRoom));
   $("isCorp").addEventListener("change",refreshRoom);
   refreshRoom();
-  // ---- 고객list(엑셀) 등록 ----
-  let lastReg="";
-  $("btnReg").onclick=async()=>{
-    if(!viaServer){ msg("고객list 등록은 run.bat 으로 열어야 해요."); return; }
-    const v=vals(); const key=JSON.stringify([v.type,v.company,v.rep,v.phone,v.start,v.room]);
-    if(!v.rep){ msg("대표자(이름)를 입력해 주세요."); return; }
-    if(key===lastReg){ msg("이미 등록한 내용이에요. 내용을 바꾸면 다시 등록할 수 있어요."); return; }
-    msg("고객list 엑셀에 등록하는 중…"); $("btnReg").disabled=true;
-    try{
-      const r=await fetch("/api/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)});
-      const j=await r.json(); if(!j.ok) throw new Error(j.error);
-      lastReg=key; msg("✔ 고객list 등록 완료: 고객번호 "+j.num+" / 호실 "+(j.room||"-")+" ("+j.row+"행)");
-      if(j.room && j.room!==v.room) setRoom(j.room);
-      room.dataset.manual=""; 
-    }catch(e){ msg("등록 실패: "+e.message); }
-    $("btnReg").disabled=false;
+  $("btnXls").onclick=async()=>{
+    if(!viaServer){ msg("엑셀 열기는 run.bat 으로 열어야 해요."); return; }
+    try{ const j=await (await fetch("/api/open-xlsx")).json(); msg(j.ok?"고객list 엑셀을 열었어요.":"엑셀 열기 실패: "+j.error); }catch(e){ msg("엑셀 열기 실패: "+e.message); }
   };
+  // ---- 등록 취소: 같은 고객을 고객list·officeboard 에서 지움 (확인 후) ----
+  $("btnCancel").onclick=async()=>{
+    if(!viaServer){ msg("등록 취소는 run.bat 으로 열어야 해요."); return; }
+    const v=vals(); v.num=window.regNum||""; v.obId=window.obId||"";
+    busy("등록된 내용을 찾는 중…");
+    const c=await post("check",v).catch(e=>({ok:false,error:String(e)}));
+    let o=null; if(v.type==="virtual"){ o=await obPost("check",v); if(!o.ok){ if(o.needPassword){ idle(); if(await askObPassword(true)){ busy("등록된 내용을 찾는 중…"); o=await obPost("check",v); } else o=null; } else { o={status:"error",error:o.error}; } } }
+    idle();
+    if(!c.ok){ await modal("고객list 오류",esc(c.error||""),[{label:"확인",value:1}]); return; }
+    const inX=c.status!=="new", inO=o && o.ok && o.status!=="new";
+    if(o && o.status==="error"){ await modal("officeboard 확인 실패",esc(o.error||"")+"<br>officeboard 쪽 삭제는 할 수 없어요.",[{label:"확인",value:1}]); }
+    if(!inX && !inO){ await modal("취소할 등록이 없어요","이 고객은 고객list에도 officeboard에도 등록돼 있지 않아요.",[{label:"확인",value:1}]); return; }
+    let html="아래 등록을 지워요. <b>되돌릴 수 없어요.</b><ul style=\"margin:8px 0 8px 18px\">";
+    if(inX) html+="<li>고객list <b>"+esc(c.num)+"</b> ("+c.row+"행) · "+esc(c.name||"")+" · 호실 "+esc(c.room||"-")+"</li>";
+    if(inO) html+="<li>officeboard <b>"+esc(o.id)+"</b> · "+esc(o.name||"")+"</li>";
+    html+="</ul>바탕화면에 저장된 Word·PDF 파일은 지워지지 않아요.";
+    const ans=await modal("등록 취소",html,[{label:"예, 삭제",value:"y"},{label:"아니요",value:"n",sub:true}]);
+    if(ans!=="y") return;
+    const notes=[];
+    if(inX){ busy("고객list에서 지우는 중…"); const r=await post("remove",v).catch(e=>({ok:false,error:String(e)})); idle(); notes.push(r.ok&&r.removed?"고객list에서 삭제: "+c.num:"고객list 삭제 실패: "+(r.error||"")); }
+    if(inO){ busy("officeboard에서 지우는 중…"); const r=await obPost("remove",v); idle(); notes.push(r.ok&&r.removed?"officeboard에서 삭제: "+o.id:"officeboard 삭제 실패: "+(r.error||"")); }
+    window.regNum=null; window.obId=null; room.dataset.manual=""; refreshRoom();
+    msg("✔ "+notes.join("\n✔ "));
+  };
+  // ---- 고객list(엑셀) 등록: 위의 sync() 사용 ----
   $("btnPdf").onclick=()=>send("pdf");
 }
 
 window.addEventListener("DOMContentLoaded", ()=>{
+  fitHeader();
   const had=load();
   bind();
   if(!had) $("start").value=iso(new Date());
