@@ -46,23 +46,23 @@ check('invoice_', months_with_prefix(recs, 'invoice_'), {'2026-05'})
 
 print('\n[왕복] V숫자 ID + contractType 없음 → 내보내기에서도 비상주 시트')
 data = {
-    'A001': {'name': '상주상호', 'tenantName': 'a', 'contractType': '입주', 'rent': 430000,
+    'A01': {'name': '상주상호', 'tenantName': 'a', 'contractType': '입주', 'rent': 430000,
              'start': '2026-01-01', 'end': '2026-12-31'},
     'V050': {'name': '비상주상호', 'tenantName': 'b', 'rent': 24200,
              'start': '2026-01-01', 'end': '2026-12-31'},  # contractType 비어 있음
 }
 wb = build_workbook(data, '2026-06')
 sheet_rooms = {ws.title: [r[0] for r in ws.iter_rows(min_row=2, values_only=True)] for ws in wb.worksheets}
-check('상주 시트', sheet_rooms['상주'], ['A001'])
+check('상주 시트', sheet_rooms['상주'], ['A01'])
 check('비상주 시트', sheet_rooms['비상주'], ['V050'])
 back = parse_workbook(wb)
 check('가져오기 후 V050 계약유형', back['V050']['contractType'], '비상주')
 
 print('\n[왕복] 할인율 직접입력(custom) 레코드가 있어도 내보내기가 죽지 않음')
-data_custom = {'A004': {'name': '직접', 'tenantName': 'c', 'discount': 'custom', 'customRentBase': 299000,
+data_custom = {'A04': {'name': '직접', 'tenantName': 'c', 'discount': 'custom', 'customRentBase': 299000,
                         'rent': 328900, 'contractType': '입주'}}
 back = parse_workbook(build_workbook(data_custom, '2026-06'))
-check('금액 보존', back['A004']['rent'], 328900)
+check('금액 보존', back['A04']['rent'], 328900)
 
 print(f'\n결과: PASS {pass_count} / FAIL {fail_count}')
 sys.exit(1 if fail_count else 0)

@@ -1,4 +1,5 @@
 """엑셀 파싱/내보내기 로직. Flask 라우트와 완전히 분리."""
+import re
 from datetime import date, datetime
 
 import openpyxl
@@ -8,6 +9,12 @@ from contract_calendar import reconstruct_prepaid
 from contract_record import (
     INVOICE_PREFIX, PAID_PREFIX, is_paid, is_virtual, months_with_prefix,
 )
+
+
+def normalize_room_id(room_id: str) -> str:
+    """상주 호실의 옛 3자리 ID(A001)를 2자리(A01)로. 비상주 고객 ID(A018 등)에는 쓰지 않는다."""
+    m = re.fullmatch(r'([A-D])0(\d\d)', room_id)
+    return m.group(1) + m.group(2) if m else room_id
 
 
 def _to_date_str(val) -> str:
@@ -74,6 +81,8 @@ def parse_workbook(wb: openpyxl.Workbook) -> dict:
             contract_type = str(row[col.get('계약유형', 9)] or '입주').strip()
             if is_virtual(room_id, {'contractType': contract_type}):
                 contract_type = '비상주'
+            else:
+                room_id = normalize_room_id(room_id)  # 옛 백업 파일의 A001 → A01
 
             entry = {
                 'name': name,
