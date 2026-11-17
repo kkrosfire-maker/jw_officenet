@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객정보 입력 - 계약서 작성</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#1c2733;--mute:#6b7785;--line:#dde3ea;--pri:#0f766e;--pri2:#0b5c56;--warn:#b45309}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:#12303a;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px}
+header h1{font-size:17px;margin:0}
+header .steps{margin-left:auto;display:flex;gap:6px;font-size:12px}
+header .steps span{padding:3px 10px;border-radius:12px;background:#ffffff22}
+header .steps span.on{background:#14b8a6;color:#04201d;font-weight:700}
+main{display:grid;grid-template-columns:400px 1fr;gap:16px;padding:16px;height:calc(100vh - 50px)}
+#form{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto}
+#form h2{font-size:13px;color:var(--pri);margin:16px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+#form h2:first-child{margin-top:0}
+.row{display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:center;margin-bottom:7px}
+.row label{color:var(--mute);font-size:12.5px}
+.row.two{grid-template-columns:92px 1fr 56px 1fr}
+.row.two .l2{text-align:right}
+input[type=text],input[type=number],input[type=date],input[type=tel],input[type=email],select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff;min-width:0}
+input:focus,select:focus{outline:2px solid #14b8a655;border-color:var(--pri)}
+.seg{display:flex;gap:6px;margin-bottom:6px}
+.seg label{flex:1;text-align:center;padding:8px 4px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px}
+.seg input{display:none}
+.seg label:has(input:checked){background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.hint{font-size:11.5px;color:var(--mute);margin:-3px 0 8px 100px}
+.btns{display:flex;gap:8px;margin-top:16px;position:sticky;bottom:-14px;background:var(--card);padding:10px 0 4px}
+button{padding:10px 12px;border:0;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;background:var(--pri);color:#fff;flex:1}
+button:hover{background:var(--pri2)}
+button.sub{background:#e5eaf0;color:var(--ink)}
+button.sub:hover{background:#d5dde6}
+#pv{background:#8a949e;border:1px solid var(--line);border-radius:10px;overflow:auto;padding:12px}
+#pv .docx-wrapper{background:transparent!important;padding:0!important}
+#msg{font-size:12px;color:var(--warn);margin-top:8px;min-height:16px}
+.hide{display:none!important}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  header,#form{display:none!important}
+  main{display:block;padding:0;height:auto}
+  #pv{border:0;padding:0;background:#fff;overflow:visible}
+  #pv .docx-wrapper{padding:0!important;background:#fff!important}
+  #pv .docx-wrapper>section.docx{box-shadow:none!important;margin:0!important;break-after:page;padding-bottom:20px!important}
+  #pv .docx-wrapper>section.docx:last-child{break-after:auto}
+}
+textarea{width:100%;padding:6px 8px;border:1px dashed #94a3b8;border-radius:6px;font:inherit;resize:vertical;background:#f8fafc}
+textarea.drag{border-color:var(--pri);background:#ecfdf5}
+.mrow{display:flex;align-items:center;gap:6px}.mrow input{width:52px!important;text-align:center}.mbtn{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px}.mbtn{background:var(--pri);color:#fff;border-color:var(--pri);}.mbtn:hover{filter:brightness(1.15)}.mbtn.on{font-weight:700;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pri)}
+.pbtns{display:flex;gap:6px;margin:6px 0}.pbtns button{padding:6px 8px;font-size:12.5px}
+.inl{font-weight:400;color:var(--ink);margin-left:10px;cursor:pointer}.inl input{vertical-align:-2px}
+</style>
+</head>
+<body>
+<header>
+  <h1>정원오피스넷 고객정보 입력</h1>
+  <div class="steps"><span class="on">1 계약서(Word→PDF)</span><span>2 고객list 엑셀</span><span>3 officeboard</span></div>
+</header>
+<main>
+<section id="form">
+  <h2>카톡 내용 붙여넣기 (비상주)</h2>
+  <textarea id="paste" rows="5" placeholder="고객이 보낸 카톡 내용을 여기에 붙여넣기(Ctrl+V)하거나 끌어다 놓으세요. 화면 어디서든 붙여넣어도 됩니다."></textarea>
+  <div class="pbtns"><button id="btnTpl" class="sub" type="button">고객용 양식 복사</button><button id="btnApply" class="sub" type="button">입력 반영</button></div>
+  <div class="hint" id="pasteInfo" style="margin-left:0"></div>
+
+  <h2>계약 종류</h2>
+  <div class="seg" id="typeSeg">
+    <label><input type="radio" name="type" value="resident" checked>상주</label>
+    <label><input type="radio" name="type" value="virtual">비상주</label>
+  </div>
+
+  <h2>을(고객) 정보 <label class="inl"><input type="checkbox" id="isCorp"> 법인</label></h2>
+  <div class="row"><label id="lbCompany">상호</label><input type="text" id="company"></div>
+  <div class="row"><label>대표자(성명)</label><input type="text" id="rep"></div>
+  <div class="row"><label>주소</label><input type="text" id="addr"></div>
+  <div class="row"><label id="lbBiz">사업자번호</label><input type="text" id="bizNo" placeholder="000-00-00000"></div>
+  <div class="row" id="rowCorpNo"><label id="lbCorpNo">법인등록번호</label><input type="text" id="corpNo"></div>
+  <div class="row"><label>연락처</label><input type="tel" id="phone" placeholder="010-0000-0000"></div>
+  <div class="row"><label>이메일</label><input type="email" id="email"></div>
+
+  <h2>계약 내용</h2>
+  <div class="row"><label>호실</label><input type="text" id="room" placeholder="예: 412 / G01 / D15"></div>
+  <div class="row"><label>시작일</label><input type="date" id="start"></div>
+  <div class="row"><label>계약 개월수</label><div class="mrow"><input type="number" id="months" min="1" max="99" value="12"><span>개월</span><button type="button" class="mbtn" data-m="1">1</button><button type="button" class="mbtn" data-m="3">3</button><button type="button" class="mbtn" data-m="6">6</button><button type="button" class="mbtn" data-m="12">12</button></div></div>
+  <div class="row"><label>종료일</label><input type="date" id="end"></div>
+  <div class="row"><label>계약 작성일</label><input type="date" id="signDate"></div>
+
+  <div id="gResident">
+    <div class="row"><label>납부일(매월)</label><input type="number" id="payDay" min="1" max="31" placeholder="일"></div>
+    <h2>금액 (월, VAT 별도 기준)</h2>
+    <div class="row"><label>표준금액</label><input type="text" id="stdFee" inputmode="numeric"></div>
+    <div class="row"><label>할인금액</label><input type="text" id="discFee" inputmode="numeric"></div>
+    <div class="row"><label>보증금</label><input type="text" id="deposit" inputmode="numeric"></div>
+    <div class="hint">보증금 기본값: 표준금액의 2개월분 (직접 수정 가능)</div>
+    <h2>집기 수량</h2>
+    <div class="row two"><label>의자</label><input type="number" id="qChair" min="0" value="1"><label class="l2">책상</label><input type="number" id="qDesk" min="0" value="1"></div>
+    <div class="row two"><label>선반</label><input type="number" id="qShelf" min="0" value="1"><label class="l2">서랍장</label><input type="number" id="qDrawer" min="0" value="1"></div>
+    <div class="row"><label>도어락</label><input type="number" id="qLock" min="0" value="1"></div>
+  </div>
+
+  <div id="gVirtual" class="hide">
+    <div class="row"><label>임대료 선납</label><input type="checkbox" id="prepaid" checked style="width:auto;justify-self:start"></div>
+    <div class="hint" id="feeInfo" style="margin-left:0"></div>
+  </div>
+
+  <h2>파일</h2>
+  <div class="row"><label>파일 제목</label><input type="text" id="fname"></div>
+  <div id="msg"></div>
+  <div class="btns">
+    <button id="btnPdf">PDF 저장 (바탕화면)</button>
+    <button id="btnDocx" class="sub">Word만 저장</button>
+  </div>
+</section>
+<section id="pv"><div id="doc"></div></section>
+</main>
+
+<script src="lib/jszip.min.js"></script>
+<script src="lib/docx-preview.min.js"></script>
+<script src="templates.js"></script>
+<script>
+"use strict";
+const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const $ = id => document.getElementById(id);
+
+/* ---------- 숫자/날짜 유틸 ---------- */
+const num = s => parseInt(String(s||"").replace(/[^\d]/g,""),10) || 0;
+const fmt = n => n.toLocaleString("ko-KR");
+function korAmount(n){
+  if(!n) return "";
+  const dg="영일이삼사오육칠팔구".split(""), sm=["","십","백","천"], big=["","만","억","조"];
+  let out="", g=0;
+  while(n>0){
+    const part=n%10000; n=Math.floor(n/10000);
+    if(part){
+      let s="";
+      for(let i=3;i>=0;i--){
+        const d=Math.floor(part/10**i)%10;
+        if(d) s += (d===1&&i>0?"":dg[d]) + sm[i];
+      }
+      out = s + big[g] + out;
+    }
+    g++;
+  }
+  return out;
+}
+const pad = n => String(n).padStart(2,"0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function parseIso(s){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||""); return m?new Date(+m[1],+m[2]-1,+m[3]):null; }
+function calcEnd(start, months){
+  const d=parseIso(start); if(!d||!months) return "";
+  const t=new Date(d.getFullYear(), d.getMonth()+months, 1);
+  const last=new Date(t.getFullYear(), t.getMonth()+1, 0).getDate();
+  t.setDate(Math.min(d.getDate(), last));
+  t.setDate(t.getDate()-1);
+  return iso(t);
+}
+const ymd = s => { const d=parseIso(s); return d?{y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate()}:{y:"",m:"",d:""}; };
+
+/* ---------- docx XML 편집 도구 ---------- */
+const q = (el, name) => Array.from(el.children).filter(c => c.localName===name && c.namespaceURI===W);
+function tNodes(p){ return Array.from(p.getElementsByTagNameNS(W,"t")); }
+function paraText(p){ return tNodes(p).map(t=>t.textContent).join(""); }
+let HL=false;   // 미리보기에서만, 바뀌는 글자에 노란 음영
+const XMLNS="http://www.w3.org/XML/1998/namespace";
+function setT(t, text){ t.textContent=text; t.setAttributeNS(XMLNS,"xml:space","preserve"); }
+function setHL(r, on){            // run 의 음영을 항상 먼저 지우고, 필요할 때만 노랑
+  if(!r || r.localName!=="r") return;
+  let rp=q(r,"rPr")[0];
+  if(rp) q(rp,"highlight").forEach(h=>rp.removeChild(h));
+  if(on){
+    if(!rp){ rp=r.ownerDocument.createElementNS(W,"w:rPr"); r.insertBefore(rp,r.firstChild); }
+    const h=r.ownerDocument.createElementNS(W,"w:highlight"); h.setAttributeNS(W,"w:val","yellow"); rp.appendChild(h);
+  }
+}
+function cloneRun(r, text, hl){   // r 의 서식을 복사한 새 run
+  const c=r.cloneNode(true), ts=c.getElementsByTagNameNS(W,"t");
+  setT(ts[0], text);
+  for(let i=1;i<ts.length;i++) ts[i].parentNode.removeChild(ts[i]);
+  setHL(c, hl);
+  return c;
+}
+function replaceRange(p, start, end, text){   // [start,end) 를 text 로 바꾸고 text 부분만 음영
+  let pos=0, placed=false;
+  for(const t of tNodes(p)){
+    const s=t.textContent, a=pos, b=pos+s.length; pos=b;
+    if(b<=start || a>=end) continue;
+    const ls=Math.max(start,a)-a, le=Math.min(end,b)-a, r=t.parentNode;
+    const pre=s.slice(0,ls), suf=s.slice(le);
+    if(r.localName==="r"){
+      if(pre) r.parentNode.insertBefore(cloneRun(r,pre,false), r);
+      if(suf) r.parentNode.insertBefore(cloneRun(r,suf,false), r.nextSibling);
+    }
+    setT(t, placed?"":text);
+    setHL(r, HL && !placed && text!=="");
+    placed=true;
+  }
+  return placed;
+}
+function makeRun(p){
+  const doc=p.ownerDocument, r=doc.createElementNS(W,"w:r");
+  const ppr=q(p,"pPr")[0], prpr=ppr&&q(ppr,"rPr")[0];
+  if(prpr){ const rp=doc.createElementNS(W,"w:rPr"); Array.from(prpr.children).forEach(c=>{ if(!["ins","del","moveFrom","moveTo"].includes(c.localName)) rp.appendChild(c.cloneNode(true)); }); r.appendChild(rp); }
+  const t=doc.createElementNS(W,"w:t"); r.appendChild(t); p.appendChild(r); return r;
+}
+// 문단 전체를 조각으로 다시 씀: 문자열=그대로, {v:값}=바뀌는 부분(음영)
+function setSegs(p, segs){
+  if(!p) return;
+  if(!tNodes(p).length){ if(!segs.some(s=>typeof s==="string"?s:s.v)) return; makeRun(p); }
+  const ts=tNodes(p), r0=ts[0].parentNode;
+  ts.slice(1).forEach(t=>{ setT(t,""); setHL(t.parentNode,false); });
+  for(const s of segs){
+    const isV=typeof s!=="string", txt=String(isV?s.v:s);
+    if(txt==="") continue;
+    r0.parentNode.insertBefore(cloneRun(r0, txt, HL&&isV), r0);
+  }
+  r0.parentNode.removeChild(r0);
+}
+function setPara(p, text){ setSegs(p, [{v:text}]); }
+function fillBlanks(p, values){      // 문단 안의 ___ 빈칸을 순서대로 채움
+  if(!p) return;
+  for(const v of values){
+    const m=/_+/.exec(paraText(p)); if(!m) break;
+    replaceRange(p,m.index,m.index+m[0].length,String(v));
+  }
+}
+function replaceText(p, from, to){
+  if(!p) return;
+  const i=paraText(p).indexOf(from); if(i>=0) replaceRange(p,i,i+from.length,to);
+}
+const bodyKids = doc => Array.from(doc.getElementsByTagNameNS(W,"body")[0].children);
+function tableAt(doc, ti){ return bodyKids(doc).filter(e=>e.localName==="tbl")[ti]; }
+function cellP(doc, ti, r, c, pi=0){
+  const tbl=tableAt(doc,ti); if(!tbl) return null;
+  const tr=q(tbl,"tr")[r]; if(!tr) return null;
+  const tc=q(tr,"tc")[c]; if(!tc) return null;
+  return q(tc,"p")[pi]||null;
+}
+function bodyParas(doc){ return bodyKids(doc).filter(e=>e.localName==="p"); }
+function findPara(doc, startsWith){ return bodyParas(doc).find(p=>paraText(p).replace(/\s/g,"").startsWith(startsWith.replace(/\s/g,""))); }
+
+/* ---------- 폼 값 ---------- */
+const STD_FEE = 100000;                    // 비상주 표준금액(월, VAT 별도)
+const DISC_FEE = {indiv:15000, corp:20000}; // 비상주 할인 후 금액(월, VAT 별도)
+function vals(){
+  const g=id=>$(id).value.trim();
+  const type=document.querySelector('input[name=type]:checked').value;   // resident | virtual
+  const corp=$("isCorp").checked, months=num(g("months")), prepaid=$("prepaid").checked;
+  const v={
+    type, corp, company:g("company"), rep:g("rep"), addr:g("addr"), bizNo:g("bizNo"), corpNo:g("corpNo"),
+    phone:g("phone"), email:g("email"), room:g("room"),
+    start:g("start"), months, end:g("end"), sign:g("signDate")||iso(new Date()), prepaid
+  };
+  if(type==="virtual"){
+    v.std=STD_FEE; v.disc=DISC_FEE[corp?"corp":"indiv"];
+    v.total = prepaid ? Math.round(v.disc*months*1.1) : 0;      // 잔금(VAT 포함 총액)
+  }else{
+    v.std=num(g("stdFee")); v.disc=num(g("discFee")); v.deposit=num(g("deposit")); v.payDay=g("payDay");
+    v.q=[g("qChair"),g("qDesk"),g("qShelf"),g("qDrawer"),g("qLock")];
+  }
+  return v;
+}
+
+/* ---------- 계약서 채우기 ---------- */
+const mo2 = m => String(m).padStart(2," ");   // 7월도 10월처럼 두 글자 폭으로 음영
+function fillResident(doc, v){
+  const s=ymd(v.start), e=ymd(v.end), sg=ymd(v.sign), yy=n=>String(n).slice(2);
+  const name = v.company || v.rep, vat = n => Math.round(n*1.1);
+  setSegs(findPara(doc,"을 :"), ["을 : ", {v:name}]);
+  fillBlanks(findPara(doc,"위 갑과 을은"), [yy(sg.y), mo2(sg.m), sg.d]);
+  fillBlanks(findPara(doc,"본 계약의 계약기간은"), [yy(s.y), mo2(s.m), s.d]);
+  fillBlanks(bodyParas(doc).find(p=>paraText(p).includes("입주 만료일")), [yy(e.y), mo2(e.m), e.d]);
+  fillBlanks(cellP(doc,0,1,1), [v.room]);
+  v.q.forEach((n,i)=>fillBlanks(cellP(doc,0,2,1,i), [n]));
+  fillBlanks(cellP(doc,1,1,1,0), [fmt(v.std)]);   fillBlanks(cellP(doc,1,1,1,1), [fmt(vat(v.std))]);
+  fillBlanks(cellP(doc,1,2,1,0), [fmt(v.disc)]);  fillBlanks(cellP(doc,1,2,1,1), [fmt(vat(v.disc))]);
+  fillBlanks(cellP(doc,1,3,1,0), [fmt(v.deposit)]);
+  fillBlanks(findPara(doc,"을은 매월"), [v.payDay]);
+  const first=q(q(q(tableAt(doc,2),"tr")[0],"tc")[0],"p");
+  fillBlanks(first[1], [name]);
+  fillBlanks(first[2], [v.rep]);
+  fillBlanks(first[12], [yy(sg.y), sg.m, sg.d]);
+  setPara(cellP(doc,2,6,2), name);
+  setSegs(cellP(doc,2,7,2), [{v:v.rep}, "     (인)"]);
+  setPara(cellP(doc,2,8,2), v.addr);
+  setPara(cellP(doc,2,9,2), v.bizNo);
+  setPara(cellP(doc,2,10,2), v.corpNo);
+  setSegs(cellP(doc,2,11,2), ["H.P : ", {v:v.phone}, "      E-mail ", {v:v.email}]);
+}
+function widenSigLabel(doc){   // 전차인 표: '사업자등록번호(주민번호)' 줄바꿈 방지 → 2열 너비 -500, 라벨 열 +500
+  const tbl=tableAt(doc,1); if(!tbl) return;
+  const D=500, gc=q(q(tbl,"tblGrid")[0]||tbl,"gridCol");
+  const setW=(el,d)=>{ const w=el.getAttributeNS(W,"w"); if(w) el.setAttributeNS(W,"w:w",String(+w+d)); };
+  if(gc.length===7){ setW(gc[2],-D); setW(gc[3],D); }
+  q(tbl,"tr").forEach((tr,ri)=>{
+    if(ri<1||ri===3||ri===4) return;            // 주소/대표 행은 병합셀이라 그대로
+    const tcs=q(tr,"tc");
+    const tw=tc=>{ const pr=q(tc,"tcPr")[0]; return pr?q(pr,"tcW")[0]:null; };
+    if(tcs[2]&&tw(tcs[2])) setW(tw(tcs[2]),-D);   // 전화번호·상호·대표 값 칸
+    if(tcs[3]&&tw(tcs[3])) setW(tw(tcs[3]),D);    // 이메일/사업자등록번호/법인등록번호 라벨 칸
+  });
+}
+function centerStamp(doc){   // 정원유니어스 도장: '(인)' 글자 한가운데에 겹쳐 찍기 (글자는 도장 위에 보임)
+  const WP="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+  const a=Array.from(doc.getElementsByTagNameNS(WP,"anchor")).find(x=>{ const d=x.getElementsByTagNameNS(WP,"docPr")[0]; return d&&d.getAttribute("name")==="그림 2"; });
+  if(!a) return;
+  const ext=a.getElementsByTagNameNS(WP,"extent")[0], cy=+ext.getAttribute("cy");
+  const mk=(tag,rel,inner)=>{ const e=doc.createElementNS(WP,"wp:"+tag); e.setAttribute("relativeFrom",rel); const c=doc.createElementNS(WP,"wp:"+inner[0]); c.textContent=inner[1]; e.appendChild(c); return e; };
+  const h=a.getElementsByTagNameNS(WP,"positionH")[0], vv=a.getElementsByTagNameNS(WP,"positionV")[0];
+  h.parentNode.replaceChild(mk("positionH","column",["align","center"]), h);
+  vv.parentNode.replaceChild(mk("positionV","paragraph",["posOffset",String(Math.round((190500-cy)/2))]), vv);
+}
+function fillVirtual(doc, v){     // 비상주 법인 양식 기준
+  const s=ymd(v.start), e=ymd(v.end), sg=ymd(v.sign);
+  const dt=d=>["  ",{v:d.y},"년 ",{v:mo2(d.m)},"월 ",{v:d.d},"일"];
+  setSegs(cellP(doc,0,1,1), ["경기 김포시 풍무로 146번길 26, 4층 (풍무동 952 프라미스 4층)     ", {v:v.room}, "호"]);
+  setSegs(cellP(doc,0,4,1), dt(s));
+  setSegs(cellP(doc,0,4,3), dt(e));
+  setSegs(cellP(doc,0,4,5), [{v:v.months},"개월"]);
+  setSegs(cellP(doc,0,6,7), v.total ? ["\\  ", {v:fmt(v.total)}, "원"] : ["\\"]);   // 잔금 원정: VAT 포함 총액
+  setSegs(cellP(doc,0,7,1), ["금"]);
+  setSegs(cellP(doc,0,7,3), ["( \\ ", {v:fmt(v.std)}, " )"]);
+  setSegs(cellP(doc,0,8,1), ["금"]);
+  setSegs(cellP(doc,0,8,3), ["( \\ ", {v:fmt(v.disc)}, " )"]);
+  if(!v.prepaid) setSegs(cellP(doc,0,7,4,1), [""]);
+  const dateP=bodyParas(doc).find(p=>/^\s*\d{4}\s*년\s*\d+\s*월\s*\d+\s*일\s*$/.test(paraText(p)));
+  setSegs(dateP, [" ",{v:sg.y},"년 ",{v:mo2(sg.m)},"월 ",{v:sg.d},"일"]);
+  widenSigLabel(doc); centerStamp(doc);
+  setPara(cellP(doc,1,4,2), v.addr);
+  setPara(cellP(doc,1,5,2), v.phone);
+  setPara(cellP(doc,1,5,4), v.email);
+  setPara(cellP(doc,1,6,2), v.company);
+  setPara(cellP(doc,1,6,4), v.bizNo);
+  setPara(cellP(doc,1,7,2), v.rep);
+  setPara(cellP(doc,1,7,4), v.corp ? v.corpNo : "");
+}
+async function buildDocx(v, hl=false){
+  HL=hl;
+  const zip = await JSZip.loadAsync(window.TEMPLATES[v.type], {base64:true});
+  const xml = await zip.file("word/document.xml").async("string");
+  const doc = new DOMParser().parseFromString(xml, "application/xml");
+  if(doc.getElementsByTagName("parsererror").length) throw new Error("계약서 XML 읽기 실패");
+  // 양식에 원래 있던 노란 음영(빈칸 표시)은 모두 제거 → 이후 바뀌는 글자에만 음영
+  Array.from(doc.getElementsByTagNameNS(W,"highlight")).forEach(h=>h.parentNode.removeChild(h));
+  (v.type==="resident" ? fillResident : fillVirtual)(doc, v);
+  const out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + new XMLSerializer().serializeToString(doc).replace(/^<\?xml[^>]*\?>\s*/, "");
+  zip.file("word/document.xml", out);
+  return zip.generateAsync({type:"blob", mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+
+/* ---------- UI ---------- */
+let renderTimer=null, renderSeq=0;
+function msg(t){ $("msg").textContent=t||""; }
+async function render(hl=true){
+  const seq=++renderSeq; syncMonthBtns();
+  try{
+    const blob=await buildDocx(vals(), hl);
+    if(seq!==renderSeq) return;
+    const box=document.createElement("div");
+    await docx.renderAsync(blob, box, null, {inWrapper:true, ignoreLastRenderedPageBreak:false, breakPages:true, useBase64URL:true});
+    if(seq!==renderSeq) return;
+    $("doc").replaceChildren(...box.childNodes);
+    // 도장은 '(인)' 글자 뒤에 깔리게 (Word의 '텍스트 뒤' 배치와 동일)
+    $("doc").querySelectorAll("p").forEach(p=>{ if(/^\s*\(인\)\s*$/.test(p.textContent) && p.querySelector("img")){ p.style.position="relative"; p.style.zIndex="0"; p.querySelectorAll("div").forEach(d=>{ if(d.querySelector("img")) d.style.zIndex="-1"; }); } });
+    msg("");
+  }catch(err){ console.error(err); msg("미리보기 오류: "+err.message); }
+}
+function schedule(){ clearTimeout(renderTimer); renderTimer=setTimeout(render,500); save(); }
+
+function autoFname(){
+  const v=vals(), f=$("fname"); if(f.dataset.manual) return;
+  const d=ymd(v.start), ds = d.y ? String(d.y).slice(2)+pad(d.m)+pad(d.d) : "";
+  const kind = v.type==="resident" ? "상주" : `비상주(${v.corp?"법인":"개인"})`;
+  f.value = `전대차계약서_${kind}_${v.company||v.rep||"고객"}${v.room?"_"+v.room:""}`;
+}
+function autoCalc(){
+  const v=vals(), res=v.type==="resident";
+  $("gResident").classList.toggle("hide", !res);
+  $("gVirtual").classList.toggle("hide", res);
+  $("rowCorpNo").classList.toggle("hide", !res && !v.corp);
+  $("lbCorpNo").textContent = res ? "법인등록번호/주민번호" : "법인등록번호";
+  $("lbCompany").textContent = (!res && !v.corp) ? "상호(선택)" : "상호";
+  $("lbBiz").textContent = res ? "사업자번호" : "사업자·주민번호";
+  if(v.start && v.months && !$("end").dataset.manual) $("end").value=calcEnd(v.start,v.months);
+  if(!$("signDate").value) $("signDate").value=iso(new Date());
+  if(res){
+    if(!$("deposit").dataset.manual) $("deposit").value = v.std ? fmt(v.std*2) : "";
+  }else{
+    $("feeInfo").textContent = `월 임대료 표준 ${fmt(v.std)}원 → 할인 ${fmt(v.disc)}원 (VAT 별도)`
+      + (v.prepaid ? ` · 선납 합계(VAT 포함) ${fmt(v.total)}원` : "");
+  }
+}
+function save(){ try{
+  const o={type:vals().type}; document.querySelectorAll("#form input:not([type=radio])").forEach(el=>{ o[el.id]=el.type==="checkbox"?el.checked:el.value; });
+  localStorage.setItem("jw_customer_draft3", JSON.stringify(o)); }catch(e){} }
+function load(){ try{
+  const o=JSON.parse(localStorage.getItem("jw_customer_draft3")||"null"); if(!o) return false;
+  document.querySelectorAll("#form input").forEach(el=>{
+    if(el.type==="radio") el.checked = el.value===o.type;
+    else if(el.id in o){ if(el.type==="checkbox") el.checked=o[el.id]; else el.value=o[el.id]; }
+  }); return true; }catch(e){ return false; } }
+
+/* ---------- 카톡 텍스트 붙여넣기 → 입력칸 자동 채움 ---------- */
+const FORM_TEMPLATE = [
+  "[정원오피스넷 비상주 계약 정보]",
+  "아래 항목을 채워서 보내주세요.(없으면 비워주세요)",
+  "1. 상호(법인명):",
+  "2. 대표자 성명:",
+  "3. 사업자등록번호(없으면 주민등록번호):",
+  "4. 법인등록번호(법인사업자만):",
+  "5. 사업장 주소(없을시집주소):",
+  "6. 연락처:",
+  "7. 이메일:",
+  "8. 계약 시작 희망일(월/일): /",
+  "9. 계약 기간(개월):"
+].join("\n");
+const NUM_KEYS = ["company","rep","bizNo","corpNo","addr","phone","email","start","months"];
+const KEY_LABEL = {company:"상호",rep:"대표자",bizNo:"사업자·주민번호",corpNo:"법인등록번호",addr:"주소",phone:"연락처",email:"이메일",start:"시작일",months:"개월수"};
+const KEY_RE = [   // 순서 중요(구체적인 것 먼저)
+  ["corpNo",/법인\s*(등록)?\s*번호/],["bizNo",/사업자|주민/],["email",/메일|e-?mail/i],
+  ["phone",/연락처|전화|휴대폰|핸드폰|H\.?\s?P/i],["addr",/주소|소재지/],
+  ["months",/기간|개월/],["start",/시작|희망|입주/],["company",/상호|법인명|회사|업체/],["rep",/대표|성명|이름/]
+];
+const keyOfLabel = s => { for(const [k,re] of KEY_RE) if(re.test(s)) return k; return null; };
+const digits = s => String(s||"").replace(/\D/g,"");
+function normVal(k, v){
+  v=v.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g,"").trim();
+  const d=digits(v);
+  if(k==="phone"){ if(d.length===11) return `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`;
+    if(d.length===10) return d.startsWith("02") ? `${d.slice(0,2)}-${d.slice(2,6)}-${d.slice(6)}` : `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`; return v; }
+  if(k==="bizNo"){ if(d.length===10) return `${d.slice(0,3)}-${d.slice(3,5)}-${d.slice(5)}`; if(d.length===13) return `${d.slice(0,6)}-${d.slice(6)}`; return v; }
+  if(k==="corpNo"){ return d.length===13 ? `${d.slice(0,6)}-${d.slice(6)}` : v; }
+  if(k==="email"){ const m=/[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+/.exec(v); return m?m[0]:v; }
+  return v;
+}
+function parseDateKo(s){
+  let m, y, mo, d;
+  if((m=/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/.exec(s))){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m=/(\d{2})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/.exec(s))){ y=2000+ +m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m=/(\d{1,2})\s*[월\/.\-]\s*(\d{1,2})/.exec(s))){
+    mo=+m[1]; d=+m[2]; const now=new Date(); y=now.getFullYear();
+    if(new Date(y,mo-1,d) < new Date(now.getTime()-30*864e5)) y++;
+  } else return "";
+  return (mo>=1&&mo<=12&&d>=1&&d<=31) ? `${y}-${pad(mo)}-${pad(d)}` : "";
+}
+function parseKakao(text){
+  const out={}, lines=String(text||"").replace(/\r/g,"").split("\n");
+  let last=null;
+  for(let raw of lines){
+    let line=raw.replace(/^\s*\[[^\]]+\]\s*\[(오전|오후)\s*\d{1,2}:\d{2}\]\s*/,"").trim();   // 카톡 [이름] [오후 3:21] 머리말 제거
+    if(!line) continue;
+    let key=null, val=null, m;
+    if((m=/^([1-9])\s*[.)．]\s*(.*)$/.exec(line))){
+      const n=+m[1], rest=m[2], ci=rest.search(/[:：]/);
+      if(ci>=0){ key=keyOfLabel(rest.slice(0,ci)) || NUM_KEYS[n-1]; val=rest.slice(ci+1); }
+      else { key=NUM_KEYS[n-1]; val=rest.replace(/^(상호\(법인명\)|상호|법인명|대표자\s*성명|대표자|사업자등록번호|주민등록번호|법인등록번호|사업장\s*주소|주소|연락처|이메일|계약\s*시작\s*희망일|계약\s*기간)\s*/,""); }
+    }else if((m=/^([^:：]{1,20})[:：]\s*(.*)$/.exec(line)) && keyOfLabel(m[1])){
+      key=keyOfLabel(m[1]); val=m[2];
+    }else if(last==="addr" && !/^\[/.test(line)){ out.addr=(out.addr+" "+line).trim(); continue; }
+    else continue;
+    last=key;
+    if(key && val!==null && !/^\(.*\)$/.test(val.trim())) out[key]=normVal(key,val);   // "(법인만)" 같은 안내문만 남은 칸은 빈칸 취급
+  }
+  return out;
+}
+function applyParsed(p){
+  const set=(id,val)=>{ $(id).value=val||""; };
+  document.querySelector("input[name=type][value=virtual]").checked=true;
+  set("company",p.company); set("rep",p.rep); set("bizNo",p.bizNo); set("corpNo",p.corpNo);
+  set("addr",p.addr); set("phone",p.phone); set("email",p.email);
+  $("isCorp").checked = !!digits(p.corpNo) || /주식회사|\(주\)|㈜|유한회사|법인/.test(p.company||"");
+  const sd=parseDateKo(p.start||""); if(sd){ $("start").value=sd; $("end").dataset.manual=""; }
+  const mm=/(\d+)/.exec(p.months||""); if(mm){ $("months").value=/년/.test(p.months)&&!/개월/.test(p.months) ? +mm[1]*12 : +mm[1]; $("end").dataset.manual=""; }
+  $("fname").dataset.manual="";
+  autoCalc(); autoFname(); schedule();
+  const got=Object.keys(KEY_LABEL).filter(k=>p[k]).map(k=>KEY_LABEL[k]);
+  const miss=Object.keys(KEY_LABEL).filter(k=>!p[k] && !(k==="corpNo"&&!$("isCorp").checked) && !(k==="company"&&!$("isCorp").checked) && !["start","months"].includes(k)).map(k=>KEY_LABEL[k]);
+  $("pasteInfo").textContent = got.length ? `반영: ${got.join(", ")}` + (miss.length?` / 비어 있음: ${miss.join(", ")}`:"") : "인식된 항목이 없어요. '고객용 양식 복사'로 보낸 양식 형태인지 확인해 주세요.";
+}
+function handleText(text){ if(String(text||"").trim()){ $("paste").value=text; applyParsed(parseKakao(text)); } }
+function bindPaste(){
+  $("paste").addEventListener("paste",()=>setTimeout(()=>handleText($("paste").value),0));
+  $("btnApply").onclick=()=>handleText($("paste").value);
+  $("btnTpl").onclick=async()=>{
+    try{ await navigator.clipboard.writeText(FORM_TEMPLATE); $("pasteInfo").textContent="고객용 양식을 복사했어요. 카톡에 붙여넣어 보내세요."; }
+    catch(e){ $("paste").value=FORM_TEMPLATE; $("paste").select(); $("pasteInfo").textContent="양식을 위 칸에 넣었어요. 선택된 상태에서 Ctrl+C 로 복사하세요."; }
+  };
+  // 화면 어디서든 붙여넣기 (입력칸에 커서가 있을 땐 그 칸에 그대로 붙여넣기)
+  document.addEventListener("paste",e=>{
+    const a=document.activeElement; if(a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+    const cd=e.clipboardData; if(!cd) return;
+    const t=cd.getData("text/plain");
+    if(t){ e.preventDefault(); handleText(t); }
+    else if(Array.from(cd.items||[]).some(i=>i.type.startsWith("image/"))){ $("pasteInfo").textContent="이미지는 읽지 않아요. 카톡에서 글자를 복사(드래그 후 Ctrl+C)해서 붙여넣어 주세요."; }
+  });
+  // 끌어다 놓기: 선택한 글자 또는 .txt 파일(카톡 대화 내보내기)
+  const stop=e=>{ e.preventDefault(); };
+  ["dragenter","dragover"].forEach(ev=>document.addEventListener(ev,e=>{ stop(e); $("paste").classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev=>document.addEventListener(ev,e=>{ if(ev==="drop"||e.target===document.documentElement) $("paste").classList.remove("drag"); }));
+  document.addEventListener("drop",async e=>{
+    stop(e); const dt=e.dataTransfer; if(!dt) return;
+    const f=Array.from(dt.files||[]).find(f=>/\.txt$/i.test(f.name)||f.type==="text/plain");
+    if(f){ handleText(await f.text()); return; }
+    const t=dt.getData("text/plain"); if(t){ handleText(t); return; }
+    if(dt.files && dt.files.length) $("pasteInfo").textContent="이미지·문서는 읽지 않아요. 카톡 글자를 복사해 붙여넣어 주세요.";
+  });
+}
+
+function syncMonthBtns(){ document.querySelectorAll(".mbtn").forEach(b=>b.classList.toggle("on", b.dataset.m===$("months").value)); }
+function bind(){
+  document.querySelectorAll(".mbtn").forEach(b=>b.onclick=()=>{ $("months").value=b.dataset.m; $("months").dispatchEvent(new Event("input",{bubbles:true})); });
+  $("months").addEventListener("input",syncMonthBtns); syncMonthBtns();
+  bindPaste();
+  document.querySelectorAll("#form input").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      if(["end","signDate","deposit","fname"].includes(el.id)) el.dataset.manual="1";
+      if(["start","months"].includes(el.id)) $("end").dataset.manual="";
+      if(el.id==="stdFee") $("deposit").dataset.manual="";
+      if(["stdFee","discFee","deposit"].includes(el.id)){ const n=num(el.value); el.value=n?fmt(n):""; }
+      if(el.type==="radio") $("fname").dataset.manual="";
+      autoCalc(); if(el.id!=="fname") autoFname();
+      schedule();
+    });
+  });
+  // 도우미 서버(run.bat)로 열렸으면 바탕화면 저장 + PDF 자동 변환, 아니면 일반 다운로드
+  const viaServer = location.protocol==="http:";
+  const send=async(kind)=>{
+    const blob=await buildDocx(vals(), true);   // 노란 음영 포함
+    const name=$("fname").value.trim()||"전대차계약서";
+    if(!viaServer){
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name+".docx"; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+      msg("서버 없이 열려서 다운로드 폴더로 저장했어요. 바탕화면 저장·PDF 자동 변환은 run.bat 으로 열어주세요."); return;
+    }
+    msg(kind==="pdf" ? "저장하고 PDF로 변환하는 중… (Word 사용, 5~10초)" : "저장하는 중…");
+    ["btnPdf","btnDocx"].forEach(id=>$(id).disabled=true);
+    try{
+      const r=await fetch("/api/"+kind+"?name="+encodeURIComponent(name),{method:"POST",body:blob});
+      const j=await r.json();
+      if(!j.ok) throw new Error(j.error||"저장 실패");
+      const base=f=>f.split("\\").pop();
+      msg("✔ 바탕화면에 저장했어요: "+(j.pdf?base(j.pdf)+" (+ Word 파일)":base(j.docx)));
+    }catch(e){ msg("저장 실패: "+e.message); }
+    ["btnPdf","btnDocx"].forEach(id=>$(id).disabled=false);
+  };
+  $("btnDocx").onclick=()=>send("docx");
+  $("btnPdf").onclick=()=>send("pdf");
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const had=load();
+  bind();
+  if(!had) $("start").value=iso(new Date());
+  else ["end","deposit","fname"].forEach(id=>{ if($(id).value) $(id).dataset.manual="1"; });
+  $("signDate").value=iso(new Date());   // 작성일은 항상 오늘이 기본 (수정 가능)
+  autoCalc(); autoFname();
+  render();
+});
+</script>
+</body>
+</html>
