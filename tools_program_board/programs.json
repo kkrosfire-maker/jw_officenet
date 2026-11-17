@@ -99,16 +99,7 @@
       "group": "온라인마케팅",
       "icon": "icons/custom2.png",
       "type": "url",
-      "url": "https://yonseiyesclinic-mo4.imweb.me/"
-    },
-    {
-      "id": "custom3",
-      "name": "네이버_스마트플레이스",
-      "desc": "스마트플레이스",
-      "group": "온라인마케팅",
-      "icon": "icons/custom3.png",
-      "type": "url",
-      "url": "https://new.smartplace.naver.com/"
+      "url": "https://yyim.co.kr/"
     },
     {
       "id": "custom4",

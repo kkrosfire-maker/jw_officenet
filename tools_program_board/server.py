@@ -326,7 +326,7 @@ def open_board():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
         pos = center_on_display(1, 903, 1008) or (None, None)  # 1번 모니터 가운데
         api = _board_api()
-        api._window = win = webview.create_window("정원유니어스 프로그램 보드", url, width=903, height=1008, x=pos[0], y=pos[1], js_api=api)
+        api._window = win = webview.create_window("정원유니어스 프로그램 보드", url, width=903, height=1008, x=pos[0], y=pos[1], js_api=api, resizable=False)
         webview.start(icon=os.path.join(HERE, "board.ico"))
     except Exception:
         webbrowser.open(url)
