@@ -123,6 +123,7 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
   <div class="btns">
     <button id="btnPdf">PDF 저장<br>(바탕화면)</button>
     <button id="btnDocx" class="sub">Word만 저장</button>
+    <button id="btnNew" class="sub" title="입력한 내용을 모두 지우고 새 화면으로 시작">새 화면</button>
     <button id="btnCancel" class="danger" title="방금 등록한 고객을 고객list·officeboard에서 지웁니다">등록 취소</button>
   </div>
 </section>
@@ -408,11 +409,13 @@ function autoCalc(){
       + (v.prepaid ? ` · 선납 합계(VAT 포함) ${fmt(v.total)}원` : "");
   }
 }
+/* 임시저장은 sessionStorage: 새로고침은 유지, 창을 닫고 다시 열면 새 화면 */
 function save(){ try{
   const o={type:vals().type}; document.querySelectorAll("#form input:not([type=radio])").forEach(el=>{ o[el.id]=el.type==="checkbox"?el.checked:el.value; });
-  localStorage.setItem("jw_customer_draft3", JSON.stringify(o)); }catch(e){} }
+  sessionStorage.setItem("jw_customer_draft3", JSON.stringify(o)); }catch(e){} }
 function load(){ try{
-  const o=JSON.parse(localStorage.getItem("jw_customer_draft3")||"null"); if(!o) return false;
+  try{ localStorage.removeItem("jw_customer_draft3"); }catch(e){}     // 예전 방식(창을 닫아도 남던) 임시저장 정리
+  const o=JSON.parse(sessionStorage.getItem("jw_customer_draft3")||"null"); if(!o) return false;
   document.querySelectorAll("#form input").forEach(el=>{
     if(el.type==="radio") el.checked = el.value===o.type;
     else if(el.id in o){ if(el.type==="checkbox") el.checked=o[el.id]; else el.value=o[el.id]; }
@@ -681,6 +684,13 @@ function bind(){
   $("btnXls").onclick=async()=>{
     if(!viaServer){ msg("엑셀 열기는 run.bat 으로 열어야 해요."); return; }
     try{ const j=await (await fetch("/api/open-xlsx")).json(); msg(j.ok?"고객list 엑셀을 열었어요.":"엑셀 열기 실패: "+j.error); }catch(e){ msg("엑셀 열기 실패: "+e.message); }
+  };
+  // ---- 새 화면: 입력 내용을 모두 지우고 처음 상태로 ----
+  $("btnNew").onclick=async()=>{
+    const a=await modal("새 화면","입력한 내용을 모두 지우고 새로 시작할까요?<br>(이미 저장·등록한 내용은 그대로 남아요.)",[{label:"예, 새 화면",value:"y"},{label:"아니요",value:"n",sub:true}]);
+    if(a!=="y") return;
+    try{ sessionStorage.removeItem("jw_customer_draft3"); }catch(e){}
+    location.reload();
   };
   // ---- 등록 취소: 같은 고객을 고객list·officeboard 에서 지움 (확인 후) ----
   $("btnCancel").onclick=async()=>{

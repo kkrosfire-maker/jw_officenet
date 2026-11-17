@@ -7,8 +7,9 @@ echo ===== 정원오피스넷 고객정보 입력 설치 =====
 echo.
 
 set PY=
-where python >nul 2>nul && set PY=python
-if not defined PY where py >nul 2>nul && set PY=py -3
+py -3 -c "import sys" >nul 2>nul && set PY=py -3
+if not defined PY python -c "import sys" >nul 2>nul && set PY=python
+if not defined PY python3 -c "import sys" >nul 2>nul && set PY=python3
 if not defined PY goto nopython
 
 echo [1/5] Python 확인
@@ -53,9 +54,11 @@ pause
 exit /b 0
 
 :nopython
-echo [오류] Python이 설치되어 있지 않아요.
+echo [오류] 사용할 수 있는 Python을 찾지 못했어요.
+echo   (Windows 스토어 안내용 python 은 진짜 Python이 아니라서 쓸 수 없어요.)
 echo   https://www.python.org/downloads/ 에서 설치하세요. 설치할 때 'Add python.exe to PATH' 를 꼭 체크하세요.
 echo   설치 후 이 설치.bat 을 다시 실행하세요.
+echo   이미 설치했는데도 이 화면이 나오면: 설정 - 앱 - 고급 앱 설정 - 앱 실행 별칭 에서 python.exe 와 python3.exe 를 끄세요.
 start "" https://www.python.org/downloads/
 pause
 exit /b 1
