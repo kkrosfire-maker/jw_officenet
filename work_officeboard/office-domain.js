@@ -66,6 +66,12 @@ function displayVaId(id) {
   return m ? `${m[1]}(${m[2]})` : id;
 }
 
+// 비상주 고객 ID 표시용: 저장된 ID 그대로(0을 줄이지 않음), 접미사만 "A018-2" → "A018(2)"
+function displayVaCustomerId(id) {
+  const m = String(id).match(/^(.+)-(\d+)$/);
+  return m ? `${m[1]}(${m[2]})` : String(id);
+}
+
 // 신규 등록 시 baseId가 이미 존재하면 충돌 없는 다음 키 반환
 // A018 → A018, A018 이미 있으면 → A018-2, A018-2도 있으면 → A018-3
 function nextSuffixedVaId(baseId, data) {

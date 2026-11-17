@@ -102,10 +102,12 @@ header h1 { font-size: 20px; font-weight: 700; }
 .stat-label { font-size: 13px; color: #aaa; margin-top: 2px; }
 .stat-card-btn { cursor: pointer; }
 .stat-card-btn:hover { background: #555; }
-.virtual-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.virtual-table th { background: #f5f5f5; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e0e0e0; font-size: 12px; color: #888; font-weight: 700; white-space: nowrap; }
-.virtual-table td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; color: #333; white-space: nowrap; }
+.virtual-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+.virtual-table th { position: sticky; top: 0; z-index: 2; background: #f5f5f5; padding: 6px 6px; text-align: left; border-bottom: 2px solid #e0e0e0; font-size: 12px; color: #888; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.virtual-table td { padding: 5px 6px; border-bottom: 1px solid #f0f0f0; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; }
 .virtual-table tbody tr:hover td { background: #f5f9ff; cursor: pointer; }
+.virtual-table .va-resizer { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; user-select: none; }
+.virtual-table .va-resizer:hover { background: rgba(84,110,122,0.35); }
 
 /* Type summary */
 .type-summary {

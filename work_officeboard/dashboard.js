@@ -27,13 +27,35 @@ let _dataLoaded = false;
 
 function getAllData() { return _DATA; }
 
+// 저장 중 화면을 어둡게 덮어 반영 중임을 표시 (클릭도 막아 중복 저장 방지)
+function _setSavingOverlay(on) {
+  var el = document.getElementById('saving-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'saving-overlay';
+    el.style.cssText = 'display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);' +
+      'align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font-size:16px;font-weight:700;cursor:progress;';
+    el.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;' +
+      'border-radius:50%;animation:saving-spin 0.8s linear infinite;"></div><div>저장 중입니다...</div>' +
+      '<style>@keyframes saving-spin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(el);
+  }
+  el.style.display = on ? 'flex' : 'none';
+}
+
 async function store(data, force) {
   if (!_dataLoaded && !force) throw new Error('데이터 로드 미완료 — 새로고침 후 시도해주세요.');
-  const res = await fetch('/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+  _setSavingOverlay(true);
+  let res;
+  try {
+    res = await fetch('/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  } finally {
+    _setSavingOverlay(false);
+  }
   // 서버가 잠들어있다 깨어나는 중이면 200 OK로 안내 페이지(HTML)를 대신 돌려줄 수 있다.
   // 실제 저장 성공은 204여야만 인정 — 그 외엔 전부 저장 실패로 취급한다.
   if (res.status !== 204) throw new Error('서버 저장 실패 (' + res.status + ') — 서버가 깨어나는 중일 수 있습니다. 잠시 후 다시 시도해주세요.');
@@ -493,7 +515,7 @@ function openVirtualAdd(id, fromList) {
   _editingVaId = id || null;
   _vaCameFromList = !!fromList;
 
-  document.getElementById('virtual-add-title').textContent = id ? (displayVaId(id) + ' 수정') : '비상주 신규 등록';
+  document.getElementById('virtual-add-title').textContent = id ? (displayVaCustomerId(id) + ' 수정') : '비상주 신규 등록';
   var idInput = document.getElementById('va-id');
   idInput.value      = newId;
   idInput.readOnly   = false;
@@ -623,7 +645,7 @@ async function saveVirtualCustomer() {
     closeVirtualAdd();
     renderFloor();
     renderStats();
-    toast(finalId !== id ? `${displayVaId(finalId)}로 저장되었습니다.` : '저장되었습니다.');
+    toast(finalId !== id ? `${displayVaCustomerId(finalId)}로 저장되었습니다.` : '저장되었습니다.');
   } catch(e) { toast('저장 실패 — 네트워크를 확인해주세요.'); }
 }
 
@@ -711,7 +733,7 @@ function renderStats() {
     const col = a.diff < 0 ? '#c62828' : a.diff <= 7 ? '#e91e63' : '#e65100';
     const lbl = a.diff < 0 ? '계약만료' : `만료 D-${a.diff}`;
     return `<div class="stat-card stat-card-btn" style="border:1.5px solid ${col};background:#fff;" onclick="openVirtualAdd('${a.id}')">
-      <div class="stat-value" style="color:${col};font-size:16px;">${displayVaId(a.id)}</div>
+      <div class="stat-value" style="color:${col};font-size:16px;">${displayVaCustomerId(a.id)}</div>
       <div class="stat-label" style="color:${col};">${lbl}</div>
     </div>`;
   }).join('');
@@ -802,13 +824,49 @@ function updateMonthDisplay() {
 }
 
 // ── 비상주 목록 ─────────────────────────────────────
+// 계약 상태 표시(라벨·색·정렬순위): 계약중=파랑, 종료 1개월 이내/경과=빨강 '만료임박', 계약해지·만료=회색
+function _vaStatusInfo(d) {
+  const cs = d.contractStatus || '계약중';
+  if (cs === '계약중') {
+    return daysLeft(d.end) !== null
+      ? { label: '만료임박', color: '#d32f2f', rank: 0 }
+      : { label: cs, color: '#1976d2', rank: 1 };
+  }
+  return { label: cs, color: '#9e9e9e', rank: cs === '계약만료' ? 2 : 3 };
+}
+
+// 열별 정렬 값 (문자열은 한글/숫자 자연 정렬, 금액·상태는 숫자)
+function _vaSortValue(col, id, d) {
+  switch (col) {
+    case 'id':     return id;
+    case 'type':   return d.isCorp ? '법인' : '개인';
+    case 'name':   return d.name || '';
+    case 'tenant': return d.tenantName || '';
+    case 'phone':  return (d.phone || '').replace(/\D/g, '');
+    case 'start':  return d.start || '';
+    case 'end':    return d.end || '';
+    case 'rent':   return d.rent || 0;
+    case 'status': return _vaStatusInfo(d).rank;
+  }
+  return '';
+}
+
 function _vaSortRooms(rooms, data) {
   const { col, asc } = _vaSort;
   // numeric:true → A9 < A10, A018 < A018-2 처럼 번호를 숫자로 비교
   const byId = (a, b) => a.localeCompare(b, 'en', { numeric: true });
   return rooms.slice().sort((a, b) => {
-    let c = col === 'id' ? byId(a, b) : (data[a].start || '').localeCompare(data[b].start || '');
-    if (c === 0) c = byId(a, b); // 동률이면 ID 순으로 고정
+    const va = _vaSortValue(col, a, data[a]), vb = _vaSortValue(col, b, data[b]);
+    let c;
+    if (col === 'id') c = byId(a, b);
+    else if (typeof va === 'number') c = va - vb;
+    else {
+      // 빈 값은 정렬 방향과 상관없이 항상 맨 아래
+      if (!va && vb) return 1;
+      if (va && !vb) return -1;
+      c = String(va).localeCompare(String(vb), 'ko', { numeric: true });
+    }
+    if (c === 0) return byId(a, b); // 동률이면 ID 오름차순으로 고정
     return asc ? c : -c;
   });
 }
@@ -829,7 +887,6 @@ function renderVirtualList(showInactive) {
   );
   const content = document.getElementById('virtual-list-content');
 
-  const statusColor = { '계약중': '#1b2838', '계약만료': '#e65100', '계약해지': '#c62828' };
   const addBtn = `<div style="margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <button class="btn-excel" style="background:#546e7a;" onclick="closeVirtualModal();openVirtualAdd(null, true);">&#43; 새 고객 추가</button>
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;user-select:none;">
@@ -851,31 +908,68 @@ function renderVirtualList(showInactive) {
       const d   = data[r];
       const cs  = d.contractStatus || '계약중';
       const rowStyle = !isActiveContract(d) ? ' style="opacity:0.5;"' : '';
+      const nm  = _vaEsc(d.name || '-');
+      const st  = _vaStatusInfo(d);
       return `<tr${rowStyle} onclick="closeVirtualModal();openVirtualAdd('${r}', true)">
-        <td><strong>${displayVaId(r)}</strong></td>
+        <td><strong>${displayVaCustomerId(r)}</strong></td>
         <td>${d.isCorp ? '법인' : '개인'}</td>
-        <td>${d.name || '-'}</td>
-        <td>${d.tenantName || '-'}</td>
+        <td title="${nm}">${nm}</td>
+        <td>${_vaEsc(d.tenantName || '-')}</td>
         <td>${d.phone || '-'}</td>
         <td>${d.start || '-'}</td>
         <td>${d.end || '-'}</td>
         <td>${fmtWon(d.rent) || '-'}</td>
-        <td><span style="color:${statusColor[cs]||'#1b2838'};font-weight:700;">${cs}</span></td>
+        <td><span style="color:${st.color};font-weight:700;">${st.label}</span></td>
       </tr>`;
     }).join('');
     const arrow = (col) => _vaSort.col === col ? (_vaSort.asc ? ' ▲' : ' ▼') : '';
-    const thStyle = 'cursor:pointer;user-select:none;';
-    content.innerHTML = addBtn + `<table class="virtual-table">
+    const sortable = 'cursor:pointer;user-select:none;';
+    // 모든 열 제목 클릭 → 해당 열 오름/내림차순 (상호명 오른쪽 경계에만 폭 조절 핸들)
+    const th = (i, col, label) =>
+      `<th style="${sortable}" onclick="_vaSortToggle('${col}')">${label}${arrow(col)}${i === 2 ? `<span class="va-resizer" onmousedown="_vaStartResize(event, ${i})" onclick="event.stopPropagation()"></span>` : ''}</th>`;
+    content.innerHTML = addBtn + `<table class="virtual-table" id="va-table" style="width:${_vaColW.reduce((a, b) => a + b, 0)}px;">
+      <colgroup>${_vaColW.map(w => `<col style="width:${w}px;">`).join('')}</colgroup>
       <thead><tr>
-        <th style="${thStyle}" onclick="_vaSortToggle('id')">ID${arrow('id')}</th>
-        <th>구분</th>
-        <th>상호명</th><th>입주자</th><th>연락처</th>
-        <th style="${thStyle}" onclick="_vaSortToggle('start')">계약시작${arrow('start')}</th>
-        <th>계약종료</th><th>계약금액(원)</th><th>계약상태</th>
+        ${th(0, 'id', 'ID')}${th(1, 'type', '구분')}${th(2, 'name', '상호명')}${th(3, 'tenant', '입주자')}${th(4, 'phone', '연락처')}
+        ${th(5, 'start', '계약시작')}${th(6, 'end', '계약종료')}${th(7, 'rent', '계약금액(원)')}${th(8, 'status', '계약상태')}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
+}
+
+// ── 비상주 목록 열 폭 (상호명 오른쪽 경계 드래그로 폭 조절, 브라우저에 기억) ──
+// 상호명 기본 폭 120px ≈ 한글 8자
+const _VA_DEFAULT_COL_W = [64, 46, 120, 72, 112, 92, 92, 92, 70];
+let _vaColW = (function () {
+  try {
+    const s = JSON.parse(localStorage.getItem('vaColW2') || 'null');
+    if (Array.isArray(s) && s.length === _VA_DEFAULT_COL_W.length && s.every(n => n >= 30)) return s;
+  } catch (e) {}
+  return _VA_DEFAULT_COL_W.slice();
+})();
+
+function _vaEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _vaStartResize(e, idx) {
+  e.preventDefault(); e.stopPropagation();
+  const startX = e.clientX, startW = _vaColW[idx];
+  const t = document.getElementById('va-table');
+  const cols = t.querySelectorAll('col');
+  function move(ev) {
+    _vaColW[idx] = Math.max(36, startW + ev.clientX - startX);
+    cols[idx].style.width = _vaColW[idx] + 'px';
+    t.style.width = _vaColW.reduce((a, b) => a + b, 0) + 'px';
+  }
+  function up() {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    try { localStorage.setItem('vaColW2', JSON.stringify(_vaColW)); } catch (err) {}
+  }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
 }
 
 function showVirtualList() {
