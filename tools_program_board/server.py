@@ -46,7 +46,24 @@ def browse():
     return out.replace("/", "\\")
 
 
+_last_launch = {}  # 프로그램 id -> 마지막 실행 시각. 더블클릭으로 같은 프로그램이 두 번 뜨는 것을 막는다
+_launch_lock = threading.Lock()
+LAUNCH_COOLDOWN = 5  # 초
+
+
 def launch(p):
+    """실행했으면 True, 방금 실행해서 건너뛰었으면 False."""
+    import time
+    with _launch_lock:
+        now = time.time()
+        if now - _last_launch.get(p["id"], 0) < LAUNCH_COOLDOWN:
+            return False
+        _last_launch[p["id"]] = now
+    _launch(p)
+    return True
+
+
+def _launch(p):
     if p.get("type") == "url":
         webbrowser.open(p["url"])
         return
@@ -160,8 +177,8 @@ class H(BaseHTTPRequestHandler):
         if not prog:
             return self.send(404, b'{"ok":false,"error":"unknown"}')
         try:
-            launch(prog)
-            self.send(200, b'{"ok":true}')
+            started = launch(prog)
+            self.send(200, json.dumps({"ok": True, "skipped": not started}).encode())
         except Exception as e:
             self.send(500, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False).encode())
 

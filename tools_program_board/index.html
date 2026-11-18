@@ -158,7 +158,10 @@ syncHH();addEventListener('resize',syncHH);
 let tt;
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');try{t.hidePopover();t.showPopover()}catch(e){}clearTimeout(tt);tt=setTimeout(()=>{t.className='';try{t.hidePopover()}catch(e){}},err?4000:2200)}
 
+const launching=new Set(); // 더블클릭 등으로 같은 프로그램 요청이 겹치지 않게
 async function launch(p){
+  if(launching.has(p.id))return;
+  launching.add(p.id);setTimeout(()=>launching.delete(p.id),5000);
   try{
     const r=await fetch('/api/launch',{method:'POST',body:p.id});
     const j=await r.json();
