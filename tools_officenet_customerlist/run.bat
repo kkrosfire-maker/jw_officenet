@@ -10,5 +10,5 @@ if not defined PYEXE (
   pause
   exit /b 1
 )
-powershell -NoProfile -Command "try{(Invoke-WebRequest http://127.0.0.1:8771/api/ping -UseBasicParsing -TimeoutSec 1)|Out-Null}catch{Start-Process %PYEXE% -ArgumentList '%PYARG%' -WorkingDirectory '%~dp0' -WindowStyle Hidden; Start-Sleep -Seconds 1}"
+powershell -NoProfile -Command "Start-Process %PYEXE% -ArgumentList '%PYARG%' -WorkingDirectory '%~dp0' -WindowStyle Hidden; Start-Sleep -Seconds 2"
 start "" chrome "http://127.0.0.1:8771/index.html" 2>nul || start "" "http://127.0.0.1:8771/index.html"

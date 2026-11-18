@@ -37,7 +37,9 @@ class H(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
-        if u.path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP})
+        if u.path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP, "dir": HERE})
+        if u.path == "/api/quit":      # 다른 폴더(옛 버전)의 서버가 새 서버에게 자리를 비켜줄 때 사용
+            self.reply(200, {"ok": True}); threading.Timer(0.3, lambda: os._exit(0)).start(); return
         if u.path == "/api/pick":
             try:
                 kind = "pdf" if q.get("kind", ["pdf"])[0] == "pdf" else "docx"
@@ -114,8 +116,20 @@ class H(SimpleHTTPRequestHandler):
         except Exception as e:
             self.reply(500, {"ok": False, "error": str(e)})
 
-if __name__ == "__main__":
+def _stop_old():
+    """같은 포트에 다른 폴더의 서버가 떠 있으면(옛 버전) 종료시킨다. 같은 폴더면 False."""
+    import urllib.request, time
     try:
-        ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
-    except OSError:
-        sys.exit(0)   # 이미 실행 중
+        j = json.load(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/ping", timeout=2))
+        if os.path.normcase(j.get("dir", "")) == os.path.normcase(HERE): return False
+        urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/quit", timeout=2).read(); time.sleep(1.2); return True
+    except Exception:
+        return False
+
+if __name__ == "__main__":
+    for attempt in range(2):
+        try:
+            ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
+        except OSError:
+            if attempt == 0 and _stop_old(): continue
+            sys.exit(0)   # 이미 실행 중

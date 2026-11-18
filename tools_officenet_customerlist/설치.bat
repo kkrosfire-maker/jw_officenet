@@ -44,8 +44,14 @@ echo   OK: %XLSX%
 echo.
 
 echo [5/5] 바탕화면 바로가기 만들기
-powershell -NoProfile -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\고객정보 입력.lnk'); $s.TargetPath='%~dp0run.bat'; $s.WorkingDirectory='%~dp0'; $s.Save()"
-if errorlevel 1 (echo   바로가기 만들기 실패 - run.bat 을 직접 실행하세요.) else (echo   바탕화면에 '고객정보 입력' 바로가기를 만들었어요.)
+set LNK=
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$d=[Environment]::GetFolderPath('Desktop'); $l=Join-Path $d '고객정보 입력.lnk'; $s=(New-Object -ComObject WScript.Shell).CreateShortcut($l); $s.TargetPath='%~dp0run.bat'; $s.WorkingDirectory='%~dp0'; $s.Save(); $l"`) do set LNK=%%P
+if defined LNK if exist "%LNK%" (
+  echo   바로가기를 만들었어요: %LNK%
+  echo   ^(내 PC의 '바탕화면' 폴더가 OneDrive 안에 있으면 그쪽에 만들어져요^)
+) else (
+  echo   바로가기 만들기 실패 - %~dp0run.bat 을 직접 실행하거나 우클릭 - 바로가기 만들기 를 쓰세요.
+)
 echo.
 echo ===== 설치 완료. 바탕화면의 '고객정보 입력' 또는 run.bat 으로 실행하세요 =====
 echo 처음 저장할 때 officeboard 비밀번호를 한 번 물어봐요.
