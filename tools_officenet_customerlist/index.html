@@ -642,13 +642,14 @@ function bind(){
       setTimeout(()=>URL.revokeObjectURL(a.href),5000);
       msg("서버 없이 열려서 다운로드 폴더로 저장했어요. 바탕화면 저장·PDF 자동 변환·대시보드 저장은 run.bat 으로 열어주세요."); return;
     }
-    let pickPath="";
+    let pickPath="", pickWarn="";
     try{
-      const pj=await (await fetch("/api/pick?kind="+kind+"&name="+encodeURIComponent(name))).json();
-      if(!pj.ok){ msg("저장 위치 창을 열지 못했어요: "+(pj.error||"")); return; }
-      if(!pj.path){ msg("저장을 취소했어요."); return; }
-      pickPath=pj.path;
-    }catch(e){ msg("저장 위치 창을 열지 못했어요: "+e.message); return; }
+      const r0=await fetch("/api/pick?kind="+kind+"&name="+encodeURIComponent(name));
+      const pj=await r0.json();
+      if(!pj.ok) pickWarn="저장 위치 창을 열지 못해 바탕화면에 저장했어요 ("+(pj.error||"원인 불명").trim().split("\n").pop()+")";
+      else if(!pj.path){ msg("저장을 취소했어요."); return; }
+      else pickPath=pj.path;
+    }catch(e){ pickWarn="저장 위치 창을 쓸 수 없어(서버가 옛 버전일 수 있어요) 바탕화면에 저장했어요"; }
     busy(kind==="pdf" ? "PDF로 변환하는 중이에요… 끝날 때까지 기다려 주세요 (5~10초)" : "Word 파일을 저장하는 중…");
     let fileMsg;
     try{
@@ -658,7 +659,7 @@ function bind(){
       const base=f=>f.split("\\").pop();
       fileMsg="✔ 저장했어요: "+(j.pdf||j.docx)+(j.pdf?" (+ Word 파일)":"");
     }catch(e){ idle(); msg("저장 실패: "+e.message); return; }
-    idle(); msg(fileMsg);
+    idle(); if(pickWarn) fileMsg=pickWarn+"\n"+fileMsg; msg(fileMsg);
     // 2단계: 공유오피스 대시보드(고객list 엑셀·officeboard)에 저장할지 묻는다
     const useOb=vals().type==="virtual";
     const ask=await modal("공유오피스 대시보드에 저장할까요?","방금 만든 계약서 내용을 <b>"+(useOb?"고객list 엑셀과 officeboard":"고객list 엑셀")+"</b>에 저장해요.<br>(이미 있는 고객이면 중복 안내 또는 변경 확인이 먼저 나와요.)",

@@ -7,8 +7,16 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("JW_PORT", "8771"))
-DESKTOP = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
-if not os.path.isdir(DESKTOP): DESKTOP = os.path.expanduser("~")
+def real_desktop():
+    """이 PC의 실제 바탕화면 경로 (OneDrive 로 옮겨진 PC 도 처리)"""
+    try:
+        import ctypes
+        buf = ctypes.create_unicode_buffer(260)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x10, None, 0, buf) == 0 and os.path.isdir(buf.value): return buf.value
+    except Exception: pass
+    d = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
+    return d if os.path.isdir(d) else os.path.expanduser("~")
+DESKTOP = real_desktop()
 LOCK = threading.Lock()   # Word 변환은 한 번에 하나씩
 
 def safe(name):

@@ -2,7 +2,16 @@
 import os, re
 from datetime import datetime
 
-DESKTOP = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
+def real_desktop():
+    """이 PC의 실제 바탕화면 경로 (OneDrive 로 옮겨진 PC 도 처리)"""
+    try:
+        import ctypes
+        buf = ctypes.create_unicode_buffer(260)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x10, None, 0, buf) == 0 and os.path.isdir(buf.value): return buf.value
+    except Exception: pass
+    d = os.path.join(os.environ.get("USERPROFILE", os.path.expanduser("~")), "Desktop")
+    return d if os.path.isdir(d) else os.path.expanduser("~")
+DESKTOP = real_desktop()
 def _cfg_xlsx():      # 엑셀 위치는 app_config.json 의 "xlsx" 에서 바꿀 수 있음 (없으면 바탕화면)
     try:
         import json
