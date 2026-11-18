@@ -38,6 +38,16 @@ class H(SimpleHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path); q = parse_qs(u.query)
         if u.path == "/api/ping": return self.reply(200, {"ok": True, "desktop": DESKTOP})
+        if u.path == "/api/pick":
+            try:
+                kind = "pdf" if q.get("kind", ["pdf"])[0] == "pdf" else "docx"
+                r = subprocess.run([sys.executable, "-X", "utf8", os.path.join(HERE, "pick_save.py"), DESKTOP, safe(q.get("name", [""])[0]), kind],
+                                   capture_output=True, timeout=600, creationflags=0x08000000)
+                path = r.stdout.decode("utf-8", "replace").strip()
+                if r.returncode != 0: return self.reply(200, {"ok": False, "error": (r.stderr or b"").decode("utf-8", "replace")[-200:]})
+                return self.reply(200, {"ok": True, "path": path})
+            except Exception as e:
+                return self.reply(200, {"ok": False, "error": str(e)})
         if u.path == "/api/open-xlsx":
             try:
                 if not os.path.exists(roomlib.XLSX): return self.reply(200, {"ok": False, "error": "엑셀 파일을 찾을 수 없어요: " + roomlib.XLSX})
@@ -81,7 +91,13 @@ class H(SimpleHTTPRequestHandler):
         try:
             data = self.rfile.read(int(self.headers.get("Content-Length", 0)))
             base = safe(unquote(q.get("name", [""])[0]))
-            docx = free_path(base, ".docx")
+            chosen = q.get("path", [""])[0]
+            if chosen:
+                chosen = os.path.normpath(chosen)
+                if not os.path.isdir(os.path.dirname(chosen)): return self.reply(500, {"ok": False, "error": "저장 폴더가 없어요: " + os.path.dirname(chosen)})
+                docx = os.path.splitext(chosen)[0] + ".docx"
+            else:
+                docx = free_path(base, ".docx")
             with open(docx, "wb") as f: f.write(data)
             res = {"ok": True, "docx": docx}
             if u.path == "/api/pdf":

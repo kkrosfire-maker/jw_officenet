@@ -40,7 +40,7 @@ button.sub:hover{background:#d5dde6}
 @media print{
   @page{size:A4;margin:0}
   body{background:#fff}
-  header,#form,#btnXls{display:none!important}
+  header,#form,#topBtns,#btnXls,#zoomBox{display:none!important}
   main{display:block;padding:0;height:auto}
   #pv{border:0;padding:0;background:#fff;overflow:visible}
   #pv .docx-wrapper{padding:0!important;background:#fff!important}
@@ -51,7 +51,7 @@ textarea{width:100%;padding:6px 8px;border:1px dashed #94a3b8;border-radius:6px;
 textarea.drag{border-color:var(--pri);background:#ecfdf5}
 .mrow{display:flex;align-items:center;gap:6px}.mrow input{width:52px!important;text-align:center}.mbtn{padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px}.mbtn{background:var(--pri);color:#fff;border-color:var(--pri);}.mbtn:hover{filter:brightness(1.15)}.mbtn.on{font-weight:700;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--pri)}
 .hint{font-size:12px;color:#0f766e;margin:-2px 0 6px 0;min-height:0}.hint:empty{display:none}.hint.warn{color:#b45309}
-#btnXls{position:fixed;right:34px;bottom:26px;z-index:50;padding:10px 18px;border-radius:24px;border:0;background:#12303a;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}#btnXls:hover{background:var(--pri)}
+#topBtns{position:fixed;right:34px;top:calc(var(--hh,63px) + 26px);z-index:50;display:flex;gap:8px}#btnXls{position:fixed;right:34px;bottom:26px;z-index:50}#btnNew,#btnXls,#btnOb{flex:none;padding:10px 18px;border-radius:24px;border:0;background:#12303a;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);text-decoration:none;white-space:nowrap}#btnXls:hover{background:var(--pri)}#zoomBox{position:fixed;right:34px;bottom:75px;z-index:50;display:flex;align-items:center;border-radius:24px;background:#12303a;box-shadow:0 4px 14px rgba(0,0,0,.35);overflow:hidden}#zoomBox button{flex:none;height:31px;padding:0 14px;border-radius:0;background:transparent;font-size:15px;line-height:1}#zoomBox button:hover{background:var(--pri)}#zoomBox #zVal{min-width:62px;font-size:13px;border-left:1px solid #ffffff33;border-right:1px solid #ffffff33}#btnNew{background:#fff;color:#0f766e;border:1px solid #99d5cd}#btnNew:hover{background:#ecfdf5}#btnOb{margin-left:auto;background:#14b8a6;color:#04201d;box-shadow:none}#btnOb:hover{background:#2dd4bf}#btnNew,#btnOb{height:31px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;line-height:1;font-size:13px}
 #ov{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 #ov.on{display:flex}
 #ovCard{background:#fff;border-radius:14px;padding:22px 26px;min-width:300px;max-width:520px;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center}
@@ -67,7 +67,7 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
 <body>
 <header>
   <h1>정원오피스넷 고객정보 입력</h1>
-  <div class="steps"><span class="on">1 계약서(Word→PDF)</span><span>2 고객list 엑셀</span><span>3 officeboard</span></div>
+  <a id="btnOb" href="https://jw-officenet.onrender.com" target="_blank" rel="noopener" title="officeboard 사이트 열기">🏢 Officeboard</a>
 </header>
 <main>
 <section id="form">
@@ -92,7 +92,7 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
   <div class="row"><label>이메일</label><input type="email" id="email"></div>
 
   <h2>계약 내용</h2>
-  <div class="row"><label>호실</label><input type="text" id="room" placeholder="예: 412 / G01 / D15"></div>
+  <div class="row"><label>호실</label><input type="text" id="room" placeholder="예: A01 / G01 / D15"></div>
   <div id="roomHint" class="hint"></div>
   <div class="row"><label>시작일</label><input type="date" id="start"></div>
   <div class="row"><label>계약 개월수</label><div class="mrow"><input type="number" id="months" min="1" max="99" value="12"><span>개월</span><button type="button" class="mbtn" data-m="1">1</button><button type="button" class="mbtn" data-m="3">3</button><button type="button" class="mbtn" data-m="6">6</button><button type="button" class="mbtn" data-m="12">12</button></div></div>
@@ -121,12 +121,13 @@ textarea.drag{border-color:var(--pri);background:#ecfdf5}
   <div class="row"><label>파일 제목</label><input type="text" id="fname"></div>
   <div id="msg"></div>
   <div class="btns">
-    <button id="btnPdf">PDF 저장<br>(바탕화면)</button>
-    <button id="btnDocx" class="sub">Word만 저장</button>
-    <button id="btnNew" class="sub" title="입력한 내용을 모두 지우고 새 화면으로 시작">새 화면</button>
+    <button id="btnPdf">PDF 저장</button>
+    <button id="btnDocx" class="sub">Word 저장</button>
     <button id="btnCancel" class="danger" title="방금 등록한 고객을 고객list·officeboard에서 지웁니다">등록 취소</button>
   </div>
 </section>
+<div id="topBtns"><button id="btnNew" title="입력한 내용을 모두 지우고 새 화면으로 시작">🆕 새 화면</button></div>
+<div id="zoomBox"><button type="button" id="zIn" title="확대">+</button><button type="button" id="zVal" title="클릭하면 100%로">100%</button><button type="button" id="zOut" title="축소">−</button></div>
 <button id="btnXls" title="고객list 엑셀 파일 열기">📊 고객list 엑셀 열기</button>
 <div id="ov"><div id="ovCard"></div></div>
 <section id="pv"><div id="doc"></div></section>
@@ -491,7 +492,7 @@ function applyParsed(p){
   set("company",p.company); set("rep",p.rep); set("bizNo",p.bizNo); set("corpNo",p.corpNo);
   set("addr",p.addr); set("phone",p.phone); set("email",p.email);
   $("isCorp").checked = !!digits(p.corpNo) || /주식회사|\(주\)|㈜|유한회사|법인/.test(p.company||"");
-  const sd=parseDateKo(p.start||""); if(sd){ $("start").value=sd; $("end").dataset.manual=""; }
+  const sd=parseDateKo(p.start||""); if(sd){ $("start").value=sd; $("start").dataset.manual="1"; $("end").dataset.manual=""; }
   const mm=/(\d+)/.exec(p.months||""); if(mm){ $("months").value=/년/.test(p.months)&&!/개월/.test(p.months) ? +mm[1]*12 : +mm[1]; $("end").dataset.manual=""; }
   $("fname").dataset.manual="";
   autoCalc(); autoFname(); schedule(); if(window.refreshRoom) refreshRoom();
@@ -547,7 +548,8 @@ function bind(){
   bindPaste();
   document.querySelectorAll("#form input").forEach(el=>{
     el.addEventListener("input", ()=>{
-      if(["end","signDate","deposit","fname"].includes(el.id)) el.dataset.manual="1";
+      if(["end","signDate","deposit","fname","start"].includes(el.id)) el.dataset.manual="1";
+      if(el.id==="signDate" && !$("start").dataset.manual && el.value){ $("start").value=el.value; }   // 시작일은 직접 고치기 전까지 계약 작성일을 따라감
       if(["start","months"].includes(el.id)) $("end").dataset.manual="";
       if(el.id==="stdFee") $("deposit").dataset.manual="";
       if(["stdFee","discFee","deposit"].includes(el.id)){ const n=num(el.value); el.value=n?fmt(n):""; }
@@ -640,14 +642,21 @@ function bind(){
       setTimeout(()=>URL.revokeObjectURL(a.href),5000);
       msg("서버 없이 열려서 다운로드 폴더로 저장했어요. 바탕화면 저장·PDF 자동 변환·대시보드 저장은 run.bat 으로 열어주세요."); return;
     }
+    let pickPath="";
+    try{
+      const pj=await (await fetch("/api/pick?kind="+kind+"&name="+encodeURIComponent(name))).json();
+      if(!pj.ok){ msg("저장 위치 창을 열지 못했어요: "+(pj.error||"")); return; }
+      if(!pj.path){ msg("저장을 취소했어요."); return; }
+      pickPath=pj.path;
+    }catch(e){ msg("저장 위치 창을 열지 못했어요: "+e.message); return; }
     busy(kind==="pdf" ? "PDF로 변환하는 중이에요… 끝날 때까지 기다려 주세요 (5~10초)" : "Word 파일을 저장하는 중…");
     let fileMsg;
     try{
-      const r=await fetch("/api/"+kind+"?name="+encodeURIComponent(name),{method:"POST",body:blob});
+      const r=await fetch("/api/"+kind+"?name="+encodeURIComponent(name)+"&path="+encodeURIComponent(pickPath),{method:"POST",body:blob});
       const j=await r.json();
       if(!j.ok) throw new Error(j.error||"저장 실패");
       const base=f=>f.split("\\").pop();
-      fileMsg="✔ 바탕화면에 저장했어요: "+(j.pdf?base(j.pdf)+" (+ Word 파일)":base(j.docx));
+      fileMsg="✔ 저장했어요: "+(j.pdf||j.docx)+(j.pdf?" (+ Word 파일)":"");
     }catch(e){ idle(); msg("저장 실패: "+e.message); return; }
     idle(); msg(fileMsg);
     // 2단계: 공유오피스 대시보드(고객list 엑셀·officeboard)에 저장할지 묻는다
@@ -676,11 +685,17 @@ function bind(){
   room.addEventListener("change",async()=>{
     if(setting||!viaServer||!room.value.trim()) return;
     const j=await jget("/api/room-check?room="+encodeURIComponent(room.value.trim()));
+    if(!j.ok){ hint.className="hint warn"; hint.textContent="고객list를 읽지 못해 호실 중복을 확인하지 못했어요. "+(j.error||""); return; }
     if(j.ok && j.room!==room.value.trim()){ const old=room.value.trim(); setRoom(j.room); hint.className="hint warn"; hint.textContent=old+" 은(는) 이미 사용 중이라 "+j.room+" 로 입력했어요."; }
   });
   document.querySelectorAll("input[name=type]").forEach(el=>el.addEventListener("change",refreshRoom));
   $("isCorp").addEventListener("change",refreshRoom);
   refreshRoom();
+  // ---- 계약서 확대/축소 ----
+  let zoom=100; const zApply=()=>{ $("doc").style.zoom=zoom/100; $("zVal").textContent=zoom+"%"; };
+  $("zIn").onclick=()=>{ zoom=Math.min(200,zoom+10); zApply(); };
+  $("zOut").onclick=()=>{ zoom=Math.max(40,zoom-10); zApply(); };
+  $("zVal").onclick=()=>{ zoom=100; zApply(); };
   $("btnXls").onclick=async()=>{
     if(!viaServer){ msg("엑셀 열기는 run.bat 으로 열어야 해요."); return; }
     try{ const j=await (await fetch("/api/open-xlsx")).json(); msg(j.ok?"고객list 엑셀을 열었어요.":"엑셀 열기 실패: "+j.error); }catch(e){ msg("엑셀 열기 실패: "+e.message); }
@@ -689,7 +704,7 @@ function bind(){
   $("btnNew").onclick=async()=>{
     const a=await modal("새 화면","입력한 내용을 모두 지우고 새로 시작할까요?<br>(이미 저장·등록한 내용은 그대로 남아요.)",[{label:"예, 새 화면",value:"y"},{label:"아니요",value:"n",sub:true}]);
     if(a!=="y") return;
-    try{ sessionStorage.removeItem("jw_customer_draft3"); }catch(e){}
+    try{ sessionStorage.setItem("jw_customer_draft3", JSON.stringify({type:vals().type})); }catch(e){}   // 계약 종류만 유지
     location.reload();
   };
   // ---- 등록 취소: 같은 고객을 고객list·officeboard 에서 지움 (확인 후) ----
@@ -724,9 +739,10 @@ window.addEventListener("DOMContentLoaded", ()=>{
   fitHeader();
   const had=load();
   bind();
-  if(!had) $("start").value=iso(new Date());
-  else ["end","deposit","fname"].forEach(id=>{ if($(id).value) $(id).dataset.manual="1"; });
   $("signDate").value=iso(new Date());   // 작성일은 항상 오늘이 기본 (수정 가능)
+  if(!$("start").value) $("start").value=$("signDate").value;            // 시작일 기본값 = 계약 작성일
+  else if(had && $("start").value!==$("signDate").value) $("start").dataset.manual="1";
+  if(had) ["end","deposit","fname"].forEach(id=>{ if($(id).value) $(id).dataset.manual="1"; });
   autoCalc(); autoFname();
   render();
 });
