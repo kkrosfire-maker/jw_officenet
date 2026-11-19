@@ -1,6 +1,6 @@
 """하루 1편 CSO 뉴스 자동 등록 (원문 이미지 포함, 바로 공개)
 
-흐름: 참고 사이트 API(medicalnews-tau) 후보 수집 -> 이미 올린 글과 중복 제거 -> 관련도 최고 1건의 원문 대표 이미지를
+흐름: 참고 사이트 API(medicalnews-tau) 후보 수집 -> 이미 올린 글과 중복 제거 -> 최신 기사 1건의 원문 대표 이미지를
       Storage 에 올리고 -> Supabase posts 에 published=true, auto=true 로 저장(바로 공개).
       이미지를 못 가져오면 기본 썸네일로 대신한다. 잘못 올라온 글은 admin.html 에서 비공개/삭제.
 
@@ -28,7 +28,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://mfbclctzkjdsrrsivlmg.supa
 ANON_KEY = "sb_publishable_CKV18Z4BTPr0Z5huTM3d6A_xr07oeBc"  # 공개용 키(읽기 전용)
 SOURCE_API = "https://medicalnews-tau.vercel.app/api/news"
 MIN_SCORE = 80          # CSO 관련도 최소 점수
-MAX_AGE_DAYS = 3        # 발행 후 며칠 이내 기사만
+ALLOWED_CATEGORIES = {"업계동향", "규제/법률"}  # 이 분류의 기사만 올린다
 SIM_THRESHOLD = 0.55    # 제목 유사도(이 이상이면 같은 이슈로 보고 건너뜀)
 RECENT_COMPARE = 300    # 비교할 기존 글 수
 DEFAULT_THUMB = "assets/news_thumbnail_default.webp"
@@ -72,17 +72,16 @@ def fetch_candidates():
     code, d = http("GET", f"{SOURCE_API}?{qs}")
     if code != 200 or not d or not d.get("success"):
         raise SystemExit(f"참고 사이트 API 오류: {code} {str(d)[:120]}")
-    cut = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
     out = []
     for n in d.get("news", []):
         try:
             pub = datetime.fromisoformat(n["pub_date"].replace("Z", "+00:00"))
         except Exception:
             continue
-        if pub >= cut and n.get("title") and n.get("link") and (n.get("score") or 0) >= MIN_SCORE:
+        if n.get("category") in ALLOWED_CATEGORIES and n.get("title") and n.get("link") and (n.get("score") or 0) >= MIN_SCORE:
             n["_pub"] = pub
             out.append(n)
-    out.sort(key=lambda n: (-(n.get("score") or 0), -n["_pub"].timestamp()))
+    out.sort(key=lambda n: (-n["_pub"].timestamp(), -(n.get("score") or 0)))  # 최근 기사 우선, 같으면 점수 높은 순
     return out
 
 
@@ -133,7 +132,7 @@ def main():
     key = ANON_KEY if dry else secret
 
     cands = fetch_candidates()
-    print(f"후보 {len(cands)}건 (점수 {MIN_SCORE}+ · 최근 {MAX_AGE_DAYS}일)")
+    print(f"후보 {len(cands)}건 (점수 {MIN_SCORE}+ · {'/'.join(sorted(ALLOWED_CATEGORIES))} · 최신순)")
     have = existing_posts(key) if not dry else _anon_existing()
     gone = rejected_posts(key)  # 삭제한 글: 같은 링크도, 비슷한 제목도 다시 올리지 않는다
     keys = {r.get("src_key") for r in have + gone if r.get("src_key")}
