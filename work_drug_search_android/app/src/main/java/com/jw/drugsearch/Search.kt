@@ -28,6 +28,14 @@ fun Row.valueOf(f: Field): String? = when (f) {
     Field.Note -> note
 }
 
+/** 카드 제목으로 쓰는 항목: 표시 중인 것 중 제품명 > 성분 > 대조의약품 > 제약사명 > 보험코드 순으로 값이 있는 첫 번째. */
+fun Row.titleField(visible: Set<Field>): Field? =
+    listOf(Field.Product, Field.Ingredient, Field.Ref, Field.Company, Field.Code)
+        .firstOrNull { it in visible && !valueOf(it).isNullOrBlank() }
+
+/** 화면·복사·공유에 보여주는 값. 제품명만 성분 괄호를 뺀 이름이고, 나머지는 valueOf 와 같다(검색은 valueOf 의 원본 사용). */
+fun Row.shown(f: Field): String? = if (f == Field.Product) displayProduct.ifBlank { null } else valueOf(f)
+
 fun formatPrice(v: Double): String =
     if (v == Math.floor(v)) "%,d".format(v.toLong()) else "%,.2f".format(v)
 

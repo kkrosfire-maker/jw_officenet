@@ -83,11 +83,28 @@ fun buildShareText(version: String, keyword: String, rows: List<Row>, visible: S
     rows.take(300).forEach { r ->
         sb.append("\n")
         sb.append(Field.entries.filter { it in visible }.mapNotNull { f ->
-            r.valueOf(f)?.takeIf { it.isNotBlank() }?.let { "${f.label}: $it" }
+            r.shown(f)?.takeIf { it.isNotBlank() }?.let { "${f.label}: $it" }
         }.joinToString(" | "))
     }
     if (rows.size > 300) sb.append("\n\n… 외 ${rows.size - 300}건")
     return sb.toString()
+}
+
+/** 카드 한 장의 내용(표시 중인 항목만)을 줄글로 만든다. 첫 줄은 카드 제목, 나머지는 `항목: 값` 줄. */
+fun buildRowText(row: Row, visible: Set<Field>): String {
+    val titleField = row.titleField(visible)
+    val lines = ArrayList<String>()
+    titleField?.let { f -> row.shown(f)?.let { lines.add(it) } }
+    Field.entries.filter { it in visible && it != titleField }.forEach { f ->
+        row.shown(f)?.takeIf { it.isNotBlank() }?.let { lines.add("${f.label}: $it") }
+    }
+    return lines.joinToString("\n")
+}
+
+/** 텍스트를 클립보드에 복사한다. */
+fun copyTextToClipboard(context: Context, label: String, text: String) {
+    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText(label, text))
 }
 
 fun shareText(context: Context, text: String) {

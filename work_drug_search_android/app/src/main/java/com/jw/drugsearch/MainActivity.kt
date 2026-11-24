@@ -12,6 +12,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,6 +94,7 @@ private val AmberBg = Color(0xFFFFF1D6)
 private val AmberText = Color(0xFF8A5A00)
 private val NoteBg = Color(0xFFFFF8E8)
 private val Red = Color(0xFFB3261E)
+private val Burgundy = Color(0xFF8E1B3A) // 성분명 글자색
 
 private val DefaultTargets = setOf(Field.Product, Field.Ingredient, Field.Ref)
 private val DefaultVisible = Field.entries.filter { it != Field.Ref }.toSet()
@@ -506,19 +510,32 @@ private fun Badge(text: String, bg: Color, fg: Color) {
 }
 
 /** 결과 카드: 제목(제품명) → 성분 → 대조의약품 → 보험코드·제약사명, 오른쪽에 약가·요율 배지, 맨 아래 비고. */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun RowCard(row: Row, visible: Set<Field>) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     // 제목은 표시 중인 항목 중 제품명 > 성분 > 대조의약품 > 제약사명 > 보험코드 순으로 첫 번째
-    val titleField = listOf(Field.Product, Field.Ingredient, Field.Ref, Field.Company, Field.Code)
-        .firstOrNull { it in visible && !row.valueOf(it).isNullOrBlank() }
-    val title = titleField?.let { row.valueOf(it) }
+    val titleField = row.titleField(visible)
+    val title = titleField?.let { row.shown(it) }
+    val hasBadges = (Field.Price in visible && row.valueOf(Field.Price) != null) ||
+        (Field.Rate in visible && row.valueOf(Field.Rate) != null)
 
     Row(
         Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .background(Color.White, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            // 꾹 누르면 이 카드의 내용(표시 중인 항목)을 클립보드에 복사
+            .combinedClickable(
+                onClick = {},
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    copyTextToClipboard(context, "동일약품 검색 결과", buildRowText(row, visible))
+                    toast(context, "복사했습니다")
+                },
+            )
             .padding(end = 12.dp),
     ) {
         Box(
@@ -526,36 +543,42 @@ private fun RowCard(row: Row, visible: Set<Field>) {
                 .background(Green700, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
         )
         Column(Modifier.weight(1f).padding(start = 10.dp, top = 11.dp, bottom = 11.dp)) {
+            // 제목+성분을 한 묶음(왼쪽)으로, 약가·요율 배지는 그 옆(오른쪽)에 둬서
+            // 배지가 높아도 성분이 제목 바로 아래에 붙어 있게 한다.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    title ?: "", Modifier.weight(1f),
-                    fontSize = 15.5.sp, fontWeight = FontWeight.ExtraBold,
-                    color = if (row.red) Red else Green900, lineHeight = 20.sp,
-                )
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (Field.Price in visible && row.valueOf(Field.Price) != null)
-                        Badge("약가 ${row.valueOf(Field.Price)}", Green100, Green900)
-                    if (Field.Rate in visible && row.valueOf(Field.Rate) != null)
-                        Badge("요율 ${row.valueOf(Field.Rate)}", AmberBg, AmberText)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title ?: "",
+                        fontSize = 15.5.sp, fontWeight = FontWeight.ExtraBold,
+                        color = if (row.red) Red else Green900, lineHeight = 20.sp,
+                    )
+                    if (Field.Ingredient in visible && titleField != Field.Ingredient && !row.ingredient.isNullOrBlank()) {
+                        LabeledLine("성분", row.ingredient!!, Burgundy, Modifier.padding(top = 3.dp))
+                    }
+                    if (Field.Ref in visible && titleField != Field.Ref && !row.ref.isNullOrBlank()) {
+                        LabeledLine("대조의약품", row.ref!!, Color(0xFF3C4D44), Modifier.padding(top = 3.dp))
+                    }
+                }
+                if (hasBadges) {
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (Field.Price in visible && row.valueOf(Field.Price) != null)
+                            Badge("약가 ${row.valueOf(Field.Price)}", Green100, Green900)
+                        if (Field.Rate in visible && row.valueOf(Field.Rate) != null)
+                            Badge("요율 ${row.valueOf(Field.Rate)}", AmberBg, AmberText)
+                    }
                 }
             }
-            if (Field.Ingredient in visible && titleField != Field.Ingredient && !row.ingredient.isNullOrBlank()) {
-                LabeledLine("성분", row.ingredient!!, Modifier.padding(top = 6.dp))
-            }
-            if (Field.Ref in visible && titleField != Field.Ref && !row.ref.isNullOrBlank()) {
-                LabeledLine("대조의약품", row.ref!!, Modifier.padding(top = 4.dp))
-            }
             val metas = buildList {
-                if (Field.Code in visible && titleField != Field.Code && !row.code.isNullOrBlank()) add("보험코드" to row.code!!)
-                if (Field.Company in visible && titleField != Field.Company && !row.company.isNullOrBlank()) add("제약사명" to row.company!!)
+                if (Field.Code in visible && titleField != Field.Code && !row.code.isNullOrBlank()) add(Triple("보험코드", row.code!!, Color(0xFF4F6057)))
+                if (Field.Company in visible && titleField != Field.Company && !row.company.isNullOrBlank()) add(Triple("제약사명", row.company!!, Green700))
             }
             if (metas.isNotEmpty()) {
                 FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    metas.forEach { (k, v) ->
+                    metas.forEach { (k, v, color) ->
                         Row {
                             Text(k, color = Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.width(4.dp))
-                            Text(v, color = Color(0xFF4F6057), fontSize = 12.sp)
+                            Text(v, color = color, fontSize = 12.sp, fontWeight = if (color == Green700) FontWeight.SemiBold else FontWeight.Normal)
                         }
                     }
                 }
@@ -571,10 +594,10 @@ private fun RowCard(row: Row, visible: Set<Field>) {
 }
 
 @Composable
-private fun LabeledLine(label: String, value: String, modifier: Modifier = Modifier) {
+private fun LabeledLine(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
     Row(modifier) {
         Text(label, color = Muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.width(8.dp))
-        Text(value, color = Color(0xFF3C4D44), fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.weight(1f))
+        Text(value, color = valueColor, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.weight(1f))
     }
 }

@@ -22,15 +22,30 @@ class Row(
     val names: List<String>
     val strengths: List<Double>
 
+    /** 화면·복사·공유에 쓰는 제품명: 뒤에 붙은 성분명 괄호 `(아토르바스타틴)` 은 뺀다. 검색은 원본(product)을 쓴다. */
+    val displayProduct: String by lazy { cleanProductName(product) }
+
     init {
         val comps = splitComponents(ingredient)
         isCombo = comps.size > 1
         val n = ArrayList<String>(comps.size)
         val s = ArrayList<Double>(comps.size)
         for (c in comps) {
-            val m = NUM_RE.find(c)
-            s.add(m?.value?.toDouble() ?: 0.0)
-            val head = c.substring(0, m?.range?.first ?: c.length).trim().lowercase()
+            val noParen = PAREN_RE.replace(c, " ")
+            val base = if (noParen.isBlank()) c.replace("(", " ").replace(")", " ") else noParen
+            val m = NUM_RE.find(base)
+            val salt = m?.value?.toDouble() ?: 0.0
+            // 괄호 안 "(20mg as atorvastatin)" 은 염을 뺀 실제 함량 → 이 값으로 규격을 묶는다.
+            // 염 무게보다 큰 값은 오타(예: 10.85mg 인데 12mg)라서 염 무게의 정수부로 맞춘다.
+            val declared = AS_RE.find(c)?.groupValues?.get(1)?.toDouble()
+            s.add(
+                when {
+                    declared == null -> salt
+                    declared <= salt + 1e-9 -> declared
+                    else -> Math.floor(salt)
+                }
+            )
+            val head = base.substring(0, m?.range?.first ?: base.length).trim().lowercase()
             n.add(head.split(Regex("\\s+")).firstOrNull() ?: "")
         }
         names = n
@@ -40,12 +55,48 @@ class Row(
     companion object {
         private val PAREN_RE = Regex("\\([^)]*\\)")
         private val NUM_RE = Regex("\\d+(?:\\.\\d+)?")
+        private val AS_RE = Regex("\\((\\d+(?:\\.\\d+)?)\\s*[A-Za-zμµ]+\\s+as\\s+[^)]*\\)", RegexOption.IGNORE_CASE)
 
-        private fun splitComponents(ingredient: String?): List<String> =
-            PAREN_RE.replace(ingredient ?: "", " ")
-                .split("/")
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
+        // "mg/g", "mg/ml", "50μg/ml" 처럼 슬래시 뒤가 단위면 복합제 구분이 아니라 농도 표기다.
+        private val UNIT_START = Regex("^\\s*\\d*(?:\\.\\d+)?\\s*(?:mg|g|ml|mL|ML|l|L|회|μg|µg|ug|%|kg|cc|IU|iu)(?![A-Za-z가-힣])")
+
+        /** 괄호 밖의 `/` 로 나누되, 뒤가 단위인 조각은 앞 조각에 붙인다. */
+        private fun splitComponents(ingredient: String?): List<String> {
+            val s = ingredient ?: return emptyList()
+            val pieces = ArrayList<String>()
+            var depth = 0
+            val cur = StringBuilder()
+            for (ch in s) {
+                when (ch) {
+                    '(' -> depth++
+                    ')' -> if (depth > 0) depth--
+                }
+                if (ch == '/' && depth == 0) {
+                    pieces.add(cur.toString()); cur.setLength(0)
+                } else cur.append(ch)
+            }
+            pieces.add(cur.toString())
+            val merged = ArrayList<String>()
+            for (p in pieces) {
+                if (merged.isNotEmpty() && UNIT_START.containsMatchIn(p)) {
+                    merged[merged.size - 1] = merged.last() + "/" + p
+                } else merged.add(p)
+            }
+            return merged.map { it.trim() }.filter { it.isNotEmpty() }
+        }
+
+        // 제품명 뒤 괄호 중 남길 것: 숫자로 시작((2:1), (1회용)…)하거나 용도 표시인 것
+        private val KEEP_TAGS = setOf("비만", "피임", "일회용", "다회용", "SR", "ECA")
+        private val NAME_PAREN_RE = Regex("\\s*\\(([^()]*)\\)")
+
+        fun cleanProductName(name: String?): String {
+            if (name.isNullOrBlank()) return name ?: ""
+            val cleaned = NAME_PAREN_RE.replace(name) { m ->
+                val inner = m.groupValues[1].trim()
+                if (inner.isEmpty() || inner[0].isDigit() || inner in KEEP_TAGS) m.value else ""
+            }.replace(Regex("\\s{2,}"), " ").trim()
+            return cleaned.ifBlank { name.trim() }
+        }
     }
 }
 
