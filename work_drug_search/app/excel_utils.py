@@ -1,3 +1,5 @@
+import re
+
 import openpyxl
 
 FIELDS = ["성분", "보험코드", "제약사명", "제품명", "대조의약품", "약가", "요율", "비고"]
@@ -138,6 +140,47 @@ def search_rows(rows, keyword, search_fields, exact=False):
         if matched:
             results.append(row)
     return results
+
+
+_PAREN_RE = re.compile(r"\([^)]*\)")
+_NUM_RE = re.compile(r"(\d+(?:\.\d+)?)")
+
+
+def _split_components(ingredient):
+    s = _PAREN_RE.sub(" ", str(ingredient or ""))
+    return [p.strip() for p in s.split("/") if p.strip()]
+
+
+def default_sort_key(row):
+    """
+    기본 정렬 키: 성분 → 약가(오름) → 요율(내림) (동률이면 제품명).
+    성분은 (복합제 여부, 성분명, 함량 숫자들) 순으로 비교해
+    단일제(5/10/20mg 순)가 먼저, 복합제는 아래쪽으로 간다.
+    성분명은 괄호 내용·숫자·염(calcium 등)을 무시하고 각 성분의 첫 단어만 쓴다.
+    """
+    comps = _split_components(row.get("성분"))
+    names = []
+    strengths = []
+    for c in comps:
+        m = _NUM_RE.search(c)
+        strengths.append(float(m.group(1)) if m else 0.0)
+        head = _NUM_RE.split(c)[0].strip().lower()
+        names.append(head.split()[0] if head else "")
+    is_combo = 1 if len(comps) > 1 else 0
+
+    price = row.get("약가")
+    price = float(price) if isinstance(price, (int, float)) else float("inf")
+    rate = row.get("요율")
+    rate = -float(rate) if isinstance(rate, (int, float)) else float("inf")
+
+    return (
+        is_combo,
+        names,
+        strengths,
+        price,
+        rate,
+        str(row.get("제품명") or ""),  # 약가·요율이 모두 같을 때만 쓰는 마지막 기준
+    )
 
 
 def format_value(field, value):

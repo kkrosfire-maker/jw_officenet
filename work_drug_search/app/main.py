@@ -10,7 +10,13 @@ import tkinter.font as tkfont
 from tkinter import ttk, filedialog, messagebox
 
 from config import load_config, save_config
-from excel_utils import FIELDS, load_rate_sheet, search_rows, format_value
+from excel_utils import (
+    FIELDS,
+    load_rate_sheet,
+    search_rows,
+    format_value,
+    default_sort_key,
+)
 
 SEARCH_TARGET_FIELDS = ["제품명", "성분", "대조의약품"]
 
@@ -105,8 +111,10 @@ class RateSheetApp:
         self.field_map = {}
         self.current_results = []
         self.current_columns = []
-        self.sort_col = self.cfg.get("sort_col")
-        self.sort_ascending = self.cfg.get("sort_ascending", True)
+        # 기본 정렬(성분→약가↑→요율↓)이 항상 먼저 적용되도록 시작 시 열 정렬은 비운다.
+        # 헤더를 클릭하면 그 세션 동안만 해당 열 기준으로 정렬된다.
+        self.sort_col = None
+        self.sort_ascending = True
         self._known_color_tags = set()
         self._sort_after_id = None
         self._grid_lines = []
@@ -124,8 +132,13 @@ class RateSheetApp:
         self.search_target_vars = {
             f: tk.BooleanVar(value=True) for f in SEARCH_TARGET_FIELDS
         }
-        self.col_vars = {f: tk.BooleanVar(value=True) for f in FIELDS}
+        # 대조의약품 열은 처음엔 숨김(체크하면 표시). 검색 대상에는 그대로 포함된다.
+        self.col_vars = {f: tk.BooleanVar(value=(f != "대조의약품")) for f in FIELDS}
         self.select_all_var = tk.BooleanVar(value=True)
+        # 표시할 항목을 켜고 끄면 이미 나와 있는 검색 결과에 바로 반영한다.
+        self._live_columns_after_id = None
+        for var in self.col_vars.values():
+            var.trace_add("write", lambda *_: self._schedule_live_columns())
 
         self._build_widgets()
 
@@ -408,6 +421,7 @@ class RateSheetApp:
             target_index -= 1
         self.column_order.insert(target_index, name)
         self._repack_column_items()
+        self._schedule_live_columns()
 
     def _build_result_section(self):
         content = self._make_section("result")
@@ -445,6 +459,33 @@ class RateSheetApp:
             content, text="캡쳐 후 복사", command=self._capture_copy
         ).pack(side="left", padx=6)
         ttk.Label(content, textvariable=self.status_var).pack(side="left", padx=16)
+
+    def _schedule_live_columns(self):
+        # 전체선택처럼 여러 변수가 연달아 바뀌어도 한 번만 갱신하도록 모아서 실행
+        if self._live_columns_after_id is None:
+            self._live_columns_after_id = self.root.after_idle(self._apply_live_columns)
+
+    def _apply_live_columns(self):
+        self._live_columns_after_id = None
+        if not self.current_results:
+            return  # 아직 검색 전이면 다음 검색 때 적용된다
+        columns = [f for f in self.column_order if self.col_vars[f].get()]
+        if columns == self.current_columns:
+            return
+        if not columns:
+            # 최소 하나는 보여야 하므로 체크 상태를 현재 표시 중인 열로 되돌린다
+            for f, var in self.col_vars.items():
+                var.set(f in self.current_columns)
+            self.status_var.set("최소 하나의 항목은 표시되어야 합니다.")
+            return
+        self._cancel_edit()
+        self._active_cell = None
+        self.current_columns = columns
+        if self.sort_col not in columns:
+            self.sort_col = None
+        self._setup_columns(columns)
+        self._perform_sort()
+        self._refresh_rows(self.current_results, columns)
 
     def _toggle_select_all(self):
         val = self.select_all_var.get()
@@ -610,6 +651,13 @@ class RateSheetApp:
         """self.sort_col / self.sort_ascending 기준으로 현재 결과를 정렬만 한다(화면 갱신 없음)."""
         col = self.sort_col
         if not col or col not in self.current_columns:
+            # 기본 정렬: 성분(단일제→복합제, 성분명, 함량) → 약가↑ → 요율↓ (동률이면 제품명)
+            self.current_results.sort(key=default_sort_key)
+            return
+        if col == "성분":
+            self.current_results.sort(
+                key=default_sort_key, reverse=not self.sort_ascending
+            )
             return
 
         def sort_key(row):
