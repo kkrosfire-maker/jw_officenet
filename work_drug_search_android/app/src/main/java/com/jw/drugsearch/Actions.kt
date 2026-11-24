@@ -7,37 +7,20 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
-import android.view.PixelCopy
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.coroutines.resume
 
 fun toast(context: Context, msg: String) =
     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
-/** 현재 화면(창 전체)을 비트맵으로 캡처한다. 실패하면 null. */
-suspend fun captureWindow(activity: MainActivity): Bitmap? {
-    val view = activity.window.decorView
-    if (view.width == 0 || view.height == 0) return null
-    val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-    return suspendCancellableCoroutine { cont ->
-        PixelCopy.request(activity.window, bmp, { result ->
-            cont.resume(if (result == PixelCopy.SUCCESS) bmp else null)
-        }, Handler(Looper.getMainLooper()))
-    }
-}
-
-/** 캡처한 이미지를 클립보드(이미지)로 복사한다. */
+/** 이미지를 클립보드(이미지)로 복사한다. */
 suspend fun copyImageToClipboard(context: Context, bmp: Bitmap) {
     val uri = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "shared").apply { mkdirs() }
@@ -46,40 +29,44 @@ suspend fun copyImageToClipboard(context: Context, bmp: Bitmap) {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.setPrimaryClip(ClipData.newUri(context.contentResolver, "동일약품 검색 화면", uri))
+    cm.setPrimaryClip(ClipData.newUri(context.contentResolver, "동일약품 검색 결과", uri))
 }
 
-/** 캡처한 이미지를 다운로드 폴더에 PNG로 저장한다. 저장한 파일명(실패 시 null)을 돌려준다. */
-suspend fun saveImageToDownloads(context: Context, bmp: Bitmap): String? = withContext(Dispatchers.IO) {
-    val name = "동일약품검색_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.KOREA).format(Date()) + ".png"
-    val values = ContentValues().apply {
-        put(MediaStore.Downloads.DISPLAY_NAME, name)
-        put(MediaStore.Downloads.MIME_TYPE, "image/png")
-        put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-        put(MediaStore.Downloads.IS_PENDING, 1)
+/** 이미지를 다운로드 폴더에 PNG로 저장한다. 저장한 파일명(실패 시 null)을 돌려준다. */
+suspend fun saveImageToDownloads(context: Context, bmp: Bitmap, stamp: String, index: Int, count: Int): String? =
+    withContext(Dispatchers.IO) {
+        val suffix = if (count > 1) "_${index}" else ""
+        val name = "동일약품검색_$stamp$suffix.png"
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, name)
+            put(MediaStore.Downloads.MIME_TYPE, "image/png")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@withContext null
+        try {
+            resolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                ?: return@withContext null
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            name
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            null
+        }
     }
-    val resolver = context.contentResolver
-    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@withContext null
-    try {
-        resolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            ?: return@withContext null
-        values.clear()
-        values.put(MediaStore.Downloads.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-        name
-    } catch (e: Exception) {
-        resolver.delete(uri, null, null)
-        null
-    }
-}
 
-/** 현재 표시 항목 기준으로 검색 결과를 줄글로 만든다(공유용). 너무 길어지지 않게 최대 300건. */
+fun nowStamp(): String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.KOREA).format(Date())
+
+/** 현재 표시 항목 기준으로 결과를 줄글로 만든다(공유용). 너무 길어지지 않게 최대 300건. */
 fun buildShareText(version: String, keyword: String, rows: List<Row>, visible: Set<Field>): String {
     val sb = StringBuilder()
     sb.append("동일약품 검색기")
     if (version.isNotEmpty()) sb.append(" (요율표 $version)")
     sb.append("\n검색어: ").append(keyword.ifBlank { "(전체)" })
-    sb.append("  / 결과 ${rows.size}건\n")
+    sb.append("  / ${rows.size}건\n")
     rows.take(300).forEach { r ->
         sb.append("\n")
         sb.append(Field.entries.filter { it in visible }.mapNotNull { f ->
@@ -88,23 +75,6 @@ fun buildShareText(version: String, keyword: String, rows: List<Row>, visible: S
     }
     if (rows.size > 300) sb.append("\n\n… 외 ${rows.size - 300}건")
     return sb.toString()
-}
-
-/** 카드 한 장의 내용(표시 중인 항목만)을 줄글로 만든다. 첫 줄은 카드 제목, 나머지는 `항목: 값` 줄. */
-fun buildRowText(row: Row, visible: Set<Field>): String {
-    val titleField = row.titleField(visible)
-    val lines = ArrayList<String>()
-    titleField?.let { f -> row.shown(f)?.let { lines.add(it) } }
-    Field.entries.filter { it in visible && it != titleField }.forEach { f ->
-        row.shown(f)?.takeIf { it.isNotBlank() }?.let { lines.add("${f.label}: $it") }
-    }
-    return lines.joinToString("\n")
-}
-
-/** 텍스트를 클립보드에 복사한다. */
-fun copyTextToClipboard(context: Context, label: String, text: String) {
-    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.setPrimaryClip(ClipData.newPlainText(label, text))
 }
 
 fun shareText(context: Context, text: String) {

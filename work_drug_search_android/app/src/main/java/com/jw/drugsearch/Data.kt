@@ -5,6 +5,7 @@ import org.json.JSONObject
 
 /** 요율표 한 행. 약가/요율은 숫자면 num, 숫자가 아니면('-', '미정' 등) 원문 text. */
 class Row(
+    val id: Int,               // 원본 엑셀에서의 순번(체크·비고 펼침 상태를 기억하는 열쇠)
     val ingredient: String?,   // 성분
     val code: String?,         // 보험코드
     val company: String?,      // 제약사명
@@ -25,7 +26,28 @@ class Row(
     /** 화면·복사·공유에 쓰는 제품명: 뒤에 붙은 성분명 괄호 `(아토르바스타틴)` 은 뺀다. 검색은 원본(product)을 쓴다. */
     val displayProduct: String by lazy { cleanProductName(product) }
 
+    /** 화면용 성분: 괄호 밖 원래 성분명 / 괄호 안 `(20mg as atorvastatin)` 같은 보충 설명(성분명 아래 회색 작은 글씨). */
+    val ingredientMain: String
+    val ingredientNote: String?
+
     init {
+        val ing = ingredient
+        var main = ing ?: ""
+        var note: String? = null
+        if (ing != null) {
+            val groups = PAREN_RE.findAll(ing).map { it.value }.toList()
+            if (groups.isNotEmpty()) {
+                val stripped = PAREN_RE.replace(ing, " ").replace(Regex("\\s{2,}"), " ").trim()
+                // 괄호를 빼고 나면 알파벳/한글이 없는 이상한 경우는 원문 그대로 둔다
+                if (stripped.any { it.isLetter() }) {
+                    main = stripped
+                    note = groups.joinToString(" ")
+                }
+            }
+        }
+        ingredientMain = main
+        ingredientNote = note
+
         val comps = splitComponents(ingredient)
         isCombo = comps.size > 1
         val n = ArrayList<String>(comps.size)
@@ -119,6 +141,7 @@ fun loadRates(context: Context): RateData {
         val (rate, rateText) = numOrText("t")
         rows.add(
             Row(
+                id = i,
                 ingredient = str("g"), code = str("k"), company = str("m"),
                 product = str("p"), ref = str("r"),
                 price = price, priceText = priceText,
