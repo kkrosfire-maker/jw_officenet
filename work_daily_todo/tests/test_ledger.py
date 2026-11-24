@@ -170,6 +170,14 @@ class Routine(unittest.TestCase):
         clock.go("2026-10-26T09:00:00")
         self.assertEqual(sections(lg), {"주간보고": "routine"})
 
+    def test_multi_weekday_rule_picks_nearest_occurrence(self):
+        lg, _, _ = ledger()  # 목요일: 월·수·금 중 가장 가까운 다음 회차는 금요일(10-23)
+        lg.add("운동", repeat="week:0,2,4")
+        t = lg.view()["tasks"][0]
+        self.assertEqual((t["section"], t["due"]), ("routine", "2026-10-23"))
+        lg.add("bad", repeat="week:1,9")
+        self.assertIsNone(lg.tasks[1]["repeat"])
+
     def test_weekly_added_on_its_day_is_due_today(self):
         lg, _, _ = ledger()
         lg.add("목요회의", repeat="week:3")

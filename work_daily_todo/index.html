@@ -362,24 +362,25 @@ async function run(fn,...a){
 }
 // 반복 규칙: "day" / "week:0"(월)~"week:6"(일) / "month:1"~"month:31"(31 = 말일)
 const WK='월화수목금토일';
-function repText(r){if(!r)return '';const[k,n]=r.split(':');return k==='day'?'매일':k==='week'?`매주 ${WK[n]}`:n==='31'?'매월 말일':`매월 ${n}일`}
-const rep={kind:'',wd:0,md:1,cb:null};
-for(let i=0;i<7;i++){const b=el('button','',WK[i]);b.dataset.d=i;b.onclick=()=>{rep.wd=i;repDraw()};$('rWeek').appendChild(b)}
+// 매주는 "week:0,2,4" 처럼 여러 요일을 쉼표로 잇는다
+function repText(r){if(!r)return '';const[k,n]=r.split(':');return k==='day'?'매일':k==='week'?`매주 ${n.split(',').map(x=>WK[x]).join('·')}`:n==='31'?'매월 말일':`매월 ${n}일`}
+const rep={kind:'',wd:new Set(),md:1,cb:null};
+for(let i=0;i<7;i++){const b=el('button','',WK[i]);b.dataset.d=i;b.onclick=()=>{rep.wd.has(i)?rep.wd.delete(i):rep.wd.add(i);repDraw()};$('rWeek').appendChild(b)}
 for(let i=1;i<=31;i++){const o=el('option','',i===31?'말일':`${i}일`);o.value=i;$('rMonth').appendChild(o)}
 $('rMonth').onchange=()=>{rep.md=+$('rMonth').value;repDraw()};
 document.querySelectorAll('.rkind button').forEach(b=>b.onclick=()=>{rep.kind=b.dataset.k;repDraw()});
-function repRule(){return rep.kind==='day'?'day':rep.kind==='week'?`week:${rep.wd}`:rep.kind==='month'?`month:${rep.md}`:null}
+function repRule(){return rep.kind==='day'?'day':rep.kind==='week'?(rep.wd.size?`week:${[...rep.wd].sort().join(',')}`:null):rep.kind==='month'?`month:${rep.md}`:null}
 function repDraw(){
   document.querySelectorAll('.rkind button').forEach(b=>b.classList.toggle('on',b.dataset.k===rep.kind));
   $('rWeek').style.display=rep.kind==='week'?'flex':'none';
-  $('rWeek').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.d===rep.wd));
+  $('rWeek').querySelectorAll('button').forEach(b=>b.classList.toggle('on',rep.wd.has(+b.dataset.d)));
   $('rMonth').style.display=rep.kind==='month'?'block':'none';$('rMonth').value=rep.md;
   const r=repRule();
-  $('rHint').textContent=!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'평일(월~금)마다 맨 위에 나타나요. 토·일은 쉬어요.':`반복 루틴에 늘 보이고, ${repText(r)}까지 남은 날을 D-day로 알려줘요.`;
+  $('rHint').textContent=rep.kind==='week'&&!r?'요일을 눌러 켜고 끌 수 있어요. 여러 요일도 가능해요.':!r?'반복하지 않는 보통 할 일이에요.':r==='day'?'평일(월~금)마다 맨 위에 나타나요. 토·일은 쉬어요.':`반복 루틴에 늘 보이고, ${repText(r)}까지 남은 날을 D-day로 알려줘요.`;
 }
 function pickRepeat(cur,cb){
   const[k,n]=(cur||'').split(':');const now=new Date();
-  rep.kind=k||'';rep.wd=k==='week'?+n:(now.getDay()+6)%7;rep.md=k==='month'?+n:now.getDate();rep.cb=cb;
+  rep.kind=k||'';rep.wd=new Set(k==='week'?n.split(',').map(Number):[(now.getDay()+6)%7]);rep.md=k==='month'?+n:now.getDate();rep.cb=cb;
   repDraw();$('repDlg').showModal();
 }
 $('rCancel').onclick=()=>$('repDlg').close();

@@ -30,7 +30,10 @@ def _month_day(y, m, n):
 
 
 def _rule(rule):
+    """(종류, 값). 매주는 "week:0,2,4" 처럼 여러 요일을 쉼표로 이을 수 있어 값이 요일 번호 리스트다."""
     kind, _, n = rule.partition(":")
+    if kind == "week":
+        return kind, [int(x) for x in n.split(",")]
     return kind, int(n or 0)
 
 
@@ -39,14 +42,16 @@ def valid_rule(rule):
         kind, n = _rule(rule)
     except (AttributeError, ValueError):
         return False
-    return kind == "day" or (kind == "week" and 0 <= n <= 6) or (kind == "month" and 1 <= n <= 31)
+    if kind == "week":
+        return bool(n) and all(0 <= x <= 6 for x in n)
+    return kind == "day" or (kind == "month" and 1 <= n <= 31)
 
 
 def occ_on_or_before(rule, day):
     """day 이전(당일 포함) 가장 최근 회차."""
     kind, n = _rule(rule)
     if kind == "week":
-        return day - timedelta(days=(day.weekday() - n) % 7)
+        return day - timedelta(days=min((day.weekday() - x) % 7 for x in n))
     if kind == "month":
         c = _month_day(day.year, day.month, n)
         if c <= day:
@@ -62,7 +67,7 @@ def occ_after(rule, day):
     """day 다음(당일 제외) 첫 회차."""
     kind, n = _rule(rule)
     if kind == "week":
-        return day + timedelta(days=(n - day.weekday()) % 7 or 7)
+        return day + timedelta(days=min((x - day.weekday()) % 7 or 7 for x in n))
     if kind == "month":
         c = _month_day(day.year, day.month, n)
         if c > day:
