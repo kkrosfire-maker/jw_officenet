@@ -177,5 +177,12 @@ def autosize(win, min_w=0, min_h=0, pad=24) -> None:
     win.update_idletasks()
     w = max(min_w, win.winfo_reqwidth() + pad)
     h = max(min_h, win.winfo_reqheight() + pad)
-    win.geometry(f"{w}x{h}")
+    parent = win.master.winfo_toplevel() if win.master else None
+    if parent is not None and parent.winfo_viewable():
+        # 부모 창(프로그램) 가운데에 띄운다 — 멀티모니터에서 프로그램이 있는 화면에 뜨도록
+        x = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
+        y = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{max(y, parent.winfo_rooty())}")
+    else:
+        win.geometry(f"{w}x{h}")
     win.minsize(w, h)
