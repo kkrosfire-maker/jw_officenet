@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동일약품 검색기 모바일 시안</title>
+<style>
+  :root {
+    --green-900: #0A4A33;
+    --green-700: #11704A;
+    --green-600: #167B3C;
+    --green-100: #E3F1EA;
+    --green-50: #EEF6F1;
+    --bg: #F2F5F3;
+    --card: #FFFFFF;
+    --text: #1B2B24;
+    --muted: #6B7A72;
+    --line: #DCE3DF;
+    --version: #AEBDB5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #E9ECEA;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    color: var(--text);
+    display: flex; justify-content: center; padding: 24px 0;
+  }
+  .phone {
+    width: 390px; height: 844px; background: var(--bg);
+    border-radius: 44px; border: 10px solid #111; position: relative; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  .status { position: absolute; top: 0; left: 0; right: 0; height: 44px; color: #fff;
+    display: flex; justify-content: space-between; align-items: center; padding: 6px 28px 0; font-size: 14px; font-weight: 700; z-index: 5; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 104px; height: 28px; background: #111; border-radius: 20px; z-index: 6; }
+  header {
+    background: linear-gradient(160deg, var(--green-900), var(--green-700));
+    padding: 52px 16px 18px; color: #fff; display: flex; align-items: center; gap: 10px;
+  }
+  .logo { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.14); display: grid; place-items: center; flex: none; }
+  .titlebox { display: flex; align-items: baseline; gap: 6px; flex: 1; white-space: nowrap; min-width: 0; }
+  .title { font-size: 24px; font-weight: 800; letter-spacing: -.5px; }
+  .version { font-size: 12px; font-weight: 400; color: var(--version); }
+  .gear { flex: none; opacity: .95; }
+
+  .scroll { position: absolute; top: 122px; bottom: 76px; left: 0; right: 0; overflow: hidden; padding: 0 12px; }
+  .panel { background: var(--card); border-radius: 18px; padding: 12px; margin-top: 0; box-shadow: 0 2px 10px rgba(10,74,51,.08); }
+  .searchrow { display: flex; gap: 8px; }
+  .search { flex: 1; height: 44px; border: 1.5px solid var(--line); border-radius: 12px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #98A39D; font-size: 14px; background: #fff; }
+  .btn-search { width: 70px; height: 44px; background: var(--green-700); color: #fff; border: 0; border-radius: 12px; font-weight: 700; font-size: 15px; }
+  .sec-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; margin: 12px 0 8px; }
+  .sec-title .chev { margin-left: auto; color: var(--muted); }
+  .opts { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+  .cb { display: inline-flex; align-items: center; gap: 6px; }
+  .box { width: 18px; height: 18px; border-radius: 5px; border: 1.8px solid #9CA9A2; background: #fff; display: grid; place-items: center; flex: none; }
+  .box.on { background: var(--green-600); border-color: var(--green-600); }
+  .box.on::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px,-1px); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; background: var(--green-50); border-radius: 9px; padding: 5px 9px; font-size: 13px; }
+  .chip.off { background: #F4F5F4; color: #7B8780; }
+
+  .reshead { display: flex; justify-content: space-between; align-items: flex-end; margin: 14px 4px 8px; }
+  .count { font-size: 15px; font-weight: 700; }
+  .count b { font-weight: 800; }
+  .rule { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sort { position: relative; }
+  .sortbtn { height: 34px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 0 10px; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .menu { display: none; position: absolute; right: 0; top: 40px; width: 210px; background: #fff; border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.22); padding: 6px; z-index: 20; }
+  .menu.open { display: block; }
+  .mi { padding: 9px 10px; border-radius: 9px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .mi small { display: block; color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .mi.sel { background: var(--green-50); font-weight: 700; }
+  .mi.dis { color: #9AA59F; }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.8px solid #9CA9A2; flex: none; }
+  .sel .radio { border-color: var(--green-600); background: radial-gradient(var(--green-600) 45%, #fff 50%); }
+  .soon { margin-left: auto; font-size: 10px; background: #EEF0EF; color: #7B8780; border-radius: 6px; padding: 2px 6px; }
+
+  .card { background: #fff; border-radius: 16px; padding: 11px 12px 11px 14px; margin-bottom: 9px; position: relative; box-shadow: 0 1px 6px rgba(10,74,51,.07); }
+  .card::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; background: var(--green-700); border-radius: 0 4px 4px 0; }
+  .ctop { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .pname { font-size: 15.5px; font-weight: 800; color: var(--green-900); line-height: 1.3; word-break: keep-all; }
+  .badges { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex: none; }
+  .badge { background: var(--green-100); color: var(--green-900); font-size: 12px; font-weight: 800; border-radius: 8px; padding: 3px 8px; white-space: nowrap; }
+  .badge.rate { background: #FFF1D6; color: #8A5A00; }
+  .ingr { margin-top: 6px; font-size: 12.5px; color: #3C4D44; line-height: 1.35; }
+  .meta { display: flex; gap: 14px; margin-top: 6px; font-size: 12px; color: #4F6057; }
+  .meta span b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .note { margin-top: 6px; font-size: 11.5px; color: #8A5A00; background: #FFF8E8; border-radius: 7px; padding: 4px 7px; }
+
+  .bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 76px; background: #fff; border-top: 1px solid var(--line); display: flex; gap: 8px; padding: 10px 12px 18px; }
+  .act { flex: 1; background: var(--green-100); color: var(--green-900); border-radius: 12px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  svg { display: block; }
+
+  .searchrow { position: relative; }
+  .ph { white-space: nowrap; overflow: hidden; }
+  .search { min-width: 0; }
+  .btngroup { display: flex; flex: none; }
+  .btngroup .btn-search { width: 58px; border-radius: 12px 0 0 12px; }
+  .btn-drop { width: 36px; height: 44px; background: var(--green-900); border: 0; border-radius: 0 12px 12px 0; display: grid; place-items: center; border-left: 1px solid rgba(255,255,255,.25); cursor: pointer; }
+  .tmenu { display: none; position: absolute; right: 0; top: 50px; width: 190px; background: #fff; border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.22); padding: 8px 6px; z-index: 30; }
+  .tmenu.open { display: block; }
+  .tmenu-title { font-size: 11px; color: var(--muted); padding: 2px 10px 6px; }
+  .trow { display: flex; align-items: center; gap: 10px; padding: 11px 10px; border-radius: 9px; font-size: 14.5px; }
+  .tsep { border-top: 1px solid var(--line); margin: 4px 8px; }
+  .sec-title.toggle { cursor: pointer; margin: 12px 0 0; }
+  .sum { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--green-50); border-radius: 8px; padding: 1px 7px; }
+  .chips { display: none; margin-top: 8px; }
+  .chips.open { display: flex; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status"><span>9:41</span><span>●●●● ▮</span></div>
+
+  <header>
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="2.5" y="8.5" width="19" height="7.5" rx="3.75" transform="rotate(-35 12 12)"/><path d="M9.2 15.5l5.5-7.5" transform="rotate(0)"/></svg>
+    </div>
+    <div class="titlebox">
+      <span class="title">동일약품 검색기</span>
+      <span class="version">(요율표 26.11)</span>
+    </div>
+    <svg class="gear" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </header>
+
+  <div class="scroll">
+    <div class="panel">
+      <div class="searchrow">
+        <div class="search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2B24" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="ph">검색어 또는 초성 (ㅇㅌㄹ)</span>
+        </div>
+        <div class="btngroup">
+          <button class="btn-search">검색</button>
+          <button class="btn-drop" id="targetbtn" aria-label="검색 대상">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M5 8h14l-7 9z"/></svg>
+          </button>
+        </div>
+        <div class="tmenu" id="tmenu">
+          <div class="tmenu-title">검색 대상</div>
+          <div class="trow"><i class="box on"></i>제품명</div>
+          <div class="trow"><i class="box on"></i>성분</div>
+          <div class="trow"><i class="box on"></i>대조의약품</div>
+          <div class="tsep"></div>
+          <div class="trow"><i class="box"></i>정확히 일치</div>
+        </div>
+      </div>
+
+      <hr>
+      <div class="sec-title toggle" id="itemsbtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B2B24" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+        표시할 항목 <span class="sum">7/8</span>
+        <svg class="chev" id="itemschev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="chips" id="chips">
+        <span class="chip off"><i class="box"></i>전체선택</span>
+        <span class="chip"><i class="box on"></i>성분</span>
+        <span class="chip"><i class="box on"></i>보험코드</span>
+        <span class="chip"><i class="box on"></i>제약사명</span>
+        <span class="chip"><i class="box on"></i>제품명</span>
+        <span class="chip off"><i class="box"></i>대조의약품</span>
+        <span class="chip"><i class="box on"></i>약가</span>
+        <span class="chip"><i class="box on"></i>요율</span>
+        <span class="chip"><i class="box on"></i>비고</span>
+      </div>
+    </div>
+
+    <div class="reshead">
+      <div>
+        <div class="count">검색 결과 <b>241건</b></div>
+        <div class="rule">성분 → 약가↑ → 요율↓</div>
+      </div>
+      <div class="sort">
+        <div class="sortbtn" id="sortbtn">정렬: 성분순
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B2B24" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="menu" id="menu">
+          <div class="mi sel"><i class="radio"></i><div>성분순<small>성분 → 약가↑ → 요율↓</small></div></div>
+          <div class="mi"><i class="radio"></i><div>약가순<small>약가 낮은 순</small></div></div>
+          <div class="mi"><i class="radio"></i><div>요율순<small>요율 높은 순</small></div></div>
+          <div class="mi dis"><i class="radio"></i><div>사용자 설정</div><span class="soon">준비 중</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctop">
+        <div class="pname">비보존아토르바스타틴정 5mg (아토르바스타틴)</div>
+        <div class="badges"><span class="badge">약가 439</span><span class="badge rate">요율 60%</span></div>
+      </div>
+      <div class="ingr"><b style="color:#6B7A72;font-weight:600">성분</b>&nbsp; Atorvastatin calcium 5.425mg (5mg as atorvastatin)</div>
+      <div class="meta"><span><b>보험코드</b>658204870</span><span><b>제약사명</b>비보존제약</span></div>
+    </div>
+
+    <div class="card">
+      <div class="ctop">
+        <div class="pname">리토아틴정 10mg (아토르바스타틴)</div>
+        <div class="badges"><span class="badge">약가 564</span><span class="badge rate">요율 65%</span></div>
+      </div>
+      <div class="ingr"><b style="color:#6B7A72;font-weight:600">성분</b>&nbsp; Atorvastatin calcium 10.85mg (10mg as atorvastatin)</div>
+      <div class="meta"><span><b>보험코드</b>678600950</span><span><b>제약사명</b>다산제약</span></div>
+    </div>
+
+    <div class="card">
+      <div class="ctop">
+        <div class="pname">휴니즈아토르바스타틴칼슘정 10mg (아토르바스타틴)</div>
+        <div class="badges"><span class="badge">약가 564</span><span class="badge rate">요율 65%</span></div>
+      </div>
+      <div class="ingr"><b style="color:#6B7A72;font-weight:600">성분</b>&nbsp; Atorvastatin calcium 10.85mg (10mg as atorvastatin)</div>
+      <div class="meta"><span><b>보험코드</b>670400770</span><span><b>제약사명</b>휴온스메디텍</span></div>
+      <div class="note">비고: 26.07 EDI부터 적용</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="act">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.7l6.8-4M8.6 13.3l6.8 4"/></svg>
+      공유하기
+    </div>
+    <div class="act">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+      클립보드 복사
+    </div>
+    <div class="act">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+      이미지 저장
+    </div>
+  </div>
+</div>
+
+<script>
+  const btn = document.getElementById('sortbtn'), menu = document.getElementById('menu');
+  btn.addEventListener('click', () => menu.classList.toggle('open'));
+  const tbtn = document.getElementById('targetbtn'), tmenu = document.getElementById('tmenu');
+  tbtn.addEventListener('click', () => tmenu.classList.toggle('open'));
+  const ibtn = document.getElementById('itemsbtn'), chips = document.getElementById('chips'), ichev = document.getElementById('itemschev');
+  ibtn.addEventListener('click', () => { chips.classList.toggle('open'); ichev.style.transform = chips.classList.contains('open') ? 'rotate(180deg)' : ''; });
+  if (location.search === '?menu') menu.classList.add('open');
+  if (location.search === '?target') tmenu.classList.add('open');
+</script>
+</body>
+</html>
