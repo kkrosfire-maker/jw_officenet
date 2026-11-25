@@ -21,7 +21,7 @@ body::after{content:"";position:fixed;left:0;right:var(--tw);bottom:var(--fh,23p
   background:url(assets/swoosh.png) right bottom/cover no-repeat;pointer-events:none;z-index:0;
   -webkit-mask-image:linear-gradient(to bottom,transparent,#000 35%);mask-image:linear-gradient(to bottom,transparent,#000 35%)}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px calc((200px + var(--hh,116px)) / 5)}
-header{display:flex;align-items:center;gap:18px;padding:14px 24px 22px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
+header{display:flex;align-items:center;gap:18px;height:115px;padding:10px 24px 12px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
   position:sticky;top:0;z-index:3;background:var(--bg);box-shadow:0 6px 12px -6px rgba(13,74,50,.25)}
 header img{width:64px;height:64px;border-radius:10px}
 .title{min-width:0}
@@ -30,7 +30,8 @@ header img{width:64px;height:64px;border-radius:10px}
 .clock{margin-left:auto;text-align:right}
 .trow{display:flex;align-items:center;gap:10px}
 .contacts,.contacts *{user-select:text !important;-webkit-user-select:text !important}
-.contacts{cursor:text;position:relative;z-index:3;display:flex;flex-wrap:nowrap;white-space:nowrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--green-tint)}
+.contacts{cursor:text;position:relative;z-index:3;display:flex;flex-direction:column;gap:2px;margin-top:3px;font-size:12px;color:var(--green-tint);white-space:nowrap}
+.contacts div{display:flex;gap:14px}
 .contacts b{color:var(--green);font-weight:700;margin-left:3px;letter-spacing:.2px}
 .pin{flex:none;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
 .pin.on{background:var(--green);color:#fff;border-color:var(--green)}
@@ -119,7 +120,7 @@ body.todo-open #todo{display:block}
   <header>
     <img src="assets/logo.png" alt="정원유니어스">
     <div class="title"><div class="trow"><h1 id="ttl">정원유니어스 프로그램 보드</h1><button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button></div><p>JW UNIUS · 업무 프로그램 바로가기</p>
-      <div class="contacts"><span>유니어스 <b>010-6498-0999</b></span><span>오피스 <b>010-8434-9099</b></span><span>김포비상주 <b>010-4494-7097</b></span><span>김포공유 <b>010-5660-9099</b></span></div></div>
+      <div class="contacts"><div><span>유니어스 <b>010-6498-0999</b></span><span>오피스 <b>010-8434-9099</b></span></div><div><span>김포비상주 <b>010-4494-7097</b></span><span>김포공유 <b>010-5660-9099</b></span></div></div></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
   </header>
   <div class="tools"><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
@@ -158,6 +159,9 @@ function syncTodoHead(h){
   try{const d=$('todoFrame').contentDocument,hd=d&&d.querySelector('header');if(!hd)return;
     hd.style.boxSizing='border-box';hd.style.minHeight=h+'px';hd.style.display='flex';hd.style.flexDirection='column';hd.style.justifyContent='center';hd.style.gap='6px'}catch(e){}
 }
+// 다른 곳을 누르거나 오른쪽 체크리스트(iframe)로 포커스가 넘어가면 선택을 푼다
+addEventListener('mousedown',e=>{if(!e.target.closest('.contacts'))getSelection().removeAllRanges()});
+addEventListener('blur',()=>getSelection().removeAllRanges());
 $('pin').onclick=async()=>{
   if(!(window.pywebview&&pywebview.api))return;
   const on=!$('pin').classList.contains('on');
