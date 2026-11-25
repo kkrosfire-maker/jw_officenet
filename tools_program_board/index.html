@@ -28,6 +28,9 @@ header img{width:64px;height:64px;border-radius:10px}
 .title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
 .clock{margin-left:auto;text-align:right}
 .trow{display:flex;align-items:center;gap:10px}
+.contacts,.contacts *{user-select:text !important;-webkit-user-select:text !important}
+.contacts{cursor:text;position:relative;z-index:3;display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px;font-size:12px;color:var(--green-tint)}
+.contacts b{color:var(--green);font-weight:700;margin-left:3px;letter-spacing:.2px}
 .pin{flex:none;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
 .pin.on{background:var(--green);color:#fff;border-color:var(--green)}
 header{position:sticky}
@@ -114,7 +117,8 @@ body.todo-open #todo{display:block}
 <div class="wrap">
   <header>
     <img src="assets/logo.png" alt="정원유니어스">
-    <div class="title"><div class="trow"><h1 id="ttl">정원유니어스 프로그램 보드</h1><button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button></div><p>JW UNIUS · 업무 프로그램 바로가기</p></div>
+    <div class="title"><div class="trow"><h1 id="ttl">정원유니어스 프로그램 보드</h1><button class="pin" id="pin" title="다른 창 위에 항상 보이기">📌 고정</button></div><p>JW UNIUS · 업무 프로그램 바로가기</p>
+      <div class="contacts"><span>유니어스 <b>010-6498-0999</b></span><span>오피스 <b>010-8434-9099</b></span><span>김포비상주 <b>010-4494-7097</b></span><span>김포공유 <b>010-5660-9099</b></span></div></div>
     <div class="clock"><div class="time" id="time"></div><div class="date" id="date"></div></div>
   </header>
   <div class="tools"><button class="btn pri" id="bAdd">＋ 프로그램 추가</button></div>
