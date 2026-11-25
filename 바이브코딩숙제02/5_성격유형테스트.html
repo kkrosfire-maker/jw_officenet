@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나의 성격 유형 테스트</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 테마: 핑크 · 파스텔 */
+  :root{--bg:#fff0f6;--card:#ffffff;--text:#4a2038;--sub:#a1687f;--line:#ffd0e2;--accent:#ec4899;--accent2:#ff8fc0;--soft:#ffe3ef}
+  @media (prefers-color-scheme: dark){:root{--bg:#2a1020;--card:#3a1a2e;--text:#ffe9f3;--sub:#d79ab4;--line:#552640;--accent:#f06aa9;--accent2:#ff9ac6;--soft:#4a2038}}
+  h1{margin:6px 0 4px;font-size:30px;color:var(--accent)}
+  .sub{color:var(--sub);margin-bottom:16px}
+  .card{background:var(--card);border:2px solid var(--line);border-radius:28px;padding:24px 18px;box-shadow:0 8px 0 var(--line);min-height:300px;display:flex;flex-direction:column;justify-content:center}
+  .prog{height:10px;background:var(--soft);border-radius:999px;overflow:hidden;margin:0 6px 6px}
+  .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width .4s}
+  .pn{color:var(--sub);font-size:13px;font-weight:800;margin-bottom:14px}
+  .q{font-size:22px;font-weight:800;margin:6px 4px 4px;word-break:keep-all}
+  .q2{color:var(--sub);margin-bottom:18px}
+  .ans{display:block;width:100%;text-align:left;border:2px solid var(--line);background:var(--bg);color:var(--text);border-radius:16px;padding:14px 16px;margin:8px 0;font-size:16px;font-weight:700;transition:transform .1s,border-color .1s,background .1s}
+  .ans b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;margin-right:10px;font-size:13px}
+  .ans:hover{border-color:var(--accent);transform:translateX(4px)}
+  .ans:active{background:var(--soft)}
+  .ans.picked{background:var(--accent);color:#fff;border-color:var(--accent)} .ans.picked b{background:#fff;color:var(--accent)}
+  .slide{animation:in .35s ease-out}
+  @keyframes in{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+  .big{border:0;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:20px;font-weight:900;border-radius:999px;padding:14px 40px;box-shadow:0 6px 0 #b3236f;margin-top:10px;transition:transform .08s,box-shadow .08s;align-self:center}
+  .big:hover{transform:translateY(-2px)} .big:active{transform:translateY(5px);box-shadow:0 1px 0 #b3236f}
+  .emoji{font-size:84px;line-height:1.1;animation:bounce 1s ease-out}
+  @keyframes bounce{0%{transform:scale(.2) rotate(-30deg)}60%{transform:scale(1.2) rotate(8deg)}100%{transform:none}}
+  .rtype{color:var(--sub);font-size:13px;font-weight:800}
+  .rname{font-size:27px;font-weight:900;color:var(--accent);margin:4px 0 10px}
+  .rdesc{font-size:16px;word-break:keep-all;margin:0 6px 14px}
+  .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .tags span{background:var(--soft);color:var(--accent);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:800}
+  .axis{margin:0 8px 16px;text-align:left;font-size:13px;color:var(--sub)}
+  .axis .b{display:flex;height:10px;background:var(--soft);border-radius:999px;overflow:hidden;margin:3px 0 8px}
+  .axis .b i{display:block;background:var(--accent);height:100%}
+  .axis .l{display:flex;justify-content:space-between}
+  .btns{display:flex;gap:8px}
+  .btns button{flex:1;border:2px solid var(--accent);background:var(--card);color:var(--accent);border-radius:14px;padding:10px;font-weight:800}
+  .btns button:hover{background:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>💗 나는 어떤 유형?</h1>
+  <div class="sub">질문 5개로 알아보는 성격 유형</div>
+  <div class="card" id="card"></div>
+  <div class="note">* 공식 심리검사가 아닌 재미로 보는 테스트예요.</div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  // axis A: 활발(a) / 차분(b) — 질문 1·2·5 (3문항이라 동점 없음)
+  // axis B: 계획(a) / 즉흥(b) — 질문 3·4 (동점이면 질문 3의 답으로 결정)
+  var Q=[
+    {t:'Q1. 주말 약속이 잡혔다!',s:'나는…',ax:'A',o:['사람 많은 모임이 신난다! 일단 간다','조용한 소규모 모임이 편하다']},
+    {t:'Q2. 처음 만난 사람들 사이에 앉았다',s:'나는…',ax:'A',o:['먼저 말을 걸며 분위기를 만든다','누가 말 걸어주면 그때 대화한다']},
+    {t:'Q3. 갑자기 하루 휴가가 생겼다!',s:'나는…',ax:'B',o:['가고 싶던 카페 리스트부터 꺼낸다','일단 나가서 발길 닿는 대로!']},
+    {t:'Q4. 여행 가기 전날 밤',s:'나는…',ax:'B',o:['일정표와 짐 체크리스트 확인 완료','비행기표만 있으면 충분하지!']},
+    {t:'Q5. 힘든 하루를 보낸 날',s:'나는…',ax:'A',o:['친구를 만나 수다로 풀어버린다','집에서 혼자 푹 쉬며 충전한다']}
+  ];
+  var TYPES={
+    'aa':{e:'🦁',n:'든든한 리더 사자',tags:['#활발','#계획형'],d:'모임의 중심에서 계획을 착착 짜는 리더! 추진력이 대단해서 "일단 이 사람 믿고 가자"는 말을 자주 들어요. 가끔은 남에게도 맡기고 쉬어가요.'},
+    'ab':{e:'🐶',n:'분위기 메이커 강아지',tags:['#활발','#즉흥형'],d:'어디서든 친구를 만들고 즉흥 번개를 책임지는 에너자이저! 같이 있으면 지루할 틈이 없어요. 약속 시간만 조금 신경 써 주세요.'},
+    'ba':{e:'🦉',n:'차분한 전략가 부엉이',tags:['#차분','#계획형'],d:'조용히 관찰하고 꼼꼼하게 준비하는 전략가. 말수는 적어도 한마디 한마디가 믿음직해요. 가끔은 계획 밖의 모험도 즐겨 봐요.'},
+    'bb':{e:'🐱',n:'자유로운 산책가 고양이',tags:['#차분','#즉흥형'],d:'내 페이스대로 유유히, 발길 닿는 대로 걷는 자유로운 영혼. 혼자만의 시간이 보약이에요. 가끔은 친구에게 먼저 연락해 봐요.'}
+  };
+  var i=0, ans=[], res=null;
+  function bar(l,r,pct){ return '<div class="l"><span>'+l+'</span><span>'+r+'</span></div><div class="b"><i style="width:'+pct+'%"></i></div>'; }
+  function intro(){
+    $('card').innerHTML='<div class="slide"><div class="emoji">🔮</div><div class="q" style="margin-top:10px">나와 닮은 동물은?</div><div class="q2">5개의 질문에 솔직하게 답해 보세요!<br>걸리는 시간은 1분이면 충분해요.</div><button class="big" id="st">🚀 시작하기</button></div>';
+    $('st').onclick=function(){ i=0; ans=[]; show(); };
+  }
+  function show(){
+    var q=Q[i];
+    $('card').innerHTML='<div class="prog"><i style="width:'+(i/Q.length*100)+'%"></i></div><div class="pn">'+(i+1)+' / '+Q.length+'</div>'+
+      '<div class="slide"><div class="q">'+q.t+'</div><div class="q2">'+q.s+'</div>'+
+      q.o.map(function(o,k){return '<button class="ans" data-k="'+k+'"><b>'+'AB'[k]+'</b>'+o+'</button>'}).join('')+'</div>';
+    requestAnimationFrame(function(){ var p=document.querySelector('.prog i'); if(p) p.style.width=((i+1)/Q.length*100)+'%'; });
+  }
+  $('card').onclick=function(e){
+    var b=e.target.closest('.ans'); if(!b||res) return;
+    b.classList.add('picked'); var k=+b.dataset.k; ans[i]=k;
+    document.querySelectorAll('.ans').forEach(function(x){x.disabled=true});
+    setTimeout(function(){ i++; if(i<Q.length) show(); else result(); },280);
+  };
+  function result(){
+    var A=0,B=0,Ba=0,Bb=0, aA=0, aB=0;
+    Q.forEach(function(q,n){ var a=(ans[n]===0);
+      if(q.ax==='A'){ if(a) A++; else B++; } else { if(a) Ba++; else Bb++; } });
+    var first=ans[2]===0;                                   // 동점일 때 기준: Q3
+    var act = A>B, plan = Ba===Bb ? first : Ba>Bb;
+    var key=(act?'a':'b')+(plan?'a':'b'), t=TYPES[key]; res=key;
+    var p1=Math.round(Math.max(A,B)/(A+B)*100), p2=Math.round(Math.max(Ba,Bb)/(Ba+Bb)*100);
+    $('card').innerHTML='<div class="slide"><div class="rtype">나와 닮은 유형은…</div><div class="emoji">'+t.e+'</div><div class="rname">'+t.n+'</div>'+
+      '<div class="tags">'+t.tags.map(function(x){return '<span>'+x+'</span>'}).join('')+'</div><div class="rdesc">'+t.d+'</div>'+
+      '<div class="axis">'+bar('활발형 '+(act?p1:100-p1)+'%','차분형 '+(act?100-p1:p1)+'%',act?p1:100-p1)+bar('계획형 '+(plan?p2:100-p2)+'%','즉흥형 '+(plan?100-p2:p2)+'%',plan?p2:100-p2)+'</div>'+
+      '<div class="btns"><button id="re">🔄 다시 테스트하기</button><button id="cp">📋 결과 복사</button></div></div>';
+    $('re').onclick=function(){ res=null; intro(); };
+    $('cp').onclick=function(){
+      var txt='💗 나의 성격 유형: '+t.e+' '+t.n+' '+t.tags.join(' ')+'\n'+t.d+'\n(재미로 보는 테스트예요)';
+      var done=function(){ $('cp').textContent='✅ 복사됨!'; setTimeout(function(){$('cp').textContent='📋 결과 복사'},1400); };
+      if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done,done); else done();
+    };
+  }
+  intro();
+})();
+</script>
+</body>
+</html>

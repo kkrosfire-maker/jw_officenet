@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>두더지 잡기 게임</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 테마: 초록 잔디 · 흙갈색 */
+  :root{--bg:#e8f5d8;--card:#ffffff;--text:#2f3a1d;--sub:#6f8050;--line:#c9e2a8;--accent:#4caf50;--accent2:#8bc34a;--dirt:#7a4a2a;--dirt2:#4e2d17}
+  @media (prefers-color-scheme: dark){:root{--bg:#16210f;--card:#243219;--text:#eaf5d8;--sub:#a5bd84;--line:#364b25;--accent:#5fc463;--accent2:#9ccc5a;--dirt:#8a5733;--dirt2:#4e2d17}}
+  h1{margin:6px 0 10px;font-size:30px;color:var(--accent)}
+  .hud{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+  .hud div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px;min-width:92px}
+  .hud small{display:block;color:var(--sub);font-size:11px}
+  .hud b{font-size:24px;font-variant-numeric:tabular-nums}
+  .hud .low b{color:#e0413a;animation:blink .5s infinite alternate}
+  @keyframes blink{to{opacity:.4}}
+  .opts{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--sub)}
+  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .seg button{border:0;background:none;color:var(--sub);padding:4px 12px;border-radius:999px;font-size:13px;font-weight:700}
+  .seg button.on{background:var(--accent);color:#fff}
+  .field{position:relative;background:linear-gradient(#9ad25a,#7cb342);border:4px solid #5e9a2f;border-radius:26px;padding:18px;box-shadow:0 8px 0 #4a7d24;max-width:430px;margin:0 auto;touch-action:manipulation}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .hole{position:relative;aspect-ratio:1;border-radius:50%/42%;overflow:hidden;cursor:crosshair;background:transparent}
+  .hole::before{content:"";position:absolute;left:4%;right:4%;bottom:4%;height:44%;background:radial-gradient(ellipse at 50% 40%,var(--dirt2),var(--dirt));border-radius:50%;box-shadow:inset 0 6px 8px rgba(0,0,0,.5)}
+  .mole{position:absolute;left:50%;bottom:12%;font-size:min(14vw,66px);line-height:1;transform:translate(-50%,160%);transition:transform .12s ease-out;user-select:none}
+  .hole.up .mole{transform:translate(-50%,0)}
+  .hole.hit .mole{transform:translate(-50%,90%) rotate(25deg);filter:grayscale(.6)}
+  .hole::after{content:"";position:absolute;left:4%;right:4%;bottom:4%;height:24%;background:var(--dirt);border-radius:0 0 50% 50%/0 0 100% 100%;box-shadow:0 -2px 0 rgba(255,255,255,.12)}
+  .pop{position:absolute;transform:translateX(-50%);font-weight:900;font-size:24px;color:#fff;text-shadow:0 2px 0 #c0392b,0 0 8px #e74c3c;pointer-events:none;animation:up .7s ease-out forwards;z-index:3}
+  @keyframes up{from{opacity:1;transform:translate(-50%,0) scale(.7)}to{opacity:0;transform:translate(-50%,-50px) scale(1.4)}}
+  .ov{position:absolute;inset:0;border-radius:22px;background:rgba(30,50,15,.82);display:grid;place-items:center;color:#fff;text-align:center;padding:20px}
+  .ov.hide{display:none}
+  .ov h2{margin:0 0 6px;font-size:28px}
+  .ov p{margin:4px 0 12px}
+  .start{border:0;background:linear-gradient(180deg,#ffd54f,#ffb300);color:#4a3200;font-size:22px;font-weight:900;border-radius:999px;padding:12px 38px;box-shadow:0 6px 0 #b27d00;transition:transform .08s,box-shadow .08s}
+  .start:hover{transform:translateY(-2px)} .start:active{transform:translateY(5px);box-shadow:0 1px 0 #b27d00}
+  .shake{animation:sh .18s}
+  @keyframes sh{25%{transform:translate(-4px,2px)}75%{transform:translate(4px,-2px)}}
+</style>
+</head>
+<body>
+<button class="sound" id="snd">🔊 효과음</button>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>🔨 두더지 잡기!</h1>
+  <div class="hud">
+    <div><small>점수</small><b id="sc">0</b></div>
+    <div id="tbox"><small>남은 시간</small><b><span id="tm">30</span>초</b></div>
+    <div><small>최고 점수</small><b id="bs">0</b></div>
+  </div>
+  <div class="opts">
+    <span>난이도 <span class="seg" id="lv"><button data-l="easy">쉬움</button><button data-l="normal" class="on">보통</button><button data-l="hard">어려움</button></span></span>
+    <span>캐릭터 <span class="seg" id="ch"><button data-c="🐹" class="on">🐹</button><button data-c="🐭">🐭</button><button data-c="🐰">🐰</button><button data-c="🦔">🦔</button></span></span>
+  </div>
+  <div class="field" id="field">
+    <div class="grid" id="grid"></div>
+    <div class="ov" id="ov"><div><h2 id="ovT">두더지를 잡아라!</h2><p id="ovP">30초 안에 최대한 많이 잡으세요.<br>한 마리에 10점!</p><button class="start" id="start">▶ 시작</button></div></div>
+  </div>
+  <div class="note">최고 점수는 이 브라우저에 저장돼요.</div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var LV={easy:{stay:1100,gap:450},normal:{stay:750,gap:300},hard:{stay:480,gap:180}};
+  var KEY='jw_mole_v1', best; try{ best=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  best=best||{easy:0,normal:0,hard:0};
+  var level='normal', ch='🐹', score=0, left=30, playing=false, sound=true, holes=[], cur=-1, hideT=null, spawnT=null, tick=null, hitFlag=false, last=-1;
+  function saveBest(){ try{localStorage.setItem(KEY,JSON.stringify(best));}catch(e){} }
+  function showBest(){ $('bs').textContent=best[level]; }
+
+  $('grid').innerHTML=Array.apply(null,Array(9)).map(function(_,i){return '<div class="hole" data-i="'+i+'"><div class="mole">'+ch+'</div></div>'}).join('');
+  holes=Array.prototype.slice.call(document.querySelectorAll('.hole'));
+
+  var ac; function beep(f,d,t){ if(!sound) return; try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); var o=ac.createOscillator(),g=ac.createGain();
+    o.type=t||'square'; o.frequency.value=f; g.gain.value=.06; o.connect(g); g.connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d); o.stop(ac.currentTime+d); }catch(e){} }
+  $('snd').onclick=function(){ sound=!sound; $('snd').textContent=sound?'🔊 효과음':'🔇 효과음 꺼짐'; };
+  $('lv').onclick=function(e){ var b=e.target.closest('button'); if(!b||playing) return; level=b.dataset.l;
+    Array.prototype.forEach.call($('lv').children,function(x){x.classList.toggle('on',x===b)}); showBest(); };
+  $('ch').onclick=function(e){ var b=e.target.closest('button'); if(!b||playing) return; ch=b.dataset.c;
+    Array.prototype.forEach.call($('ch').children,function(x){x.classList.toggle('on',x===b)});
+    holes.forEach(function(h){h.querySelector('.mole').textContent=ch}); };
+
+  function hide(){ if(cur>=0){ holes[cur].classList.remove('up','hit'); cur=-1; } }
+  function spawn(){
+    if(!playing) return;
+    var i; do{ i=Math.floor(Math.random()*9); }while(i===last);
+    last=i; cur=i; hitFlag=false; holes[i].classList.remove('hit'); holes[i].classList.add('up');
+    hideT=setTimeout(function(){ hide(); spawnT=setTimeout(spawn,LV[level].gap); },LV[level].stay);
+  }
+  $('grid').addEventListener('pointerdown',function(e){
+    var h=e.target.closest('.hole'); if(!h||!playing) return;
+    if(+h.dataset.i===cur && !hitFlag){
+      hitFlag=true; score+=10; $('sc').textContent=score; h.classList.add('hit'); beep(760,.1); setTimeout(function(){beep(1000,.12)},70);
+      var fr=$('field').getBoundingClientRect(), hr=h.getBoundingClientRect(), p=document.createElement('div'); p.className='pop'; p.textContent='+10';
+      p.style.left=(hr.left-fr.left+hr.width/2)+'px'; p.style.top=(hr.top-fr.top+hr.height*0.1)+'px'; $('field').appendChild(p); setTimeout(function(){p.remove()},700);
+      clearTimeout(hideT); setTimeout(function(){ hide(); },180); clearTimeout(spawnT); spawnT=setTimeout(spawn,LV[level].gap+120);
+    } else { beep(150,.12,'sawtooth'); $('field').classList.remove('shake'); void $('field').offsetWidth; $('field').classList.add('shake'); }
+  });
+
+  function start(){
+    score=0; left=30; playing=true; last=-1; $('sc').textContent=0; $('tm').textContent=30; $('tbox').classList.remove('low');
+    $('ov').classList.add('hide'); showBest(); beep(520,.15); setTimeout(function(){beep(780,.2)},160);
+    var end=Date.now()+30000;
+    tick=setInterval(function(){
+      left=Math.max(0,Math.ceil((end-Date.now())/1000)); $('tm').textContent=left; $('tbox').classList.toggle('low',left<=5);
+      if(Date.now()>=end) finish();
+    },100);
+    spawnT=setTimeout(spawn,500);
+  }
+  function finish(){
+    playing=false; clearInterval(tick); clearTimeout(hideT); clearTimeout(spawnT); hide();
+    var nb=score>best[level]; if(nb){ best[level]=score; saveBest(); } showBest();
+    $('ovT').textContent=nb&&score>0?'🏆 신기록!':'게임 끝!';
+    $('ovP').innerHTML='점수 <b style="font-size:30px">'+score+'</b>점 ('+(score/10)+'마리)<br>'+(nb&&score>0?'최고 점수를 갱신했어요!':'최고 점수 '+best[level]+'점');
+    $('start').textContent='🔄 다시 하기'; $('ov').classList.remove('hide'); beep(300,.4,'triangle');
+  }
+  $('start').onclick=start;
+  showBest();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정원헤어살롱 운영 대시보드</title>
+<style>
+  :root{
+    color-scheme:light dark;
+    --bg:#f4f3f0;--surface:#fcfcfb;--line:#e3e1dc;--line-2:#d2d0ca;
+    --text:#0b0b0b;--text-2:#52514e;--accent:#2a78d6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;--text:#f0efec;--text-2:#c3c2b7;--accent:#3987e5}
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  .top{flex:none;background:var(--bg);border-bottom:1px solid var(--line)}
+  .in{max-width:1280px;margin:0 auto;padding:16px 16px 0}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .logo{width:46px;height:46px;flex:none;border-radius:10px;background:var(--accent);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center}
+  h1{font-size:20px;margin:0}
+  .sub{color:var(--text-2);font-size:13px}
+  nav{display:flex;gap:4px;overflow-x:auto}
+  nav button{font:inherit;border:0;background:none;padding:10px 14px;color:var(--text-2);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+  nav button:hover{color:var(--text)}
+  nav button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+  iframe{flex:1;width:100%;border:0;background:var(--bg);color-scheme:light dark}
+</style>
+</head>
+<body>
+<div class="top"><div class="in">
+  <div class="brand">
+    <div class="logo">✂</div>
+    <div><h1>정원헤어살롱 운영 대시보드</h1><div class="sub">AI 바이브코딩 숙제 01 · 매장 운영 도우미</div></div>
+  </div>
+  <nav id="nav"></nav>
+</div></div>
+<iframe id="view" title="프로그램"></iframe>
+
+<script>
+(function(){
+  var TABS=[
+    ['시술 매출 계산기','1_시술매출계산기.html'],
+    ['이벤트 추첨기','2_이벤트추첨기.html'],
+    ['디자이너 근무표','3_디자이너근무표.html'],
+    ['안내 문자 생성기','4_고객안내문자.html'],
+    ['디자이너별 매출 분석','5_디자이너매출분석.html']
+  ];
+  var nav=document.getElementById('nav'), view=document.getElementById('view');
+  nav.innerHTML=TABS.map(function(t,i){return '<button data-i="'+i+'">'+t[0]+'</button>'}).join('');
+  function show(i){
+    i=(i>=0&&i<TABS.length)?i:0;
+    view.src=TABS[i][1];
+    Array.prototype.forEach.call(nav.children,function(b,k){b.classList.toggle('on',k===i)});
+    try{ location.hash='t'+(i+1); }catch(e){}
+  }
+  nav.onclick=function(e){ var b=e.target.closest('button'); if(b) show(+b.dataset.i); };
+  var m=/^#t(\d)$/.exec(location.hash);
+  show(m?+m[1]-1:0);
+})();
+</script>
+</body>
+</html>

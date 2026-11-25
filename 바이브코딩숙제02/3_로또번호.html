@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로또 번호 생성기</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 테마: 추첨 방송 — 네이비 · 골드 */
+  :root{--bg:#10183a;--card:#1a2552;--text:#fff6dd;--sub:#a9b4e0;--line:#2e3b78;--accent:#ffc83d;--accent2:#ff9f1c}
+  body{background:radial-gradient(ellipse at 50% -10%,rgba(255,200,61,.22),transparent 60%),var(--bg);background-attachment:fixed}
+  h1{margin:6px 0 4px;font-size:30px;color:var(--accent);text-shadow:0 0 18px rgba(255,200,61,.45)}
+  .sub{color:var(--sub);margin-bottom:14px}
+  .stage{background:var(--card);border:2px solid var(--line);border-radius:26px;padding:20px 10px;box-shadow:0 0 0 4px rgba(255,200,61,.12),0 14px 34px rgba(0,0,0,.25)}
+  .lines{display:inline-flex;background:rgba(255,255,255,.07);border-radius:999px;padding:3px;margin-bottom:12px}
+  .lines button{border:0;background:none;color:var(--sub);padding:6px 16px;border-radius:999px;font-size:13px;font-weight:800}
+  .lines button.on{background:var(--accent);color:#2b2a1a}
+  .row{display:flex;gap:8px;justify-content:center;align-items:center;min-height:62px;margin:10px 0;flex-wrap:wrap}
+  .row .tools{display:flex;gap:4px;margin-left:6px}
+  .ball{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:21px;font-weight:900;color:#fff;
+    box-shadow:inset -5px -6px 10px rgba(0,0,0,.28),inset 4px 4px 8px rgba(255,255,255,.5),0 5px 10px rgba(0,0,0,.35);
+    text-shadow:0 1px 2px rgba(0,0,0,.4);animation:drop .7s cubic-bezier(.3,1.6,.5,1) backwards}
+  .ball.y{background:#fbc400;color:#4b3b00;text-shadow:none} .ball.b{background:#4aa8e8} .ball.r{background:#f05b5b}
+  .ball.g{background:#8e8e8e} .ball.n{background:#5cb82e}
+  @keyframes drop{0%{transform:translateY(-120px) rotate(-360deg) scale(.3);opacity:0}100%{transform:none;opacity:1}}
+  .mini{border:1px solid var(--line);background:none;color:var(--sub);border-radius:8px;padding:3px 8px;font-size:12px}
+  .mini:hover{color:var(--accent);border-color:var(--accent)}
+  .go{margin-top:8px;border:0;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent2));color:#2b2a1a;font-size:22px;font-weight:900;padding:14px 42px;box-shadow:0 6px 0 #b86a00,0 0 24px rgba(255,200,61,.4);transition:transform .08s,box-shadow .08s}
+  .go:hover{transform:translateY(-2px)} .go:active{transform:translateY(5px);box-shadow:0 1px 0 #b86a00}
+  .go:disabled{opacity:.6}
+  .box{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;text-align:left}
+  .box h2{margin:0 0 8px;font-size:15px;color:var(--accent)}
+  .item{display:flex;align-items:center;gap:6px;padding:5px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+  .item:first-of-type{border-top:0}
+  .item .mb{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff}
+  .item .mb.y{background:#fbc400;color:#4b3b00}.item .mb.b{background:#4aa8e8}.item .mb.r{background:#f05b5b}.item .mb.g{background:#8e8e8e}.item .mb.n{background:#5cb82e}
+  .item .sp{flex:1}
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:6px}
+  .legend{display:flex;gap:10px;justify-content:center;font-size:11px;color:var(--sub);margin-top:10px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px}
+</style>
+</head>
+<body>
+<button class="sound" id="snd">🔊 효과음</button>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>🎰 행운의 번호 생성기</h1>
+  <div class="sub">1~45 중 겹치지 않는 6개 · 작은 숫자부터!</div>
+
+  <div class="stage">
+    <div class="lines" id="lines"><button data-n="1" class="on">1줄</button><button data-n="5">5줄</button></div>
+    <div id="draws"><div class="row" id="r0"><span class="empty">아래 버튼을 눌러 번호를 뽑아 보세요!</span></div></div>
+    <button class="go" id="go">🎱 번호 뽑기</button>
+    <div class="legend"><span><i style="background:#fbc400"></i>1~10</span><span><i style="background:#4aa8e8"></i>11~20</span><span><i style="background:#f05b5b"></i>21~30</span><span><i style="background:#8e8e8e"></i>31~40</span><span><i style="background:#5cb82e"></i>41~45</span></div>
+  </div>
+
+  <div class="box"><h2>⭐ 마음에 드는 번호 <span id="savedCnt" style="color:var(--sub);font-weight:400"></span></h2><div id="saved"></div></div>
+  <div class="box"><h2>🕘 이전에 뽑은 번호</h2><div id="hist"></div></div>
+  <div class="note">* 재미로만! 당첨 확률은 어떤 번호든 똑같아요.</div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var KEY='jw_lotto_v1', st; try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!st) st={saved:[],hist:[]};
+  var n=1, sound=true, busy=false;
+  function save(){ try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){} }
+  function cls(x){ return x<=10?'y':x<=20?'b':x<=30?'r':x<=40?'g':'n'; }
+  var ac; function beep(f,d){ if(!sound) return; try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); var o=ac.createOscillator(),g=ac.createGain();
+    o.type='triangle'; o.frequency.value=f; g.gain.value=.07; o.connect(g); g.connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d); o.stop(ac.currentTime+d); }catch(e){} }
+  $('snd').onclick=function(){ sound=!sound; $('snd').textContent=sound?'🔊 효과음':'🔇 효과음 꺼짐'; };
+  $('lines').onclick=function(e){ var b=e.target.closest('button'); if(!b||busy) return; n=+b.dataset.n;
+    Array.prototype.forEach.call($('lines').children,function(x){x.classList.toggle('on',x===b)}); };
+
+  function make(){
+    var pool=[]; for(var i=1;i<=45;i++) pool.push(i);
+    var out=[]; while(out.length<6){ out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); }   // 중복 없이 뽑기
+    return out.sort(function(a,b){return a-b});
+  }
+  function balls(arr,anim){
+    return arr.map(function(x,i){ return '<span class="ball '+cls(x)+'" style="'+(anim?'animation-delay:'+(i*0.35)+'s':'animation:none')+'">'+x+'</span>'; }).join('');
+  }
+  function mini(arr){ return arr.map(function(x){return '<span class="mb '+cls(x)+'">'+x+'</span>'}).join(''); }
+  function copy(arr,btn){
+    var t=arr.join(', '), done=function(){ var o=btn.textContent; btn.textContent='복사됨'; setTimeout(function(){btn.textContent=o},1000); };
+    if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,done); else done();
+  }
+
+  var cur=[];
+  function draw(){
+    if(busy) return; busy=true; $('go').disabled=true;
+    cur=[]; for(var i=0;i<n;i++) cur.push(make());
+    $('draws').innerHTML=cur.map(function(a,i){
+      return '<div class="row" id="r'+i+'">'+balls(a,true)+'<span class="tools"><button class="mini" data-s="'+i+'">⭐ 저장</button><button class="mini" data-c="'+i+'">복사</button></span></div>'; }).join('');
+    for(var k=0;k<6;k++) (function(k){ setTimeout(function(){ beep(500+k*90,.18); },k*350+250); })(k);
+    st.hist.unshift({t:new Date().toLocaleString('ko-KR'),lines:cur}); st.hist=st.hist.slice(0,10); save();
+    setTimeout(function(){ busy=false; $('go').disabled=false; renderLists(); },6*350+500);
+  }
+  $('go').onclick=draw;
+  $('draws').onclick=function(e){
+    var s=e.target.closest('[data-s]'), c=e.target.closest('[data-c]');
+    if(s){ var a=cur[+s.dataset.s]; if(!st.saved.some(function(x){return x.join()===a.join()})){ st.saved.unshift(a); save(); renderLists(); } s.textContent='⭐ 저장됨'; }
+    if(c) copy(cur[+c.dataset.c],c);
+  };
+  function renderLists(){
+    $('saved').innerHTML=st.saved.length?st.saved.map(function(a,i){ return '<div class="item">'+mini(a)+'<span class="sp"></span><button class="mini" data-cc="'+i+'">복사</button><button class="mini" data-d="'+i+'">삭제</button></div>'}).join(''):'<div class="empty">⭐ 저장을 누르면 여기에 모여요.</div>';
+    $('savedCnt').textContent=st.saved.length?'('+st.saved.length+'개)':'';
+    $('hist').innerHTML=st.hist.length?st.hist.map(function(h){ return h.lines.map(function(a,j){ return '<div class="item">'+mini(a)+'<span class="sp"></span>'+(j===0?'<small style="color:var(--sub)">'+h.t+'</small>':'')+'</div>'}).join('') }).join(''):'<div class="empty">아직 뽑은 기록이 없어요.</div>';
+  }
+  $('saved').onclick=function(e){
+    var d=e.target.closest('[data-d]'), c=e.target.closest('[data-cc]');
+    if(d){ st.saved.splice(+d.dataset.d,1); save(); renderLists(); }
+    if(c) copy(st.saved[+c.dataset.cc],c);
+  };
+  renderLists();
+})();
+</script>
+</body>
+</html>

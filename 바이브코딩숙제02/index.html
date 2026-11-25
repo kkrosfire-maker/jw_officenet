@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정원헤어살롱 놀이터</title>
+<style>
+  :root{
+    color-scheme:light dark;
+    --bg:#f4f3f0;--surface:#fcfcfb;--line:#e3e1dc;--text:#0b0b0b;--text-2:#52514e;--tc:#f2644a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--text:#f0efec;--text-2:#c3c2b7}
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  .top{flex:none;background:var(--bg);border-bottom:1px solid var(--line)}
+  .in{max-width:1280px;margin:0 auto;padding:16px 16px 0}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .logo{width:46px;height:46px;flex:none;border-radius:12px;background:var(--tc);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;transition:background .3s}
+  h1{font-size:20px;margin:0}
+  .sub{color:var(--text-2);font-size:13px}
+  nav{display:flex;gap:4px;overflow-x:auto}
+  nav button{font:inherit;border:0;background:none;padding:10px 14px;color:var(--text-2);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:7px}
+  nav button i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+  nav button:hover{color:var(--text)}
+  nav button.on{color:var(--text);font-weight:600;border-bottom-color:var(--c)}
+  iframe{flex:1;width:100%;border:0;background:var(--bg);color-scheme:light dark}
+</style>
+</head>
+<body>
+<div class="top"><div class="in">
+  <div class="brand">
+    <div class="logo" id="logo">🎮</div>
+    <div><h1>정원헤어살롱 놀이터</h1><div class="sub">AI 바이브코딩 숙제 02 · 일 생각은 잠깐 내려놓고 놀아요</div></div>
+  </div>
+  <nav id="nav"></nav>
+</div></div>
+<iframe id="view" title="프로그램"></iframe>
+
+<script>
+(function(){
+  // [이름, 파일, 아이콘, 테마색]
+  var TABS=[
+    ['가위바위보 대결','1_가위바위보.html','✌️','#f2644a'],
+    ['오늘의 운세','2_오늘의운세.html','🔮','#7c4dff'],
+    ['로또 번호 생성기','3_로또번호.html','🎰','#f5a000'],
+    ['두더지 잡기','4_두더지잡기.html','🔨','#4caf50'],
+    ['성격 유형 테스트','5_성격유형테스트.html','💗','#ec4899']
+  ];
+  var nav=document.getElementById('nav'), view=document.getElementById('view'), logo=document.getElementById('logo');
+  nav.innerHTML=TABS.map(function(t,i){return '<button data-i="'+i+'" style="--c:'+t[3]+'"><i></i>'+t[2]+' '+t[0]+'</button>'}).join('');
+  function show(i){
+    i=(i>=0&&i<TABS.length)?i:0;
+    view.src=TABS[i][1];
+    document.documentElement.style.setProperty('--tc',TABS[i][3]); logo.textContent=TABS[i][2];
+    Array.prototype.forEach.call(nav.children,function(b,k){b.classList.toggle('on',k===i)});
+    document.title=TABS[i][0]+' · 정원헤어살롱 놀이터';
+    try{ location.hash='t'+(i+1); }catch(e){}
+  }
+  nav.onclick=function(e){ var b=e.target.closest('button'); if(b) show(+b.dataset.i); };
+  var m=/^#t(\d)$/.exec(location.hash);
+  show(m?+m[1]-1:0);
+})();
+</script>
+</body>
+</html>

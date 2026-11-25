@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시술 매출 계산기</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<style>
+  :root{
+    color-scheme:light dark;
+    --bg:#f4f3f0;--surface:#fcfcfb;--line:#e3e1dc;--line-2:#d2d0ca;
+    --text:#0b0b0b;--text-2:#52514e;--muted:#7a7974;
+    --accent:#2a78d6;--accent-dark:#1f5fb0;--soft:#e3eefb;--crit:#c9372c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;--text:#f0efec;--text-2:#c3c2b7;--muted:#8f8e86;
+      --accent:#3987e5;--accent-dark:#5a9cec;--soft:#1d2d42;--crit:#ec6b5f}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  .embed .back{display:none !important}
+  .wrap{max-width:780px;margin:0 auto;padding:20px 16px 60px}
+  h1{margin:0 0 2px;font-size:20px}
+  .sub{margin:0 0 16px;color:var(--text-2);font-size:13px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 10px;font-size:15px}
+  label{display:block;font-size:12px;color:var(--text-2);margin:10px 0 4px}
+  input,select{width:100%;padding:8px 10px;font:inherit;font-size:14px;border:1px solid var(--line-2);border-radius:8px;color:var(--text);background:var(--surface)}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .row{display:flex;gap:10px} .row>div{flex:1;min-width:0}
+  .rates,.quick{display:flex;gap:6px;flex-wrap:wrap}
+  .rate{padding:6px 14px;font:inherit;font-size:13px;border:1px solid var(--line-2);background:var(--surface);border-radius:999px;cursor:pointer;color:var(--text)}
+  .rate.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .rate-custom{width:80px !important;border-radius:999px !important;padding:5px 10px !important}
+  .quick{margin-top:8px}
+  .preview{margin-top:14px;background:var(--soft);border-radius:8px;padding:10px 14px}
+  .line{display:flex;justify-content:space-between;padding:3px 0}
+  .line.disc{color:var(--accent-dark)}
+  .line.pay{font-size:20px;font-weight:700;border-top:1px dashed var(--accent);margin-top:6px;padding-top:8px}
+  .btn{border:1px solid var(--accent);border-radius:8px;padding:9px 16px;font:inherit;font-size:14px;cursor:pointer;font-weight:600;background:var(--accent);color:#fff}
+  .btn:hover{filter:brightness(.95)}
+  .btn.main{width:100%;margin-top:12px}
+  .btn.ghost{background:var(--surface);border-color:var(--line-2);color:var(--text-2);font-weight:400;padding:4px 10px;font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-size:12px;color:var(--text-2);text-align:right;font-weight:600;padding:6px 4px;border-bottom:1px solid var(--line-2)}
+  td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  td.x{width:30px;text-align:center}
+  .del{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+  .del:hover{color:var(--crit)}
+  .empty{text-align:center;color:var(--muted);padding:14px 0}
+  .vat-toggle{display:flex;gap:6px;margin:12px 0 6px}
+  .total{background:var(--accent);color:#fff;border-radius:8px;padding:12px 16px;margin-top:10px}
+  .total .line{padding:2px 0;opacity:.95}
+  .total .big{font-size:22px;font-weight:700;border-top:1px solid rgba(255,255,255,.5);margin-top:6px;padding-top:8px;opacity:1}
+  .hist-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .hist-item small{color:var(--text-2)}
+  .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .head h2{margin:0}
+  .err{color:var(--crit);font-size:13px;margin-top:6px;min-height:18px}
+  .note{font-size:12px;color:var(--text-2);margin-top:4px}
+  .warn{color:var(--crit)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html" style="color:var(--accent);font-size:13px;text-decoration:none">← 메뉴로</a>
+  <h1>시술 매출 계산기</h1>
+  <p class="sub">방문한 손님·담당 디자이너를 고르고 시술을 담아 저장하면, 매출 분석·추첨기에 자동으로 반영돼요.</p>
+
+  <!-- 방문 정보 -->
+  <div class="card">
+    <h2>방문 정보</h2>
+    <div class="row">
+      <div><label for="dt">날짜</label><input type="date" id="dt"></div>
+      <div><label for="cust">고객 이름</label><input type="text" id="cust" list="custList" placeholder="예) 김하늘" autocomplete="off"><datalist id="custList"></datalist></div>
+      <div><label for="des">담당 디자이너</label><select id="des"></select></div>
+    </div>
+    <div class="note" id="desNote"></div>
+  </div>
+
+  <!-- 시술 입력 -->
+  <div class="card">
+    <h2>시술 입력</h2>
+    <label for="svc">시술명</label>
+    <select id="svc"></select>
+    <input type="text" id="name" placeholder="시술명을 직접 입력하세요" style="display:none;margin-top:8px" list="extraList">
+    <datalist id="extraList"></datalist>
+    <div class="quick" id="quick" style="display:none"></div>
+    <div class="row">
+      <div><label for="price">가격 (원)</label><input type="number" id="price" min="0" step="1000" value="0"></div>
+      <div><label for="qty">수량</label><input type="number" id="qty" min="1" step="1" value="1"></div>
+    </div>
+    <label>할인율</label>
+    <div class="rates" id="rates"></div>
+    <div class="preview">
+      <div class="line"><span>정가</span><span id="pvOrig">0원</span></div>
+      <div class="line disc"><span>할인금액</span><span id="pvDisc">- 0원</span></div>
+      <div class="line pay"><span>결제금액</span><span id="pvPay">0원</span></div>
+    </div>
+    <div class="err" id="err"></div>
+    <button class="btn main" id="addBtn">+ 이 시술을 목록에 담기</button>
+  </div>
+
+  <!-- 합산 -->
+  <div class="card">
+    <div class="head"><h2>이번 방문 시술 합계</h2><button class="btn ghost" id="clearBtn">목록 비우기</button></div>
+    <div id="listBox"></div>
+    <div class="vat-toggle">
+      <button class="rate on" data-vat="incl">부가세 포함가</button>
+      <button class="rate" data-vat="excl">부가세 별도가</button>
+    </div>
+    <div class="total" id="totalBox"></div>
+    <div class="err" id="saveErr"></div>
+    <button class="btn main" id="saveBtn" style="margin-top:4px">💾 이 방문 저장하기 (매출에 반영)</button>
+    <div class="note">저장하면 시술별 결제금액(할인 후)이 디자이너 매출로 기록돼요.</div>
+  </div>
+
+  <!-- 최근 저장 -->
+  <div class="card">
+    <div class="head"><h2>최근 저장된 방문</h2><span class="note" id="histInfo"></span></div>
+    <div id="histBox"></div>
+  </div>
+</div>
+<script src="salon-data.js"></script>
+<script>
+(function(){
+  var S=window.Salon, MENU=S.MENU, EXTRAS=S.EXTRAS;
+  var $=function(id){return document.getElementById(id)};
+  var won=function(n){return Math.round(n).toLocaleString('ko-KR')+'원'};
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  var rate=0, vatMode='incl', items=[];
+
+  /* ---------- 방문 정보 ---------- */
+  $('dt').value=S.ymd(S.today());
+  function refreshDes(){
+    var w=S.working($('dt').value), keep=$('des').value;
+    $('des').innerHTML=w.length?w.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+' ('+esc(S.roleOf(n))+')</option>'}).join(''):'<option value="">근무자 없음</option>';
+    if(w.indexOf(keep)>=0) $('des').value=keep;
+    $('desNote').innerHTML=w.length?'이 날 근무 디자이너 '+w.length+'명만 선택할 수 있어요. (근무표 기준)':'<span class="warn">이 날은 근무하는 디자이너가 없어요. 근무표를 확인해 주세요.</span>';
+  }
+  function refreshCust(){
+    var seen={}; S.sales().forEach(function(x){seen[x.cust]=1});
+    $('custList').innerHTML=Object.keys(seen).sort().map(function(n){return '<option value="'+esc(n)+'">'}).join('');
+  }
+  $('dt').addEventListener('change',refreshDes);
+
+  /* ---------- 시술 메뉴 ---------- */
+  $('svc').innerHTML=MENU.map(function(m,i){return '<option value="'+i+'">'+m[0]+' · '+m[1]+' — '+m[2].toLocaleString('ko-KR')+'원</option>'}).join('')+'<option value="custom">✏ 직접 입력하기</option>';
+  $('extraList').innerHTML=EXTRAS.map(function(e){return '<option value="'+e[0]+'">'}).join('');
+  $('quick').innerHTML='<span class="note" style="margin:0 4px 0 0;align-self:center">자주 쓰는 항목</span>'+EXTRAS.map(function(e,i){return '<button class="rate" data-q="'+i+'">'+e[0]+' '+e[1].toLocaleString('ko-KR')+'원</button>'}).join('');
+  function applySvc(){
+    var v=$('svc').value, custom=(v==='custom');
+    $('name').style.display=custom?'block':'none'; $('quick').style.display=custom?'flex':'none';
+    if(custom){ $('name').value=''; $('price').value=''; }
+    else { $('name').value=MENU[v][1]; $('price').value=MENU[v][2]; }
+    preview();
+  }
+  $('svc').addEventListener('change',function(){ applySvc(); if($('svc').value==='custom') $('name').focus(); });
+  $('quick').addEventListener('click',function(e){
+    var b=e.target.closest('[data-q]'); if(!b) return;
+    var x=EXTRAS[+b.dataset.q]; $('name').value=x[0]; $('price').value=x[1]; preview();
+  });
+
+  /* ---------- 할인율 ---------- */
+  function renderRates(){
+    var keep=$('custom')?$('custom').value:'';
+    $('rates').innerHTML=[0,10,20,30].map(function(r){return '<button class="rate'+(r===rate&&!keep?' on':'')+'" data-r="'+r+'">'+r+'%</button>'}).join('')+'<input type="number" class="rate-custom" id="custom" min="0" max="100" placeholder="직접">';
+    $('custom').value=keep;
+  }
+  $('rates').addEventListener('click',function(e){ var b=e.target.closest('button[data-r]'); if(!b)return; rate=+b.dataset.r; $('custom').value=''; renderRates(); preview(); });
+  $('rates').addEventListener('input',function(e){
+    if(e.target.id!=='custom') return;
+    rate=e.target.value===''?0:Math.min(100,Math.max(0,+e.target.value));
+    Array.prototype.forEach.call($('rates').querySelectorAll('button'),function(b){b.classList.remove('on')});
+    preview();
+  });
+
+  function calc(price,qty,r){ var o=price*qty, d=Math.floor(o*r/100); return {orig:o,disc:d,pay:o-d}; }
+  function preview(){
+    var c=calc(Number($('price').value)||0,Math.max(1,Math.floor(Number($('qty').value)||1)),rate);
+    $('pvOrig').textContent=won(c.orig); $('pvDisc').textContent='- '+won(c.disc)+(rate?' ('+rate+'%)':''); $('pvPay').textContent=won(c.pay);
+  }
+  ['price','qty'].forEach(function(id){$(id).addEventListener('input',preview)});
+
+  /* ---------- 목록 ---------- */
+  $('addBtn').addEventListener('click',function(){
+    var name=$('name').value.trim(), price=Number($('price').value), qty=Math.floor(Number($('qty').value));
+    if(!name) return $('err').textContent='시술명을 입력해 주세요.';
+    if(!(price>0)) return $('err').textContent='가격을 0보다 크게 입력해 주세요.';
+    if(!(qty>=1)) return $('err').textContent='수량은 1 이상이어야 해요.';
+    $('err').textContent='';
+    var c=calc(price,qty,rate);
+    items.push({name:name,price:price,qty:qty,rate:rate,orig:c.orig,disc:c.disc,pay:c.pay});
+    applySvc(); renderList();
+  });
+  $('clearBtn').addEventListener('click',function(){items=[];renderList()});
+  document.querySelectorAll('[data-vat]').forEach(function(b){
+    b.addEventListener('click',function(){ vatMode=b.dataset.vat; document.querySelectorAll('[data-vat]').forEach(function(x){x.classList.toggle('on',x===b)}); renderList(); });
+  });
+  function totals(){
+    var t=items.reduce(function(a,i){a.orig+=i.orig;a.disc+=i.disc;a.pay+=i.pay;return a},{orig:0,disc:0,pay:0}), supply,vat,grand;
+    if(vatMode==='incl'){ grand=t.pay; vat=Math.round(grand/11); supply=grand-vat; } else { supply=t.pay; vat=Math.round(supply*.1); grand=supply+vat; }
+    return {orig:t.orig,disc:t.disc,supply:supply,vat:vat,grand:grand};
+  }
+  function renderList(){
+    $('listBox').innerHTML=!items.length?'<div class="empty">아직 담긴 시술이 없어요.<br>위에서 시술을 고르고 "목록에 담기"를 눌러 보세요.</div>'
+      :'<table><tr><th>시술</th><th>정가</th><th>할인</th><th>결제</th><th></th></tr>'+items.map(function(i,k){
+        return '<tr><td>'+esc(i.name)+(i.qty>1?' ×'+i.qty:'')+'</td><td>'+won(i.orig)+'</td><td>'+(i.rate?i.rate+'%':'-')+'</td><td><b>'+won(i.pay)+'</b></td><td class="x"><button class="del" data-del="'+k+'" title="삭제">×</button></td></tr>'}).join('')+'</table>';
+    var t=totals();
+    $('totalBox').innerHTML='<div class="line"><span>정가 합계</span><span>'+won(t.orig)+'</span></div><div class="line"><span>할인 합계</span><span>- '+won(t.disc)+'</span></div><div class="line"><span>공급가액</span><span>'+won(t.supply)+'</span></div><div class="line"><span>부가세 (10%)</span><span>'+won(t.vat)+'</span></div><div class="line big"><span>총 결제금액</span><span>'+won(t.grand)+'</span></div>';
+  }
+  $('listBox').addEventListener('click',function(e){ var b=e.target.closest('[data-del]'); if(!b)return; items.splice(+b.dataset.del,1); renderList(); });
+
+  /* ---------- 저장 (공용 데이터에 기록) ---------- */
+  $('saveBtn').addEventListener('click',function(){
+    var cust=$('cust').value.trim(), des=$('des').value, date=$('dt').value;
+    if(!date) return $('saveErr').textContent='날짜를 선택해 주세요.';
+    if(!cust) return $('saveErr').textContent='고객 이름을 입력해 주세요.';
+    if(!des) return $('saveErr').textContent='근무 중인 담당 디자이너를 선택해 주세요.';
+    if(!items.length) return $('saveErr').textContent='먼저 시술을 목록에 담아 주세요.';
+    $('saveErr').textContent='';
+    S.addVisit({date:date,cust:cust,des:des,items:items});
+    items=[]; $('cust').value=''; renderList(); renderHist(); refreshCust();
+  });
+  function renderHist(){
+    var v=S.visits().slice().reverse().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0}).slice(0,8);
+    $('histInfo').textContent='전체 '+S.visits().length.toLocaleString()+'건 중 최근 8건';
+    $('histBox').innerHTML=v.length?v.map(function(x){
+      return '<div class="hist-item"><div>'+esc(x.cust)+' · '+esc(x.des)+'<br><small>'+x.date+' · '+x.items.map(function(i){return esc(i.name)}).join(', ')+'</small></div><div><b>'+won(x.total)+'</b> <button class="del" data-hv="'+x.v+'" title="이 방문 삭제">×</button></div></div>';
+    }).join(''):'<div class="empty">저장된 방문이 없어요.</div>';
+  }
+  $('histBox').addEventListener('click',function(e){
+    var b=e.target.closest('[data-hv]'); if(!b)return;
+    if(confirm('이 방문 기록을 삭제할까요? (매출 분석에서도 빠져요)')){ S.removeVisit(b.dataset.hv); renderHist(); refreshCust(); }
+  });
+
+  renderRates(); refreshDes(); refreshCust(); applySvc(); renderList(); renderHist();
+})();
+</script>
+</body>
+</html>

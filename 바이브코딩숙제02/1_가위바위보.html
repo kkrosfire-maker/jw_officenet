@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가위바위보 대결</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 테마: 코랄 레드 · 크림 */
+  :root{--bg:#fff4ee;--card:#ffffff;--text:#3b2420;--sub:#8d6b63;--line:#ffd9cc;--accent:#f2644a;--accent2:#ff9a6b;--soft:#ffe6dc;--win:#1fa971;--lose:#e0413a}
+  @media (prefers-color-scheme: dark){:root{--bg:#24140f;--card:#33201a;--text:#ffeee6;--sub:#c9a398;--line:#4a2e25;--accent:#ff7358;--accent2:#ff9a6b;--soft:#43271d;--win:#3ccf91;--lose:#ff6a62}}
+  h1{margin:6px 0 14px;font-size:30px;color:var(--accent);letter-spacing:-1px}
+  .stats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 12px;min-width:70px}
+  .stat small{display:block;color:var(--sub);font-size:11px}
+  .stat b{font-size:18px}
+  .modes{display:inline-flex;background:var(--soft);border-radius:999px;padding:3px;margin-bottom:14px}
+  .modes button{border:0;background:none;color:var(--sub);padding:6px 16px;border-radius:999px;font-size:13px;font-weight:700}
+  .modes button.on{background:var(--accent);color:#fff}
+  .arena{background:var(--card);border:2px solid var(--line);border-radius:26px;padding:20px 10px 16px;box-shadow:0 8px 0 var(--line)}
+  .fight{display:flex;align-items:center;justify-content:space-around}
+  .side{flex:1}
+  .side small{display:block;color:var(--sub);font-weight:700;margin-bottom:4px}
+  .hand{font-size:86px;line-height:1.1;display:inline-block;transition:transform .2s}
+  .hand.shake{animation:shake .5s ease-in-out 2}
+  .side.cpu .hand.shake{animation-name:shake2}
+  @keyframes shake{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-22px) rotate(-12deg)}75%{transform:translateY(8px) rotate(8deg)}}
+  @keyframes shake2{0%,100%{transform:translateY(0) rotate(0) scaleX(-1)}25%{transform:translateY(-22px) rotate(12deg) scaleX(-1)}75%{transform:translateY(8px) rotate(-8deg) scaleX(-1)}}
+  .hand.reveal{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+  .vs{font-weight:900;font-size:22px;color:var(--accent2)}
+  .msg{min-height:44px;margin:10px 0 2px;font-size:22px;font-weight:800}
+  .msg.win{color:var(--win)} .msg.lose{color:var(--lose)} .msg.tie{color:var(--sub)}
+  .msg.bump{animation:bump .4s}
+  @keyframes bump{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .series{color:var(--sub);font-size:13px;min-height:20px}
+  .picks{display:flex;gap:12px;justify-content:center;margin:20px 0 14px}
+  .pick{width:104px;border:0;border-radius:20px;background:var(--accent);color:#fff;padding:12px 4px;font-size:15px;font-weight:800;box-shadow:0 6px 0 #c24630;transition:transform .08s,box-shadow .08s}
+  .pick span{display:block;font-size:42px;line-height:1.2}
+  .pick:hover{transform:translateY(-3px);box-shadow:0 9px 0 #c24630}
+  .pick:active{transform:translateY(5px);box-shadow:0 1px 0 #c24630}
+  .pick:disabled{opacity:.55;transform:none;box-shadow:0 6px 0 #c24630;cursor:default}
+  .again{border:2px solid var(--accent);background:var(--card);color:var(--accent);border-radius:999px;padding:8px 22px;font-weight:800}
+  .again:hover{background:var(--accent);color:#fff}
+  .burst{position:fixed;font-size:26px;pointer-events:none;animation:rise 1.2s ease-out forwards;z-index:9}
+  @keyframes rise{from{transform:translateY(0) scale(.6);opacity:1}to{transform:translateY(-220px) scale(1.3) rotate(40deg);opacity:0}}
+</style>
+</head>
+<body>
+<button class="sound" id="snd">🔊 효과음</button>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>✌️ 가위바위보 대결!</h1>
+
+  <div class="stats">
+    <div class="stat"><small>승</small><b id="sW">0</b></div>
+    <div class="stat"><small>무</small><b id="sT">0</b></div>
+    <div class="stat"><small>패</small><b id="sL">0</b></div>
+    <div class="stat"><small>승률</small><b id="sR">-</b></div>
+    <div class="stat"><small>연승</small><b id="sS">0</b></div>
+    <div class="stat"><small>최고 연승</small><b id="sB">0</b></div>
+  </div>
+
+  <div class="modes" id="modes"><button data-m="single" class="on">단판 승부</button><button data-m="bo5">5판 3선승제</button></div>
+
+  <div class="arena">
+    <div class="fight">
+      <div class="side"><small>나</small><div class="hand" id="myH">❔</div></div>
+      <div class="vs">VS</div>
+      <div class="side cpu"><small>컴퓨터</small><div class="hand" id="cpH" style="transform:scaleX(-1)">❔</div></div>
+    </div>
+    <div class="msg" id="msg">무엇을 낼까요?</div>
+    <div class="series" id="series"></div>
+  </div>
+
+  <div class="picks" id="picks"></div>
+  <button class="again" id="again">🔄 다시 하기</button>
+  <div class="note">기록(승·패·최고 연승)은 이 브라우저에 저장돼요.</div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var H=[{e:'✌️',n:'가위'},{e:'✊',n:'바위'},{e:'🖐️',n:'보'}];
+  var KEY='jw_rps_v1', st; try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!st) st={w:0,t:0,l:0,streak:0,best:0};
+  var mode='single', sw=0, sl=0, over=false, busy=false, sound=true;
+  function save(){ try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){} }
+
+  $('picks').innerHTML=H.map(function(h,i){return '<button class="pick" data-i="'+i+'"><span>'+h.e+'</span>'+h.n+'</button>'}).join('');
+
+  /* 효과음 (브라우저 내장 소리 만들기) */
+  var ac; function beep(f,d,type){
+    if(!sound) return;
+    try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)(); var o=ac.createOscillator(), g=ac.createGain();
+      o.type=type||'sine'; o.frequency.value=f; g.gain.value=.08; o.connect(g); g.connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d); o.stop(ac.currentTime+d); }catch(e){}
+  }
+  $('snd').onclick=function(){ sound=!sound; $('snd').textContent=sound?'🔊 효과음':'🔇 효과음 꺼짐'; };
+
+  function stats(){
+    $('sW').textContent=st.w; $('sT').textContent=st.t; $('sL').textContent=st.l;
+    var n=st.w+st.t+st.l; $('sR').textContent=n?Math.round(st.w/n*100)+'%':'-';
+    $('sS').textContent=st.streak; $('sB').textContent=st.best;
+    $('series').textContent=mode==='bo5'?('5판 3선승제 · 나 '+sw+' : '+sl+' 컴퓨터'):'';
+  }
+  function burst(){
+    var em=['🎉','⭐','✨','🏆','💖'];
+    for(var i=0;i<14;i++){ (function(i){ setTimeout(function(){
+      var s=document.createElement('span'); s.className='burst'; s.textContent=em[i%em.length];
+      s.style.left=(25+Math.random()*50)+'vw'; s.style.top=(45+Math.random()*20)+'vh'; document.body.appendChild(s);
+      setTimeout(function(){s.remove()},1300); },i*50); })(i); }
+  }
+  function play(me){
+    if(busy||over) return; busy=true;
+    document.querySelectorAll('.pick').forEach(function(b){b.disabled=true});
+    var cpu=Math.floor(Math.random()*3), my=$('myH'), cp=$('cpH');
+    my.textContent='✊'; cp.textContent='✊'; my.className='hand shake'; cp.className='hand shake';
+    $('msg').className='msg'; $('msg').textContent='가위~ 바위~ ...'; beep(330,.12); setTimeout(function(){beep(330,.12)},250);
+    setTimeout(function(){
+      my.className='hand reveal'; cp.className='hand reveal'; my.textContent=H[me].e; cp.textContent=H[cpu].e;
+      var d=(me-cpu+3)%3, m=$('msg');
+      if(d===0){ st.t++; st.streak=st.streak; m.className='msg tie bump'; m.textContent='비겼어요! 🤝'; beep(440,.2); }
+      else if(d===1){ st.w++; st.streak++; if(st.streak>st.best) st.best=st.streak; if(mode==='bo5') sw++;
+        m.className='msg win bump'; m.textContent='이겼다! 🎉'+(st.streak>1?' '+st.streak+'연승 중':''); beep(660,.15); setTimeout(function(){beep(880,.25)},150); burst(); }
+      else { st.l++; st.streak=0; if(mode==='bo5') sl++; m.className='msg lose bump'; m.textContent='졌어요... 😭'; beep(200,.35,'sawtooth'); }
+      if(mode==='bo5' && (sw===3||sl===3)){ over=true; m.textContent=(sw===3?'🏆 시리즈 승리!':'💔 시리즈 패배...')+'  ('+sw+':'+sl+')'; if(sw===3) burst(); }
+      save(); stats();
+      busy=false; document.querySelectorAll('.pick').forEach(function(b){b.disabled=over});
+    },1000);
+  }
+  $('picks').onclick=function(e){ var b=e.target.closest('.pick'); if(b) play(+b.dataset.i); };
+  function reset(){
+    sw=0; sl=0; over=false; $('myH').textContent='❔'; $('cpH').textContent='❔'; $('myH').className='hand'; $('cpH').className='hand';
+    $('msg').className='msg'; $('msg').textContent='무엇을 낼까요?';
+    document.querySelectorAll('.pick').forEach(function(b){b.disabled=false}); stats();
+  }
+  $('again').onclick=function(){ if(busy) return; reset(); };
+  $('modes').onclick=function(e){
+    var b=e.target.closest('button'); if(!b||busy) return; mode=b.dataset.m;
+    Array.prototype.forEach.call($('modes').children,function(x){x.classList.toggle('on',x===b)}); reset();
+  };
+  stats();
+})();
+</script>
+</body>
+</html>

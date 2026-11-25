@@ -1,0 +1,37 @@
+/* 정원헤어살롱 공통 테마 (정원유니어스 정산 대시보드 스타일) */
+:root{
+  color-scheme:light dark;
+  --bg:#f4f3f0;--surface:#fcfcfb;--line:#e3e1dc;--line-2:#d2d0ca;
+  --text:#0b0b0b;--text-2:#52514e;--muted:#7a7974;
+  --accent:#2a78d6;--accent-dark:#1f5fb0;--soft:#e3eefb;--crit:#c9372c;--good:#2f855a;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#121211;--surface:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;--text:#f0efec;--text-2:#c3c2b7;--muted:#8f8e86;
+    --accent:#3987e5;--accent-dark:#5a9cec;--soft:#1d2d42;--crit:#ec6b5f;--good:#5cbf88}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+.embed .back{display:none !important}
+a.back{color:var(--accent);font-size:13px;text-decoration:none}
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+h1{margin:4px 0 2px;font-size:20px}
+.sub{margin:0 0 16px;color:var(--text-2);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2,h2{margin:0 0 10px;font-size:15px}
+label{display:block;font-size:12px;color:var(--text-2);margin:0 0 4px}
+input,select,textarea{width:100%;padding:8px 10px;font:inherit;font-size:14px;border:1px solid var(--line-2);border-radius:8px;color:var(--text);background:var(--surface)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input[type=checkbox]{width:auto}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.btn{border:1px solid var(--accent);border-radius:8px;padding:8px 16px;font:inherit;font-size:14px;cursor:pointer;font-weight:600;background:var(--accent);color:#fff;white-space:nowrap}
+.btn:hover{filter:brightness(.95)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--surface);border-color:var(--line-2);color:var(--text-2);font-weight:400;padding:5px 11px;font-size:13px}
+.err{color:var(--crit);font-size:13px;min-height:18px;margin-top:6px}
+.note{font-size:12px;color:var(--text-2)}
+.empty{text-align:center;color:var(--muted);padding:14px}
+.x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:18px}
+.x:hover{color:var(--crit)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:12px;color:var(--text-2);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line-2);text-align:right}
+td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}

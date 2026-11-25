@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>디자이너별 매출 분석</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .wrap{max-width:960px}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .kpi div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .kpi small{color:var(--text-2);display:block;font-size:12px}
+  .kpi b{font-size:22px;font-variant-numeric:tabular-nums}
+  th:nth-child(1),td:nth-child(1),th:nth-child(2),td:nth-child(2){text-align:left}
+  td{font-variant-numeric:tabular-nums}
+  .role{color:var(--muted);font-size:11px;margin-left:4px}
+  .bars .b{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .bars .nm{width:84px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bars .track{flex:1;background:var(--soft);border-radius:6px;height:24px;overflow:hidden}
+  .bars .fill{height:100%;background:var(--accent);border-radius:6px;transition:width .4s}
+  .bars .v{width:76px;text-align:right;font-size:13px;color:var(--text-2)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+  .scroll{overflow-x:auto}
+  .log{max-height:340px;overflow:auto}
+  td.l,th.l{text-align:left}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>디자이너별 매출 분석</h1>
+  <p class="sub">시술 매출 계산기에 저장한 방문이 자동으로 집계돼요. (가상 데이터 6개월치 포함)</p>
+
+  <div class="top">
+    <div style="width:200px"><label for="mon">기간</label><select id="mon"></select></div>
+    <button class="btn ghost" id="reset">가상 데이터 다시 만들기</button>
+  </div>
+
+  <div class="kpi" id="kpi"></div>
+
+  <div class="card">
+    <h2 id="ttl">디자이너 순위</h2>
+    <div class="scroll"><table id="rank"></table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h2>디자이너별 매출 그래프</h2><div class="bars" id="bars"></div><div class="note" id="cmp" style="margin-top:10px"></div></div>
+    <div class="card"><h2>시술별 매출 비중</h2><div class="bars" id="svcBars"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>월별 매출 추이</h2>
+    <div class="bars" id="trend"></div>
+  </div>
+
+  <div class="card">
+    <div class="top" style="margin-bottom:6px"><h2 style="margin:0">방문 내역</h2>
+      <div style="width:160px"><select id="fd"></select></div></div>
+    <div class="log scroll"><table id="log"></table></div>
+  </div>
+</div>
+<script src="salon-data.js"></script>
+<script>
+(function(){
+  var S=window.Salon, $=function(i){return document.getElementById(i)};
+  var won=function(n){return Math.round(n).toLocaleString('ko-KR')+'원'};
+  var man=function(n){return n>=10000?(Math.round(n/1000)/10).toLocaleString('ko-KR')+'만':won(n)};
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  var mon=function(d){return d.slice(0,7)};
+  function bars(el,rows,fmt){
+    var max=rows.reduce(function(m,r){return Math.max(m,r[1])},0)||1;
+    $(el).innerHTML=rows.length?rows.map(function(r){
+      return '<div class="b"><span class="nm" title="'+esc(r[0])+'">'+esc(r[0])+'</span><div class="track"><div class="fill" style="width:'+(r[1]/max*100)+'%"></div></div><span class="v">'+(fmt?fmt(r):man(r[1]))+'</span></div>';
+    }).join(''):'<div class="empty">데이터가 없어요.</div>';
+  }
+
+  function render(){
+    var sales=S.sales(), all=sales.slice();
+    var ms={}; all.forEach(function(x){ms[mon(x.date)]=1}); var months=Object.keys(ms).sort();
+    var cur=$('mon').value;
+    $('mon').innerHTML='<option value="all">전체 기간</option>'+months.slice().reverse().map(function(m){return '<option value="'+m+'">'+m.replace('-','년 ')+'월</option>'}).join('');
+    $('mon').value=(cur&&(cur==='all'||ms[cur]))?cur:(months[months.length-1]||'all');
+    var sel=$('mon').value;
+    var list=sel==='all'?all:all.filter(function(x){return mon(x.date)===sel});
+
+    // 디자이너별 집계 (고객 수 = 방문 건수, 같은 방문의 여러 시술은 1명으로 셈)
+    var m={}, vis={};
+    list.forEach(function(x){
+      var o=m[x.des]||(m[x.des]={des:x.des,sa:0,sv:0,v:{}});
+      o.sa+=x.pay; o.sv+=1; o.v[x.v]=1; vis[x.v]=1;
+    });
+    var a=Object.keys(m).map(function(k){var o=m[k]; o.cu=Object.keys(o.v).length; return o}).sort(function(x,y){return y.sa-x.sa});
+    var total=a.reduce(function(s,o){return s+o.sa},0), cust=Object.keys(vis).length;
+
+    $('ttl').textContent=(sel==='all'?'전체 기간':sel.replace('-','년 ')+'월')+' 디자이너 순위';
+    $('kpi').innerHTML='<div><small>총매출</small><b>'+won(total)+'</b></div><div><small>총 방문(고객)</small><b>'+cust.toLocaleString()+'명</b></div><div><small>평균 객단가</small><b>'+(cust?won(total/cust):'-')+'</b></div><div><small>시술 건수</small><b>'+list.length.toLocaleString()+'건</b></div>';
+
+    $('rank').innerHTML=a.length?'<tr><th class="l">순위</th><th class="l">디자이너</th><th>고객</th><th>시술</th><th>총매출</th><th>객단가</th><th>비중</th></tr>'+a.map(function(o,i){
+      return '<tr><td class="l">'+(['🥇','🥈','🥉'][i]||(i+1))+'</td><td class="l"><b>'+esc(o.des)+'</b><span class="role">'+esc(S.roleOf(o.des))+'</span></td><td>'+o.cu.toLocaleString()+'명</td><td>'+o.sv.toLocaleString()+'건</td><td>'+won(o.sa)+'</td><td>'+won(o.sa/o.cu)+'</td><td>'+(total?Math.round(o.sa/total*100):0)+'%</td></tr>';
+    }).join(''):'<tr><td class="empty">데이터가 없어요. 시술 매출 계산기에서 방문을 저장해 보세요.</td></tr>';
+
+    bars('bars',a.map(function(o){return [o.des,o.sa]}));
+    var prev=months[months.indexOf(sel)-1];
+    if(sel!=='all'&&prev){
+      var pt=all.filter(function(x){return mon(x.date)===prev}).reduce(function(s,x){return s+x.pay},0), d=pt?(total-pt)/pt*100:0;
+      $('cmp').textContent='전월('+prev+') 대비 총매출 '+(d>=0?'▲ ':'▼ ')+Math.abs(d).toFixed(1)+'% ('+(total-pt>=0?'+':'-')+won(Math.abs(total-pt))+')';
+    } else $('cmp').textContent='';
+
+    // 시술별 비중 (컷/펌/염색/기타로 묶음)
+    var g={}; list.forEach(function(x){
+      var k=/컷$|컷\(/.test(x.name)?'컷':/펌/.test(x.name)?'펌':/염색/.test(x.name)?'염색':x.name;
+      g[k]=(g[k]||0)+x.pay;
+    });
+    var order=['컷','펌','염색','두피관리','탈모관리','드라이','샴푸'];
+    bars('svcBars',Object.keys(g).sort(function(x,y){return (order.indexOf(x)<0?99:order.indexOf(x))-(order.indexOf(y)<0?99:order.indexOf(y))}).map(function(k){return [k,g[k]]}),
+      function(r){return man(r[1])+' ('+(total?Math.round(r[1]/total*100):0)+'%)'});
+
+    var mt={}; all.forEach(function(x){mt[mon(x.date)]=(mt[mon(x.date)]||0)+x.pay});
+    bars('trend',months.map(function(k){return [k.replace('-','년 ')+'월',mt[k]]}));
+
+    // 방문 내역
+    var fdv=$('fd').value||'';
+    $('fd').innerHTML='<option value="">전체 디자이너</option>'+S.designers().map(function(d){return '<option value="'+esc(d.name)+'">'+esc(d.name)+'</option>'}).join('');
+    $('fd').value=fdv;
+    var vs=S.visits().filter(function(v){return (!fdv||v.des===fdv)&&(sel==='all'||mon(v.date)===sel)}).sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0}).slice(0,60);
+    $('log').innerHTML=vs.length?'<tr><th class="l">날짜</th><th class="l">고객</th><th class="l">디자이너</th><th class="l">시술</th><th>금액</th></tr>'+vs.map(function(v){
+      return '<tr><td class="l">'+v.date+'</td><td class="l">'+esc(v.cust)+'</td><td class="l">'+esc(v.des)+'</td><td class="l">'+v.items.map(function(i){return esc(i.name)}).join(', ')+'</td><td>'+won(v.total)+'</td></tr>';
+    }).join(''):'<tr><td class="empty">내역이 없어요.</td></tr>';
+  }
+  $('mon').onchange=render; $('fd').onchange=render;
+  $('reset').onclick=function(){ if(confirm('저장한 방문·근무표 수정을 지우고 가상 데이터를 새로 만들까요?')){ S.reset(); render(); } };
+  render();
+})();
+</script>
+</body>
+</html>

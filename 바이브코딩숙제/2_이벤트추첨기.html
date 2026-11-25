@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이벤트 당첨자 추첨기</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .wrap{max-width:780px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;max-height:230px;overflow:auto}
+  .chip{background:var(--soft);border-radius:999px;padding:4px 6px 4px 12px;font-size:13px;display:flex;gap:4px;align-items:center}
+  .chip em{font-style:normal;color:var(--text-2);font-size:11px}
+  .chip.won{opacity:.5;text-decoration:line-through}
+  .chip button{border:none;background:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px}
+  .chip button:hover{color:var(--crit)}
+  .opt{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--text-2)}
+  .opt label{display:flex;gap:6px;align-items:center;margin:0;color:var(--text-2);font-size:13px}
+  .stage{text-align:center;padding:28px 10px;min-height:170px;position:relative;overflow:hidden;background:var(--bg);border-radius:8px;margin-top:12px}
+  .stage .small{color:var(--text-2);font-size:14px}
+  .stage .name{font-size:48px;font-weight:700;color:var(--accent);margin:8px 0;word-break:keep-all}
+  .stage .name.spin{color:var(--muted)}
+  .stage .name.pop{animation:pop .6s ease}
+  @keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+  .confetti{position:absolute;top:-20px;font-size:22px;animation:fall 2.2s linear forwards;pointer-events:none}
+  @keyframes fall{to{transform:translateY(300px) rotate(360deg);opacity:0}}
+  .big{width:100%;font-size:18px;padding:12px;margin-top:12px}
+  .hist div{padding:8px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .summary{background:var(--soft);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>이벤트 당첨자 추첨기</h1>
+  <p class="sub">시술 매출 계산기에 저장된 방문 손님 이름이 자동으로 모여요. 기간을 고르면 그 기간에 방문한 손님으로 추첨합니다.</p>
+
+  <div class="card">
+    <h2>참가자 (<span id="cnt">0</span>명)</h2>
+    <div class="row">
+      <div style="width:200px"><label for="per">방문 기간</label>
+        <select id="per">
+          <option value="m0">이번 달</option><option value="m1">지난 달</option>
+          <option value="d7">최근 7일</option><option value="d30" selected>최근 30일</option>
+          <option value="d90">최근 3개월</option><option value="all">전체 (6개월)</option>
+        </select></div>
+      <div style="flex:1;min-width:180px"><label for="nm">직접 추가 (쉼표로 여러 명)</label><input type="text" id="nm" placeholder="이름 입력 후 Enter"></div>
+      <button class="btn" id="add">추가</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="summary" id="sum"></div>
+    <div class="chips" id="chips"></div>
+    <div class="opt">
+      <label><input type="checkbox" id="excl" checked> 당첨된 사람은 다음 추첨에서 제외</label>
+      <label><input type="checkbox" id="wgt"> 방문 횟수가 많을수록 당첨 확률 높게</label>
+      <button class="btn ghost" id="reload">참가자 다시 불러오기</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>추첨</h2>
+    <div class="row">
+      <div style="flex:1"><label for="prize">경품</label><input type="text" id="prize" value="1등 · 헤어 케어 세트"></div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="small" id="stSmall">준비되었나요?</div>
+      <div class="name" id="stName">?</div>
+    </div>
+    <button class="btn big" id="draw">🎉 추첨하기</button>
+  </div>
+
+  <div class="card hist">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">당첨 기록</h2><button class="btn ghost" id="hclr">기록 삭제</button></div>
+    <div id="hist"></div>
+  </div>
+</div>
+<script src="salon-data.js"></script>
+<script>
+(function(){
+  var S=window.Salon, KEY='jw_draw_v2', $=function(i){return document.getElementById(i)};
+  var st; try{ st=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!st) st={manual:[],rm:[],h:[],per:'d30'};
+  $('per').value=st.per||'d30';
+  function save(){ try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){} }
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+  function range(){
+    var v=$('per').value, t=S.today(), to=S.ymd(t), from=null;
+    if(v==='m0'){ from=S.ymd(new Date(t.getFullYear(),t.getMonth(),1)); }
+    else if(v==='m1'){ from=S.ymd(new Date(t.getFullYear(),t.getMonth()-1,1)); to=S.ymd(new Date(t.getFullYear(),t.getMonth(),0)); }
+    else if(v[0]==='d'){ from=S.ymd(S.addDays(t,-(+v.slice(1)-1))); }
+    return {from:from,to:to};
+  }
+  // 참가자 = 기간 내 방문 손님(자동) + 직접 추가한 사람 − 뺀 사람
+  function people(){
+    var r=range(), list=S.customers(r.from,r.to).map(function(c){return {name:c.name,n:c.n}});
+    var have={}; list.forEach(function(p){have[p.name]=1});
+    st.manual.forEach(function(n){ if(!have[n]) list.push({name:n,n:0}); });
+    return list.filter(function(p){return st.rm.indexOf(p.name)<0});
+  }
+  function winners(){ return st.h.map(function(x){return x.name}); }
+  function pool(){ var w=winners(); return people().filter(function(p){ return !$('excl').checked || w.indexOf(p.name)<0; }); }
+
+  function render(){
+    var list=people(), w=winners(), r=range();
+    $('cnt').textContent=list.length;
+    var visits=S.visits(r.from,r.to).length;
+    $('sum').innerHTML='선택한 기간 방문 <b>'+visits.toLocaleString()+'건</b> · 방문 손님 <b>'+S.customers(r.from,r.to).length+'명</b> 이 자동으로 집계됐어요.'+(r.from?' ('+r.from+' ~ '+r.to+')':'');
+    $('chips').innerHTML=list.length?list.map(function(p){
+      var won=$('excl').checked&&w.indexOf(p.name)>=0;
+      return '<span class="chip'+(won?' won':'')+'">'+esc(p.name)+(p.n?' <em>'+p.n+'회</em>':'')+'<button data-n="'+esc(p.name)+'" title="빼기">×</button></span>';
+    }).join(''):'<div class="empty">이 기간에 방문한 손님이 없어요.</div>';
+    $('hist').innerHTML=st.h.length?st.h.slice().reverse().map(function(x){
+      return '<div><span>'+esc(x.prize)+'</span><b>'+esc(x.name)+' 님</b></div>'}).join(''):'<div class="empty">아직 당첨자가 없어요.</div>';
+  }
+  $('per').onchange=function(){ st.per=$('per').value; save(); render(); };
+  function add(){
+    var parts=$('nm').value.split(/[,\n]/).map(function(s){return s.trim()}).filter(Boolean), dup=[], cur=people().map(function(p){return p.name});
+    parts.forEach(function(n){
+      if(cur.indexOf(n)>=0){ dup.push(n); return; }
+      st.rm=st.rm.filter(function(x){return x!==n});
+      if(st.manual.indexOf(n)<0) st.manual.push(n);
+    });
+    $('err').textContent=dup.length?'이미 있는 이름: '+dup.join(', '):'';
+    $('nm').value=''; save(); render();
+  }
+  $('add').onclick=add;
+  $('nm').addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+  $('chips').onclick=function(e){ var b=e.target.closest('button[data-n]'); if(!b)return; st.rm.push(b.dataset.n); st.manual=st.manual.filter(function(x){return x!==b.dataset.n}); save(); render(); };
+  $('excl').onchange=render;
+  $('reload').onclick=function(){ st.rm=[]; st.manual=[]; save(); render(); };
+  $('hclr').onclick=function(){ st.h=[]; save(); render(); };
+
+  var busy=false;
+  $('draw').onclick=function(){
+    if(busy) return;
+    var p=pool();
+    if(!p.length){ $('stSmall').textContent='추첨할 참가자가 없어요 (모두 당첨되었거나 비어 있어요)'; return; }
+    var bag=[]; p.forEach(function(x){ var k=$('wgt').checked?Math.max(1,x.n):1; for(var i=0;i<k;i++) bag.push(x.name); });
+    var win=bag[Math.floor(Math.random()*bag.length)];
+    busy=true; $('draw').disabled=true;
+    var nm=$('stName'); nm.className='name spin'; $('stSmall').textContent='두구두구두구...';
+    var t=0, iv=setInterval(function(){
+      nm.textContent=p[Math.floor(Math.random()*p.length)].name; t+=80;
+      if(t>=2400){
+        clearInterval(iv);
+        nm.textContent=win+' 님'; nm.className='name pop';
+        $('stSmall').textContent='🎊 축하합니다! '+($('prize').value||'당첨');
+        st.h.push({name:win,prize:$('prize').value||'당첨'}); save(); render();
+        confetti(); busy=false; $('draw').disabled=false;
+      }
+    },80);
+  };
+  function confetti(){
+    var s=$('stage'), em=['🎉','✨','🎊','💖','⭐'];
+    for(var i=0;i<24;i++){
+      var c=document.createElement('span'); c.className='confetti'; c.textContent=em[i%em.length];
+      c.style.left=(Math.random()*95)+'%'; c.style.animationDelay=(Math.random()*.6)+'s';
+      s.appendChild(c); (function(x){ setTimeout(function(){x.remove()},3200); })(c);
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>

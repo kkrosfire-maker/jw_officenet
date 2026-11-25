@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>디자이너 근무표</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .wrap{max-width:980px}
+  .weeknav{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .weeknav b{font-size:16px;margin:0 6px}
+  .scroll{overflow-x:auto}
+  table.rost{border-collapse:separate;border-spacing:4px;min-width:680px}
+  table.rost th{text-align:center;font-weight:400;padding:4px 2px;border:0}
+  th.sat{color:#4a78d6} th.sun{color:var(--crit)}
+  th.today{color:var(--accent);font-weight:700}
+  td.nm{font-weight:600;white-space:nowrap;text-align:left;padding:0 8px 0 0;border:0}
+  td.nm small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  td.cell{text-align:center;padding:11px 2px;border-radius:8px;cursor:pointer;user-select:none;border:0;color:#222}
+  td.cell:hover{filter:brightness(.94)}
+  td.cell.off{background:var(--line);color:var(--muted)}
+  td.sum{text-align:center;color:var(--text-2);white-space:nowrap;border:0}
+  tr.total td{font-weight:700;text-align:center;color:var(--accent-dark);border:0;padding-top:8px}
+  tr.total td:first-child{text-align:left}
+  .lowstaff{color:var(--crit) !important}
+  @media print{ .noprint{display:none !important} body{background:#fff} .card{border:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back noprint" href="index.html">← 메뉴로</a>
+  <h1>디자이너 근무표</h1>
+  <p class="sub noprint">칸을 누르면 그 날짜만 근무 ↔ 휴무로 바뀌어요. 시술 매출 계산기에서는 그날 근무하는 디자이너만 고를 수 있어요.</p>
+
+  <div class="card noprint">
+    <div class="row">
+      <div style="flex:1;min-width:150px;max-width:240px"><label for="nm">디자이너 이름</label><input type="text" id="nm" placeholder="예) 보라"></div>
+      <div style="width:120px"><label for="role">직급</label><select id="role"><option>디자이너</option><option>부원장</option><option>원장</option></select></div>
+      <button class="btn" id="add">+ 추가</button>
+      <button class="btn ghost" id="print">인쇄</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="note">새 디자이너는 기본으로 일요일 휴무입니다. 칸을 눌러 바꿔 주세요.</div>
+  </div>
+
+  <div class="card">
+    <div class="weeknav">
+      <button class="btn ghost noprint" id="prev">◀ 이전 주</button>
+      <b id="range"></b>
+      <button class="btn ghost noprint" id="next">다음 주 ▶</button>
+      <button class="btn ghost noprint" id="today">이번 주</button>
+    </div>
+    <div class="scroll"><table class="rost" id="tbl"></table></div>
+    <div class="note noprint" style="margin-top:8px">아래 숫자는 날짜별 근무 인원이고, 오른쪽은 그 주의 근무일수입니다.</div>
+  </div>
+</div>
+<script src="salon-data.js"></script>
+<script>
+(function(){
+  var S=window.Salon, $=function(i){return document.getElementById(i)};
+  var DAYS=['월','화','수','목','금','토','일'];
+  var COLORS=['#ffd6e3','#d6ecff','#dff5d6','#fff0c2','#e8dcff','#ffe0cc','#d3f3f0'];
+  var monday=mondayOf(S.today());
+  function mondayOf(d){ var w=(d.getDay()+6)%7; return S.addDays(d,-w); }
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+  function render(){
+    var des=S.designers(), end=S.addDays(monday,6), td=S.ymd(S.today());
+    $('range').textContent=(monday.getMonth()+1)+'/'+monday.getDate()+' ~ '+(end.getMonth()+1)+'/'+end.getDate();
+    if(!des.length){ $('tbl').innerHTML='<tr><td class="empty">디자이너를 추가해 주세요.</td></tr>'; return; }
+    var dates=[0,1,2,3,4,5,6].map(function(i){return S.addDays(monday,i)});
+    var h='<tr><th></th>'+dates.map(function(d,i){
+      return '<th class="'+(i==5?'sat ':i==6?'sun ':'')+(S.ymd(d)===td?'today':'')+'">'+DAYS[i]+'<br><small>'+(d.getMonth()+1)+'/'+d.getDate()+'</small></th>';
+    }).join('')+'<th>근무일</th><th class="noprint"></th></tr>';
+    var cnt=[0,0,0,0,0,0,0];
+    des.forEach(function(d,r){
+      var work=0; h+='<tr><td class="nm">'+esc(d.name)+'<small>'+esc(d.role)+'</small></td>';
+      dates.forEach(function(dt,i){
+        var off=S.isOff(S.ymd(dt),d.name); if(!off){work++;cnt[i]++;}
+        h+='<td class="cell'+(off?' off':'')+'" data-n="'+esc(d.name)+'" data-d="'+S.ymd(dt)+'" '+(off?'':'style="background:'+COLORS[r%COLORS.length]+'"')+'>'+(off?'휴무':'근무')+'</td>';
+      });
+      h+='<td class="sum">'+work+'일</td><td class="noprint" style="border:0"><button class="x" data-del="'+esc(d.name)+'" title="삭제">×</button></td></tr>';
+    });
+    h+='<tr class="total"><td>근무 인원</td>'+cnt.map(function(c){return '<td class="'+(c<3?'lowstaff':'')+'">'+c+'명</td>'}).join('')+'<td></td><td class="noprint" style="border:0"></td></tr>';
+    $('tbl').innerHTML=h;
+  }
+  $('tbl').onclick=function(e){
+    var c=e.target.closest('td.cell');
+    if(c){ S.setOff(c.dataset.d,c.dataset.n,!S.isOff(c.dataset.d,c.dataset.n)); render(); return; }
+    var x=e.target.closest('button[data-del]');
+    if(x && confirm(x.dataset.del+' 님을 근무표에서 삭제할까요? (이미 저장된 매출 기록은 남아요)')){ S.removeDesigner(x.dataset.del); render(); }
+  };
+  function add(){
+    var n=$('nm').value.trim();
+    if(!n) return;
+    if(S.designers().some(function(d){return d.name===n})) return $('err').textContent='이미 있는 이름이에요.';
+    $('err').textContent=''; S.addDesigner(n,$('role').value); $('nm').value=''; render();
+  }
+  $('add').onclick=add;
+  $('nm').addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+  $('prev').onclick=function(){ monday=S.addDays(monday,-7); render(); };
+  $('next').onclick=function(){ monday=S.addDays(monday,7); render(); };
+  $('today').onclick=function(){ monday=mondayOf(S.today()); render(); };
+  $('print').onclick=function(){ window.print(); };
+  render();
+})();
+</script>
+</body>
+</html>

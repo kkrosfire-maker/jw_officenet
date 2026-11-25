@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘의 운세 뽑기</title>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 테마: 보라 · 별밤 */
+  :root{--bg:#f3effe;--card:#ffffff;--text:#2b2152;--sub:#7a6fa6;--line:#ddd3fb;--accent:#7c4dff;--accent2:#b388ff;--soft:#ebe4ff}
+  @media (prefers-color-scheme: dark){:root{--bg:#161233;--card:#221c4a;--text:#efeaff;--sub:#b3a8e0;--line:#372f6b;--accent:#9d7bff;--accent2:#c3a6ff;--soft:#2c2559}}
+  body{background:radial-gradient(circle at 20% 0,var(--soft),transparent 55%),var(--bg);background-attachment:fixed}
+  h1{margin:6px 0 4px;font-size:30px;color:var(--accent)}
+  .sub{color:var(--sub);margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px 20px;box-shadow:0 10px 30px rgba(124,77,255,.15)}
+  input{width:100%;padding:12px 16px;font:inherit;font-size:18px;text-align:center;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text)}
+  input:focus{outline:none;border-color:var(--accent)}
+  .go{width:100%;margin-top:12px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:14px;font-size:18px;font-weight:800;box-shadow:0 5px 0 rgba(80,40,190,.55);transition:transform .08s,box-shadow .08s}
+  .go:hover{transform:translateY(-2px)} .go:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(80,40,190,.55)}
+  .err{color:#e0413a;font-size:13px;min-height:18px;margin-top:6px}
+  #res{display:none;margin-top:18px}
+  #res.show{display:block;animation:rise .6s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(30px) scale(.9)}to{opacity:1;transform:none}}
+  .who{color:var(--sub);font-size:14px}
+  .ring{--p:0;width:150px;height:150px;border-radius:50%;margin:10px auto;display:grid;place-items:center;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--soft) 0)}
+  .ring div{width:122px;height:122px;border-radius:50%;background:var(--card);display:grid;place-items:center}
+  .ring b{font-size:42px;color:var(--accent);line-height:1}
+  .ring small{display:block;font-size:12px;color:var(--sub)}
+  .text{font-size:17px;font-weight:700;margin:10px 4px 16px;word-break:keep-all}
+  .lucky{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+  .lucky div{background:var(--soft);border-radius:14px;padding:8px 14px;flex:1}
+  .lucky small{display:block;color:var(--sub);font-size:12px}
+  .lucky b{font-size:18px}
+  .sw{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.15)}
+  .bars{text-align:left;margin:0 4px 6px}
+  .bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:14px}
+  .bar span{width:54px;font-weight:700}
+  .bar .t{flex:1;height:12px;background:var(--soft);border-radius:999px;overflow:hidden}
+  .bar .f{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width 1s ease}
+  .bar em{width:36px;font-style:normal;color:var(--sub);text-align:right}
+  .btns{display:flex;gap:8px;margin-top:14px}
+  .btns button{flex:1;border:2px solid var(--accent);background:var(--card);color:var(--accent);border-radius:12px;padding:9px;font-weight:800}
+  .btns button:hover{background:var(--accent);color:#fff}
+  .star{position:fixed;pointer-events:none;animation:tw 1.4s ease-out forwards;font-size:20px;z-index:9}
+  @keyframes tw{from{opacity:1;transform:scale(.4)}to{opacity:0;transform:translateY(-90px) scale(1.4) rotate(90deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>🔮 오늘의 운세</h1>
+  <div class="sub" id="today"></div>
+
+  <div class="card">
+    <input type="text" id="nm" maxlength="12" placeholder="이름을 입력하세요" autocomplete="off">
+    <div class="err" id="err"></div>
+    <button class="go" id="go">✨ 운세 뽑기</button>
+
+    <div id="res">
+      <div class="who" id="who"></div>
+      <div class="ring" id="ring"><div><span><b id="score">0</b><small>점</small></span></div></div>
+      <div class="text" id="text"></div>
+      <div class="lucky">
+        <div><small>행운의 숫자</small><b id="ln">7</b></div>
+        <div><small>행운의 색</small><b id="lc"></b></div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <div class="btns"><button id="again">🔄 다시 뽑기</button><button id="copy">📋 결과 복사</button></div>
+    </div>
+  </div>
+  <div class="note">* 재미로 보는 운세예요. 실제 미래를 맞히는 건 아니랍니다!</div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var MSG={
+    high:['생각지 못한 곳에서 반가운 연락이 와요. 오늘은 먼저 웃어 보세요!','하려던 일이 술술 풀리는 날! 망설이던 걸 오늘 시작해 보세요.','오늘은 어디를 가도 환영받아요. 거울 속 내 모습이 평소보다 반짝여요.','작은 행운이 연달아 찾아와요. 점심 메뉴 고르기도 대성공!'],
+    mid:['무난하고 평온한 하루예요. 따뜻한 차 한 잔이 행운을 불러와요.','조금 바쁘지만 보람 있는 하루! 한 가지씩 차근차근 해결해요.','뜻밖의 칭찬을 듣게 될지도 몰라요. 겸손하게 활짝 웃어 주세요.','평소 지나치던 길로 가 보세요. 작은 발견이 기다리고 있어요.'],
+    low:['오늘은 천천히 가는 날! 서두르지 않으면 오히려 좋은 일이 생겨요.','잠깐 쉬어 가라는 신호예요. 좋아하는 음악을 들으며 여유를 가져 보세요.','말 한마디를 조금만 더 부드럽게! 그러면 오후부터 분위기가 바뀌어요.','물을 자주 마시고 스트레칭하세요. 몸이 가벼워지면 운도 따라와요.']
+  };
+  var COLORS=[['민트','#4fd8b4'],['코랄','#ff7b6b'],['라벤더','#b79cf2'],['레몬','#ffe14d'],['하늘','#6cc6ff'],['핑크','#ff8fc0'],['라임','#a6e22e'],['오렌지','#ffa43a'],['버건디','#a52a4a'],['네이비','#2c3e8c']];
+  var d=new Date(); $('today').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+'일월화수목금토'[d.getDay()]+'요일';
+  var cur=null;
+  function r(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  function stars(){
+    for(var i=0;i<10;i++){ var s=document.createElement('span'); s.className='star'; s.textContent=pick(['✨','⭐','💜','🌟']);
+      s.style.left=(15+Math.random()*70)+'vw'; s.style.top=(30+Math.random()*30)+'vh'; s.style.animationDelay=(i*60)+'ms'; document.body.appendChild(s); (function(x){setTimeout(function(){x.remove()},1700)})(s); }
+  }
+  function draw(){
+    var name=$('nm').value.trim();
+    if(!name){ $('err').textContent='이름을 입력해 주세요 🙂'; $('nm').focus(); return; }
+    $('err').textContent='';
+    var score=r(0,100), c=pick(COLORS);
+    cur={name:name,score:score,text:pick(score>=70?MSG.high:score>=40?MSG.mid:MSG.low),num:r(1,99),color:c,
+         money:r(1,100),love:r(1,100),health:r(1,100)};
+    $('who').textContent=name+' 님의 오늘 행운 점수';
+    $('text').textContent=cur.text; $('ln').textContent=cur.num;
+    $('lc').innerHTML='<span class="sw" style="background:'+c[1]+'"></span>'+c[0];
+    $('bars').innerHTML=[['금전운',cur.money],['애정운',cur.love],['건강운',cur.health]].map(function(x){
+      return '<div class="bar"><span>'+x[0]+'</span><div class="t"><div class="f" data-w="'+x[1]+'"></div></div><em>'+x[1]+'</em></div>'}).join('');
+    var res=$('res'); res.classList.remove('show'); void res.offsetWidth; res.classList.add('show');
+    // 점수 숫자 올라가는 연출
+    var n=0, ring=$('ring'); ring.style.setProperty('--p',0); $('score').textContent=0;
+    var iv=setInterval(function(){ n=Math.min(score,n+Math.max(1,Math.round(score/25))); $('score').textContent=n; ring.style.setProperty('--p',n);
+      if(n>=score){ clearInterval(iv); } },30);
+    setTimeout(function(){ document.querySelectorAll('.f').forEach(function(f){f.style.width=f.dataset.w+'%'}); },60);
+    stars();
+  }
+  $('go').onclick=draw; $('again').onclick=draw;
+  $('nm').addEventListener('keydown',function(e){ if(e.key==='Enter') draw(); });
+  $('copy').onclick=function(){
+    if(!cur) return;
+    var t='🔮 '+cur.name+' 님의 오늘의 운세\n행운 점수: '+cur.score+'점\n'+cur.text+'\n행운의 숫자 '+cur.num+' · 행운의 색 '+cur.color[0]+'\n금전운 '+cur.money+' / 애정운 '+cur.love+' / 건강운 '+cur.health+'\n(재미로 보는 운세예요)';
+    var done=function(){ $('copy').textContent='✅ 복사됨!'; setTimeout(function(){$('copy').textContent='📋 결과 복사'},1400); };
+    if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,done); else done();
+  };
+})();
+</script>
+</body>
+</html>

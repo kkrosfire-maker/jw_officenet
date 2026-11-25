@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객 안내 문자 생성기</title>
+<style>
+  :root{
+    color-scheme:light dark;
+    --bg:#f4f3f0;--surface:#fcfcfb;--card:#fcfcfb;--line:#e3e1dc;--line-2:#d2d0ca;
+    --text:#0b0b0b;--text-2:#52514e;--muted:#7a7974;
+    --pink:#2a78d6;--dark:#1f5fb0;--soft:#e3eefb;
+    --pink-dark:#1f5fb0;--pink-soft:#e3eefb;--accent:#2a78d6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#121211;--surface:#1a1a19;--card:#1a1a19;--line:#2c2c2a;--line-2:#3a3a37;
+      --text:#f0efec;--text-2:#c3c2b7;--muted:#8f8e86;
+      --pink:#3987e5;--dark:#5a9cec;--soft:#1d2d42;
+      --pink-dark:#5a9cec;--pink-soft:#1d2d42;--accent:#3987e5;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Malgun Gothic","맑은 고딕",sans-serif;font-size:14px}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 60px}
+  a.back{color:var(--dark);font-size:14px;text-decoration:none}
+  h1{margin:4px 0 4px;font-size:20px;color:var(--text)}
+  .sub{margin:0 0 20px;color:var(--muted);font-size:15px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px;box-shadow:none}
+  label{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
+  input[type=text],input[type=date],input[type=time],select,textarea{width:100%;padding:11px 14px;font-size:15px;border:1px solid var(--line);border-radius:10px;font-family:inherit;color:var(--text);background:var(--surface)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pink)}
+  .row{display:flex;gap:12px} .row>div{flex:1}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{padding:9px 16px;font-size:15px;border:1px solid var(--line);background:var(--surface);border-radius:999px;cursor:pointer;font-family:inherit;color:var(--text)}
+  .pill.on{background:var(--pink);border-color:var(--pink);color:#fff;font-weight:bold}
+  textarea{min-height:170px;line-height:1.6;resize:vertical}
+  .meta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-top:6px}
+  .btn{border:none;border-radius:8px;padding:14px 20px;font-size:14px;font-family:inherit;cursor:pointer;font-weight:bold;background:var(--pink);color:#fff;width:100%;margin-top:12px}
+  .btn:hover{background:var(--dark)}
+  .btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:normal;padding:8px 14px;font-size:14px;width:auto;margin:0}
+  h2{margin:0 0 4px;font-size:15px}
+  .note{font-size:13px;color:var(--muted);margin-top:8px}
+  .embed .back{display:none !important}
+</style>
+</head>
+<body>
+<script>if(window.self!==window.top)document.documentElement.classList.add("embed");</script>
+<div class="wrap">
+  <a class="back" href="index.html">← 메뉴로</a>
+  <h1>💌 고객 안내 문자 생성기</h1>
+  <p class="sub">정보를 고르면 문자 초안이 써져요. 고쳐서 복사해 쓰세요. (자동 발송은 없어요)</p>
+
+  <div class="card">
+    <div class="row">
+      <div><datalist id="custList"></datalist><label for="cust">고객 이름</label><input type="text" id="cust" value="김하늘" list="custList"></div>
+      <div><label for="des">담당 디자이너</label><select id="des"></select></div>
+    </div>
+    <div class="row">
+      <div><label for="tr">시술명</label><input type="text" id="tr" value="펌"></div>
+      <div><label for="shop">미용실 이름</label><input type="text" id="shop" value="정원헤어살롱"></div>
+    </div>
+    <div class="row">
+      <div><label for="dt">예약 날짜</label><input type="date" id="dt"></div>
+      <div><label for="tm">예약 시간</label><input type="time" id="tm" value="14:00"></div>
+    </div>
+    <label>문자 종류</label>
+    <div class="pills" id="kinds"></div>
+    <label>말투</label>
+    <div class="pills" id="tones"></div>
+  </div>
+
+  <div class="card">
+    <h2>만들어진 문자</h2>
+    <div class="note">내용을 직접 고칠 수 있어요.</div>
+    <textarea id="out"></textarea>
+    <div class="meta"><span id="len"></span><button class="btn ghost" id="regen">↻ 다시 만들기</button></div>
+    <button class="btn" id="copy">📋 복사하기</button>
+  </div>
+</div>
+
+<script src="salon-data.js"></script>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var KINDS=['예약 확인','예약 전날 알림','방문 감사','재방문 안내','이벤트 안내'];
+  var TONES=['정중','친근'];
+  var kind=0, tone=1;
+
+  function pills(id,arr,get,set){
+    $(id).innerHTML=arr.map(function(t,i){return '<button class="pill'+(i===get()?' on':'')+'" data-i="'+i+'">'+t+'</button>'}).join('');
+  }
+  function drawPills(){
+    pills('kinds',KINDS,function(){return kind});
+    pills('tones',TONES,function(){return tone});
+  }
+  $('kinds').onclick=function(e){ var b=e.target.closest('[data-i]'); if(!b)return; kind=+b.dataset.i; drawPills(); make(); };
+  $('tones').onclick=function(e){ var b=e.target.closest('[data-i]'); if(!b)return; tone=+b.dataset.i; drawPills(); make(); };
+
+  function designers(){ return window.Salon.designers().map(function(d){return d.name+' '+d.role}); }
+  function fillDes(){
+    var cur=$('des').value, l=designers();
+    $('des').innerHTML=l.map(function(n){return '<option>'+n.replace(/</g,'&lt;')+'</option>'}).join('');
+    if(l.indexOf(cur)>=0) $('des').value=cur;
+  }
+  function when(){
+    var v=$('dt').value, t=$('tm').value;
+    var s='';
+    if(v){ var p=v.split('-'), d=new Date(+p[0],p[1]-1,+p[2]);
+      s=(d.getMonth()+1)+'월 '+d.getDate()+'일('+'일월화수목금토'[d.getDay()]+')'; }
+    if(t){ var h=+t.split(':')[0], m=t.split(':')[1];
+      s+=(s?' ':'')+(h<12?'오전 ':'오후 ')+(h%12===0?12:h%12)+'시'+(m!=='00'?' '+(+m)+'분':''); }
+    return s||'예약일';
+  }
+  function make(){
+    var c=$('cust').value.trim()||'고객', d=$('des').value||'담당 디자이너', t=$('tr').value.trim()||'시술',
+        s=$('shop').value.trim()||'정원헤어살롱', w=when(), f=tone===1;
+    var T=[
+      // 예약 확인
+      f ? c+' 고객님, 안녕하세요! :)\n'+w+' '+d+' '+t+' 예약이 확인되었어요.\n편하게 오세요~ 기다리고 있을게요!\n- '+s
+        : c+' 고객님, 안녕하세요.\n'+s+'입니다.\n'+w+' '+d+' '+t+' 예약이 확인되었습니다.\n방문을 기다리겠습니다. 감사합니다.',
+      // 전날 알림
+      f ? c+' 고객님, 내일 '+w+'에 '+d+' '+t+' 예약이 있어요!\n혹시 일정이 바뀌면 미리 살짝 알려주세요 :)\n- '+s
+        : c+' 고객님, '+s+'입니다.\n내일 '+w+' '+d+' '+t+' 예약을 안내드립니다.\n일정 변경이 필요하시면 미리 연락 부탁드립니다.',
+      // 방문 감사
+      f ? c+' 고객님, 오늘 와주셔서 감사해요! 😊\n'+t+' 어떠셨어요? 마음에 드셨으면 좋겠어요.\n관리하다 궁금한 점 있으면 언제든 편하게 문자 주세요!\n- '+d+' 올림'
+        : c+' 고객님, 오늘 방문해 주셔서 감사합니다.\n'+t+' 결과가 만족스러우셨기를 바랍니다.\n관리 중 궁금하신 점은 언제든 문의해 주세요.\n- '+d+' 드림',
+      // 재방문
+      f ? c+' 고객님, 잘 지내셨죠? :)\n'+t+' 한 지 시간이 좀 지났어요. 슬슬 관리받을 때가 됐답니다!\n'+d+'가 시간 맞춰 기다릴게요. 예약은 편하게 문자 주세요~\n- '+s
+        : c+' 고객님, 안녕하세요. '+s+'입니다.\n지난 '+t+' 시술 후 시간이 지나 관리 시기를 안내드립니다.\n원하시는 일정에 '+d+'가 맞춰 준비하겠습니다. 예약 문의 주세요.',
+      // 이벤트
+      f ? c+' 고객님! '+s+' 이벤트 소식이에요 🎁\n이번 달 '+t+' 특별 할인 진행 중이에요.\n자세한 건 '+d+'에게 편하게 물어보세요!'
+        : c+' 고객님, '+s+'입니다.\n이번 달 '+t+' 특별 이벤트를 안내드립니다.\n자세한 내용은 '+d+'에게 문의해 주시기 바랍니다.'
+    ];
+    $('out').value=T[kind]; count();
+  }
+  function count(){ var n=$('out').value.length; $('len').textContent=n+'자 · '+(n>90?'장문(LMS)':'단문(SMS)'); }
+
+  $('out').addEventListener('input',count);
+  ['cust','tr','shop','dt','tm'].forEach(function(i){ $(i).addEventListener('input',make); });
+  $('des').onchange=make;
+  $('regen').onclick=make;
+  $('copy').onclick=function(){
+    var ta=$('out'), done=function(){ $('copy').textContent='✅ 복사되었어요!'; setTimeout(function(){$('copy').textContent='📋 복사하기'},1500); };
+    if(navigator.clipboard&&window.isSecureContext||location.protocol==='file:'&&navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(done,function(){ta.select();document.execCommand('copy');done();});
+    } else { ta.select(); document.execCommand('copy'); done(); }
+  };
+
+  var n=new Date(); n.setDate(n.getDate()+3);
+  $('dt').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  $('custList').innerHTML=window.Salon.customers().map(function(c){return '<option value="'+c.name+'">'}).join('');
+  drawPills(); fillDes(); make();
+})();
+</script>
+</body>
+</html>
