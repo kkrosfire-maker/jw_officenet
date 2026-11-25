@@ -24,12 +24,13 @@ body::after{content:"";position:fixed;left:0;right:var(--tw);bottom:var(--fh,23p
 header{display:flex;align-items:center;gap:18px;padding:14px 24px 22px;margin:-28px -24px 0;border-bottom:2px solid var(--green);
   position:sticky;top:0;z-index:3;background:var(--bg);box-shadow:0 6px 12px -6px rgba(13,74,50,.25)}
 header img{width:64px;height:64px;border-radius:10px}
+.title{min-width:0}
 .title h1{margin:0;font-size:26px;color:var(--green);letter-spacing:-.5px}
 .title p{margin:4px 0 0;font-size:13px;color:var(--green-tint);letter-spacing:.5px}
 .clock{margin-left:auto;text-align:right}
 .trow{display:flex;align-items:center;gap:10px}
 .contacts,.contacts *{user-select:text !important;-webkit-user-select:text !important}
-.contacts{cursor:text;position:relative;z-index:3;display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px;font-size:12px;color:var(--green-tint)}
+.contacts{cursor:text;position:relative;z-index:3;display:flex;flex-wrap:nowrap;white-space:nowrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--green-tint)}
 .contacts b{color:var(--green);font-weight:700;margin-left:3px;letter-spacing:.2px}
 .pin{flex:none;font:inherit;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--green-tint);border-radius:99px;padding:3px 10px;cursor:pointer}
 .pin.on{background:var(--green);color:#fff;border-color:var(--green)}
@@ -151,13 +152,18 @@ function tick(){
 }
 tick(); setInterval(tick,1000);
 // 하단 흰 여백 = 상단 헤더 높이의 1/5
-const syncHH=()=>{const h=document.querySelector('header').offsetHeight,s=document.documentElement.style;s.setProperty('--hh',h+'px');s.setProperty('--fh',h/5+'px')};
+const syncHH=()=>{const h=document.querySelector('header').offsetHeight,s=document.documentElement.style;s.setProperty('--hh',h+'px');s.setProperty('--fh',h/5+'px');syncTodoHead(h)};
+// 오른쪽 체크리스트 헤더 높이를 보드 헤더와 같게 맞춘다(같은 서버라 iframe 안을 직접 만질 수 있다)
+function syncTodoHead(h){
+  try{const d=$('todoFrame').contentDocument,hd=d&&d.querySelector('header');if(!hd)return;
+    hd.style.boxSizing='border-box';hd.style.minHeight=h+'px';hd.style.display='flex';hd.style.flexDirection='column';hd.style.justifyContent='center';hd.style.gap='6px'}catch(e){}
+}
 $('pin').onclick=async()=>{
   if(!(window.pywebview&&pywebview.api))return;
   const on=!$('pin').classList.contains('on');
   await pywebview.api.set_pin(on);$('pin').classList.toggle('on',on);
 };
-syncHH();addEventListener('resize',syncHH);
+syncHH();addEventListener('resize',syncHH);$('todoFrame').addEventListener('load',()=>syncHH());
 
 let tt;
 function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='show'+(err?' err':'');try{t.hidePopover();t.showPopover()}catch(e){}clearTimeout(tt);tt=setTimeout(()=>{t.className='';try{t.hidePopover()}catch(e){}},err?4000:2200)}
